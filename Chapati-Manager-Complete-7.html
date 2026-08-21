@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+    <title>Chapati Business Tracker</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; -webkit-touch-callout: none; }
+        html, body { width: 100%; height: 100%; overflow: hidden; position: fixed; }
+        body { font-family: 'Segoe UI', Roboto, sans-serif; background: #f5f1ed; color: #333; }
+        
+        .header { background: #8B4513; color: white; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: fixed; top: 0; left: 0; right: 0; width: 100%; height: 60px; z-index: 9999; }
+        .header h1 { font-size: 20px; }
+        .menu-toggle { background: none; border: none; color: white; font-size: 28px; cursor: pointer; padding: 0; }
+        
+        .sidebar { position: fixed; right: 0; top: 0; height: 100%; width: 280px; background: #8B4513; color: white; z-index: 10000; transform: translateX(100%); transition: transform 0.3s ease; box-shadow: -2px 0 8px rgba(0,0,0,0.2); overflow-y: auto; padding-top: 60px; }
+        .sidebar.open { transform: translateX(0); }
+        
+        .sidebar-header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.2); display: flex; justify-content: space-between; align-items: center; }
+        .sidebar-header h2 { font-size: 18px; }
+        .sidebar-close { background: none; border: none; color: white; font-size: 28px; cursor: pointer; }
+        
+        .sidebar-menu { padding: 16px 0; }
+        .sidebar-item { padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); cursor: pointer; font-size: 15px; display: flex; align-items: center; gap: 12px; }
+        .sidebar-item:hover { background: rgba(0,0,0,0.2); }
+        .sidebar-item.active { background: rgba(0,0,0,0.3); font-weight: 600; }
+        .sidebar-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .sidebar-overlay.open { opacity: 1; pointer-events: all; }
+        
+        .container { position: fixed; top: 60px; left: 0; right: 0; bottom: 0; width: 100%; padding: 12px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .view { display: none; }
+        .view.active { display: block; }
+        .card { background: white; border-radius: 8px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); width: calc(100% - 4px); }
+        .card h2 { font-size: 16px; margin-bottom: 12px; }
+        .card h3 { font-size: 13px; margin: 12px 0 8px 0; color: #666; font-weight: 600; }
+        
+        .date-selector { display: flex; gap: 8px; margin-bottom: 16px; }
+        .date-selector input { flex: 1; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; }
+        .date-selector button { padding: 8px 10px; background: #8B4513; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; }
+        
+        .status-badge { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-bottom: 12px; }
+        .status-badge.open { background: #d4edda; color: #155724; }
+        .status-badge.closed { background: #e2e3e5; color: #383d41; }
+        
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .form-row.full { grid-template-columns: 1fr; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-size: 11px; font-weight: 600; color: #666; margin-bottom: 4px; }
+        .form-group input, .form-group select { padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; font-family: inherit; width: 100%; -webkit-appearance: none; appearance: none; }
+        
+        .btn { padding: 10px 14px; border: none; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 8px; transition: all 0.2s; }
+        .btn-primary { background: #8B4513; color: white; }
+        .btn-primary:hover { background: #6d3410; }
+        .btn-secondary { background: #e0d7ce; color: #333; }
+        .btn-secondary:hover { background: #d1c8bc; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-small { padding: 6px 10px; font-size: 11px; width: auto; display: inline-block; margin-right: 4px; }
+        
+        .summary-box { background: #f9f7f4; border-left: 3px solid #8B4513; padding: 12px; margin-bottom: 12px; border-radius: 4px; }
+        .summary-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 8px; }
+        .summary-row.total { font-weight: 700; border-top: 1px solid #ddd; padding-top: 8px; }
+        .summary-row.profit { color: #27a745; font-weight: 700; }
+        .summary-row.loss { color: #dc3545; font-weight: 700; }
+        
+        .profit-share { background: #e8f5e9; padding: 12px; border-radius: 6px; margin-top: 12px; }
+        .profit-share-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+        .profit-share-row.amount { font-weight: 700; font-size: 14px; color: #27a745; }
+        
+        .transaction-item { background: #f9f7f4; padding: 10px; border-radius: 6px; margin-bottom: 8px; font-size: 12px; border-left: 3px solid #999; }
+        .transaction-item.purchase { border-left-color: #27a745; }
+        .transaction-item.usage { border-left-color: #ffc107; }
+        .transaction-item.opening { border-left-color: #17a2b8; }
+        .transaction-header { font-weight: 600; margin-bottom: 4px; }
+        .transaction-detail { color: #666; display: flex; justify-content: space-between; margin-bottom: 2px; font-size: 11px; }
+        
+        .empty-state { text-align: center; padding: 24px 16px; color: #999; font-size: 12px; }
+        .inventory-table { width: 100%; font-size: 11px; margin-top: 12px; border-collapse: collapse; }
+        .inventory-table th, .inventory-table td { padding: 8px; text-align: right; border-bottom: 1px solid #e0d7ce; }
+        .inventory-table th:first-child, .inventory-table td:first-child { text-align: left; }
+        .inventory-table th { background: #f0ede8; font-weight: 600; }
+        
+        .alert { padding: 10px; border-radius: 6px; margin-bottom: 12px; font-size: 12px; }
+        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .alert-info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        
+        .day-item { background: #f9f7f4; padding: 12px; border-radius: 6px; margin-bottom: 8px; cursor: pointer; border: 1px solid #e0d7ce; }
+        .day-item:hover { background: #ede7dc; }
+        .day-item-date { font-weight: 600; font-size: 12px; margin-bottom: 4px; }
+        .day-item-summary { font-size: 11px; color: #666; }
+        
+        .viewing-date-banner { background: #fff3cd; border-left: 3px solid #ffc107; padding: 12px; margin-bottom: 12px; border-radius: 4px; }
+        .viewing-date-banner button { padding: 6px 12px; background: #8B4513; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600; margin-top: 8px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🫓 Chapati Tracker</h1>
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+    </div>
+    
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleMenu()"></div>
+    
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h2>Menu</h2>
+            <button class="sidebar-close" onclick="toggleMenu()">✕</button>
+        </div>
+        <div class="sidebar-menu">
+            <div class="sidebar-item active" data-view="dashboard" onclick="goView('dashboard')">📊 Dashboard</div>
+            <div class="sidebar-item" data-view="opening" onclick="goView('opening')">📦 Opening</div>
+            <div class="sidebar-item" data-view="inventory" onclick="goView('inventory')">🏪 Inventory</div>
+            <div class="sidebar-item" data-view="sales" onclick="goView('sales')">💰 Sales</div>
+            <div class="sidebar-item" data-view="expenses" onclick="goView('expenses')">💸 Expenses</div>
+            <div class="sidebar-item" data-view="close" onclick="goView('close')">🔒 Close Day</div>
+            <div class="sidebar-item" data-view="history" onclick="goView('history')">📅 History</div>
+            <div class="sidebar-item" data-view="backup" onclick="goView('backup')">💾 Backup</div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- DASHBOARD -->
+        <div id="dashboard" class="view active">
+            <div class="card">
+                <div id="viewing-banner"></div>
+                <div class="date-selector">
+                    <input type="date" id="dash-date">
+                    <button onclick="goDate(document.getElementById('dash-date').value)">Go</button>
+                </div>
+                <div id="status-badge"></div>
+                <h2>📊 Today's Summary</h2>
+                <div id="dash-content"></div>
+            </div>
+        </div>
+        
+        <!-- OPENING INVENTORY -->
+        <div id="opening" class="view">
+            <div class="card">
+                <div id="viewing-banner2"></div>
+                <h2>📦 Opening Inventory</h2>
+                <div class="date-selector">
+                    <input type="date" id="open-date">
+                    <button onclick="goDate(document.getElementById('open-date').value)">Go</button>
+                </div>
+                
+                <h3>🫓 Chapati Production</h3>
+                <form id="chapati-form">
+                    <div class="form-row">
+                        <div class="form-group"><label>Made</label><input type="number" id="chap-made" min="0"></div>
+                        <div class="form-group"><label>Sold</label><input type="number" id="chap-sold" min="0"></div>
+                    </div>
+                    <div class="form-row full">
+                        <div class="form-group"><label>Remaining</label><input type="number" id="chap-remain" disabled></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Record Production</button>
+                </form>
+                
+                <h3>📋 Opening Stock</h3>
+                <form id="opening-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Item</label>
+                            <input type="text" id="open-item" placeholder="e.g. Flour" list="item-list" required>
+                            <datalist id="item-list">
+                                <option value="Flour"></option>
+                                <option value="Oil"></option>
+                                <option value="Eggs"></option>
+                                <option value="Charcoal"></option>
+                                <option value="Beans"></option>
+                            </datalist>
+                        </div>
+                        <div class="form-group"><label>Qty</label><input type="number" id="open-qty" placeholder="0" step="0.1" required></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Unit</label><select id="open-unit" required><option value="packet">Packet</option><option value="kg">Kg</option><option value="litre">Litre</option><option value="bag">Bag</option><option value="piece">Piece</option></select></div>
+                        <div class="form-group"><label>Unit Cost (UGX)</label><input type="text" id="open-cost" placeholder="0" inputmode="decimal" required></div>
+                    </div>
+                    <div class="form-row full"><div class="form-group"><label>Notes</label><input type="text" id="open-notes"></div></div>
+                    <button type="submit" class="btn btn-primary">Add Opening Stock</button>
+                </form>
+                <div id="open-list" style="margin-top: 16px;"></div>
+            </div>
+        </div>
+        
+        <!-- INVENTORY -->
+        <div id="inventory" class="view">
+            <div class="card">
+                <div id="viewing-banner3"></div>
+                <h2>🏪 Inventory</h2>
+                <div class="date-selector">
+                    <input type="date" id="inv-date">
+                    <button onclick="goDate(document.getElementById('inv-date').value)">Go</button>
+                </div>
+                
+                <h3>📥 Purchase</h3>
+                <form id="purchase-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Item</label>
+                            <input type="text" id="purch-item" placeholder="e.g. Flour" list="item-list2" required>
+                            <datalist id="item-list2">
+                                <option value="Flour"></option>
+                                <option value="Oil"></option>
+                                <option value="Eggs"></option>
+                                <option value="Charcoal"></option>
+                                <option value="Beans"></option>
+                            </datalist>
+                        </div>
+                        <div class="form-group"><label>Qty</label><input type="number" id="purch-qty" placeholder="0" step="0.1" required></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Unit</label><select id="purch-unit" required><option value="packet">Packet</option><option value="kg">Kg</option><option value="litre">Litre</option><option value="bag">Bag</option><option value="piece">Piece</option></select></div>
+                        <div class="form-group"><label>Price/Unit (UGX)</label><input type="text" id="purch-price" placeholder="0" inputmode="decimal" required></div>
+                    </div>
+                    <div class="form-row full"><div class="form-group"><label>Total</label><input type="number" id="purch-total" disabled></div></div>
+                    <button type="submit" class="btn btn-primary">Record Purchase</button>
+                </form>
+                
+                <h3>📤 Record Usage</h3>
+                <form id="usage-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Item</label>
+                            <input type="text" id="usage-item" placeholder="e.g. Flour" list="item-list3" required>
+                            <datalist id="item-list3">
+                                <option value="Flour"></option>
+                                <option value="Oil"></option>
+                                <option value="Eggs"></option>
+                                <option value="Charcoal"></option>
+                                <option value="Beans"></option>
+                            </datalist>
+                        </div>
+                        <div class="form-group"><label>Qty Used</label><input type="number" id="usage-qty" placeholder="0" step="0.1" required></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Record Usage</button>
+                </form>
+                
+                <h3>Transactions</h3>
+                <div id="trans-list"></div>
+                
+                <h3>Current Stock</h3>
+                <table class="inventory-table"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Value</th></tr></thead><tbody id="stock-tbody"></tbody></table>
+            </div>
+        </div>
+        
+        <!-- SALES -->
+        <div id="sales" class="view">
+            <div class="card">
+                <div id="viewing-banner4"></div>
+                <h2>💰 Sales</h2>
+                <div class="date-selector">
+                    <input type="date" id="sales-date">
+                    <button onclick="goDate(document.getElementById('sales-date').value)">Go</button>
+                </div>
+                
+                <form id="sales-form">
+                    <div class="form-row">
+                        <div class="form-group"><label>Product</label><input type="text" id="sales-product" placeholder="e.g. Chapati" required></div>
+                        <div class="form-group"><label>Qty</label><input type="number" id="sales-qty" placeholder="0" step="0.1" required></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Price/Unit (UGX)</label><input type="text" id="sales-price" placeholder="0" inputmode="decimal" required></div>
+                        <div class="form-group"><label>Total</label><input type="number" id="sales-total" disabled></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Record Sale</button>
+                </form>
+                
+                <h3>Sales Today</h3>
+                <div id="sales-list"></div>
+            </div>
+        </div>
+        
+        <!-- EXPENSES -->
+        <div id="expenses" class="view">
+            <div class="card">
+                <div id="viewing-banner5"></div>
+                <h2>💸 Operating Expenses</h2>
+                <div class="date-selector">
+                    <input type="date" id="exp-date">
+                    <button onclick="goDate(document.getElementById('exp-date').value)">Go</button>
+                </div>
+                
+                <form id="expense-form">
+                    <div class="form-row full"><div class="form-group"><label>Description</label><input type="text" id="exp-desc" placeholder="e.g. Worker meals" required></div></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Amount (UGX)</label><input type="text" id="exp-amt" placeholder="0" inputmode="decimal" required></div>
+                        <div class="form-group"><label>Category</label><select id="exp-cat"><option value="meals">Meals</option><option value="transport">Transport</option><option value="packaging">Packaging</option><option value="other">Other</option></select></div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Record Expense</button>
+                </form>
+                
+                <h3>Expenses Today</h3>
+                <div id="exp-list"></div>
+            </div>
+        </div>
+        
+        <!-- CLOSE DAY -->
+        <div id="close" class="view">
+            <div class="card">
+                <div id="viewing-banner6"></div>
+                <h2>🔒 Close Business Day</h2>
+                <div class="date-selector">
+                    <input type="date" id="close-date">
+                    <button onclick="goDate(document.getElementById('close-date').value)">Go</button>
+                </div>
+                <div id="close-content"></div>
+            </div>
+        </div>
+        
+        <!-- HISTORY -->
+        <div id="history" class="view">
+            <div class="card">
+                <h2>📅 Business History</h2>
+                <p style="font-size: 11px; color: #666; margin-bottom: 12px;">Tap any day to view full records. Viewing old data won't affect today's page.</p>
+                <div id="hist-list" style="max-height: 600px; overflow-y: auto;"></div>
+            </div>
+        </div>
+        
+        <!-- BACKUP -->
+        <div id="backup" class="view">
+            <div class="card">
+                <h2>💾 Backup & Restore</h2>
+                <h3>Download Backup</h3>
+                <p style="font-size: 11px; color: #666; margin-bottom: 12px;">Save all your business records as a JSON file.</p>
+                <button class="btn btn-secondary" onclick="downloadBackup()">📥 Download Backup</button>
+                
+                <h3 style="margin-top: 16px;">Restore from Backup</h3>
+                <p style="font-size: 11px; color: #666; margin-bottom: 12px;">Upload a previously saved backup file to restore all records.</p>
+                <input type="file" id="backup-file" accept=".json" style="margin-bottom: 12px; padding: 8px; border: 1px solid #ddd; border-radius: 6px; width: 100%;">
+                <button class="btn btn-secondary" onclick="uploadBackup()">📤 Restore from File</button>
+                
+                <h3 style="margin-top: 16px;">⚠️ Danger Zone</h3>
+                <button class="btn btn-danger" onclick="clearAllData()">Clear All Data</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        const KEY = 'chapatiBizTracker';
+        let curDate = new Date().toISOString().split('T')[0];
+        let viewingDate = null; // Track if viewing history
+        
+        function load() { return JSON.parse(localStorage.getItem(KEY) || '{"days":{}}'); }
+        function save(d) { localStorage.setItem(KEY, JSON.stringify(d)); }
+        
+        function toggleMenu() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('open');
+        }
+        
+        function goView(view) {
+            toggleMenu();
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+            document.getElementById(view).classList.add('active');
+            document.querySelector(`[data-view="${view}"]`).classList.add('active');
+            
+            if (view === 'dashboard') renderDash();
+            else if (view === 'opening') renderOpen();
+            else if (view === 'inventory') renderInv();
+            else if (view === 'sales') renderSalesList();
+            else if (view === 'expenses') renderExpList();
+            else if (view === 'close') renderClose();
+            else if (view === 'history') renderHist();
+        }
+        
+        function getDay(dt) {
+            const d = load();
+            if (!d.days[dt]) {
+                d.days[dt] = {
+                    date: dt, status: 'open',
+                    chapatiMade: 0, chapatiSold: 0,
+                    opening: [], transactions: [], sales: [], expenses: []
+                };
+                save(d);
+            }
+            return d.days[dt];
+        }
+        
+        function saveDay(dt, day) {
+            const d = load();
+            d.days[dt] = day;
+            save(d);
+        }
+        
+        function goDate(dt) {
+            if (!dt) return;
+            curDate = dt;
+            viewingDate = null; // Return to current date
+            updateAllDateInputs();
+            renderDash();
+            updateBanners();
+        }
+        
+        function viewHistoryDay(dt) {
+            viewingDate = dt;
+            curDate = dt;
+            updateAllDateInputs();
+            goView('dashboard');
+            updateBanners();
+        }
+        
+        function backToToday() {
+            viewingDate = null;
+            const today = new Date().toISOString().split('T')[0];
+            curDate = today;
+            updateAllDateInputs();
+            renderDash();
+            updateBanners();
+        }
+        
+        function updateAllDateInputs() {
+            document.querySelectorAll('input[type="date"]').forEach(i => i.value = curDate);
+        }
+        
+        function updateBanners() {
+            const today = new Date().toISOString().split('T')[0];
+            const banners = document.querySelectorAll('[id^="viewing-banner"]');
+            
+            if (viewingDate && viewingDate !== today) {
+                const bannerHtml = `
+                    <div class="viewing-date-banner">
+                        📖 Viewing <strong>${new Date(viewingDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })}</strong>
+                        <button onclick="backToToday()">← Back to Today</button>
+                    </div>
+                `;
+                banners.forEach(b => b.innerHTML = bannerHtml);
+            } else {
+                banners.forEach(b => b.innerHTML = '');
+            }
+        }
+        
+        window.addEventListener('load', () => {
+            updateAllDateInputs();
+            renderDash();
+            updateBanners();
+            startAutoDateCheck();
+        });
+        
+        function startAutoDateCheck() {
+            // Check every 60 seconds if date changed
+            setInterval(checkDateChanged, 60000);
+            
+            // Check when app comes back to focus
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) {
+                    checkDateChanged();
+                }
+            });
+            
+            // Check when window gets focus
+            window.addEventListener('focus', checkDateChanged);
+        }
+        
+        function checkDateChanged() {
+            const today = new Date().toISOString().split('T')[0];
+            if (today !== curDate && !viewingDate) {
+                // Date has changed!
+                // Auto-carry over inventory from yesterday to today
+                const yesterday = new Date(today);
+                yesterday.setDate(yesterday.getDate() - 1);
+                const ystStr = yesterday.toISOString().split('T')[0];
+                
+                const ystDay = getDay(ystStr);
+                const todayDay = getDay(today);
+                
+                // Carry over remaining CHAPATIS
+                const chapatiRemaining = ystDay.chapatiMade - ystDay.chapatiSold;
+                if (chapatiRemaining > 0) {
+                    todayDay.opening.push({
+                        item: 'Remaining Chapatis',
+                        qty: chapatiRemaining,
+                        unit: 'piece',
+                        unitCost: 0,
+                        notes: `Carryover from ${ystStr}`
+                    });
+                }
+                
+                // Carry over remaining INVENTORY items
+                const ystStock = {};
+                
+                // Start with opening items
+                ystDay.opening.forEach(o => {
+                    if (!ystStock[o.item]) {
+                        ystStock[o.item] = { qty: 0, unit: o.unit, price: o.unitCost, originalItem: o };
+                    }
+                    ystStock[o.item].qty += o.qty;
+                });
+                
+                // Subtract usage
+                ystDay.transactions.forEach(t => {
+                    if (!ystStock[t.item]) {
+                        ystStock[t.item] = { qty: 0, unit: t.unit, price: t.unitPrice };
+                    }
+                    ystStock[t.item].qty += (t.type === 'usage' ? -t.qty : t.qty);
+                    ystStock[t.item].price = t.unitPrice;
+                });
+                
+                // Add carryover items to today's opening (but avoid duplicates)
+                Object.entries(ystStock).forEach(([item, data]) => {
+                    if (data.qty > 0 && item !== 'Remaining Chapatis' && !todayDay.opening.find(o => o.item === item && o.notes?.includes('Carryover'))) {
+                        todayDay.opening.push({
+                            item: item,
+                            qty: data.qty,
+                            unit: data.unit,
+                            unitCost: data.price,
+                            notes: `Carryover from ${ystStr}`
+                        });
+                    }
+                });
+                
+                saveDay(today, todayDay);
+                
+                // Update display
+                curDate = today;
+                updateAllDateInputs();
+                renderDash();
+                updateBanners();
+            }
+        }
+        
+        // DASHBOARD
+        function renderDash() {
+            const day = getDay(curDate);
+            const remain = day.chapatiMade - day.chapatiSold;
+            const rev = day.sales.reduce((s, x) => s + x.qty * x.price, 0);
+            const cogs = day.transactions.filter(t => t.type === 'usage').reduce((s, t) => s + t.qty * (t.unitPrice || 0), 0);
+            const opex = day.expenses.reduce((s, e) => s + e.amt, 0);
+            const profit = rev - cogs - opex;
+            const share = profit > 0 ? profit / 2 : 0;
+            
+            document.getElementById('status-badge').innerHTML = `<span class="status-badge ${day.status}">${day.status.toUpperCase()}</span>`;
+            document.getElementById('dash-content').innerHTML = `
+                <div class="summary-box">
+                    <h3>🫓 Production</h3>
+                    <div class="summary-row"><span>Made:</span><span>${day.chapatiMade}</span></div>
+                    <div class="summary-row"><span>Sold:</span><span>${day.chapatiSold}</span></div>
+                    <div class="summary-row total"><span>Remaining:</span><span>${remain}</span></div>
+                </div>
+                <div class="summary-box">
+                    <h3>💵 Financials</h3>
+                    <div class="summary-row"><span>Revenue:</span><span>UGX ${fmt(rev)}</span></div>
+                    <div class="summary-row"><span>COGS:</span><span>UGX ${fmt(cogs)}</span></div>
+                    <div class="summary-row"><span>Gross Profit:</span><span>UGX ${fmt(rev - cogs)}</span></div>
+                    <div class="summary-row"><span>Op Expenses:</span><span>UGX ${fmt(opex)}</span></div>
+                    <div class="summary-row ${profit > 0 ? 'profit' : (profit < 0 ? 'loss' : '')}">
+                        <span>${profit > 0 ? '✓ PROFIT' : (profit < 0 ? '✗ LOSS' : '= BREAK-EVEN')}</span>
+                        <span>UGX ${fmt(Math.abs(profit))}</span>
+                    </div>
+                </div>
+                <div class="profit-share">
+                    <div class="profit-share-row"><span>👷 Worker Share:</span><span class="profit-share-row amount">UGX ${fmt(share)}</span></div>
+                    <div class="profit-share-row"><span>👤 Owner Share:</span><span class="profit-share-row amount">UGX ${fmt(share)}</span></div>
+                </div>
+            `;
+        }
+        
+        // OPENING
+        function renderOpen() {
+            const day = getDay(curDate);
+            document.getElementById('chap-made').value = day.chapatiMade || '';
+            document.getElementById('chap-sold').value = day.chapatiSold || '';
+            document.getElementById('chap-remain').value = (day.chapatiMade - day.chapatiSold) || '';
+            
+            const list = document.getElementById('open-list');
+            if (day.opening.length === 0) {
+                list.innerHTML = '<div class="empty-state">No opening stock recorded</div>';
+                return;
+            }
+            list.innerHTML = day.opening.map((o, i) => {
+                const val = o.qty * (o.unitCost || 0);
+                return `
+                    <div class="transaction-item opening">
+                        <div class="transaction-header">${o.item} (${o.unit})</div>
+                        <div class="transaction-detail"><span>Qty: ${o.qty}</span><span>@ UGX ${fmt(o.unitCost || 0)}</span></div>
+                        <div class="transaction-detail"><span>Value: UGX ${fmt(val)}</span><button class="btn btn-small btn-danger" onclick="delOpen('${curDate}', ${i})">Delete</button></div>
+                        <div class="transaction-detail"><span style="font-size: 10px; color: #999;">${o.notes || '—'}</span></div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function delOpen(dt, i) { const day = getDay(dt); day.opening.splice(i, 1); saveDay(dt, day); renderOpen(); }
+        
+        document.getElementById('chap-made')?.addEventListener('input', () => {
+            const m = parseInt(document.getElementById('chap-made').value) || 0;
+            const s = parseInt(document.getElementById('chap-sold').value) || 0;
+            document.getElementById('chap-remain').value = m - s;
+        });
+        document.getElementById('chap-sold')?.addEventListener('input', () => {
+            const m = parseInt(document.getElementById('chap-made').value) || 0;
+            const s = parseInt(document.getElementById('chap-sold').value) || 0;
+            document.getElementById('chap-remain').value = m - s;
+        });
+        
+        const chapatiForm = document.getElementById('chapati-form');
+        if (chapatiForm) {
+            chapatiForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const day = getDay(curDate);
+                day.chapatiMade = parseInt(document.getElementById('chap-made').value) || 0;
+                day.chapatiSold = parseInt(document.getElementById('chap-sold').value) || 0;
+                saveDay(curDate, day);
+                msg('✓ Production recorded', 'success');
+                renderOpen();
+                renderDash();
+            });
+        }
+        
+        const openingForm = document.getElementById('opening-form');
+        if (openingForm) {
+            openingForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const day = getDay(curDate);
+                day.opening.push({
+                    item: document.getElementById('open-item').value,
+                    qty: parseFloat(document.getElementById('open-qty').value),
+                    unit: document.getElementById('open-unit').value,
+                    unitCost: parseFloat(document.getElementById('open-cost').value),
+                    notes: document.getElementById('open-notes').value
+                });
+                saveDay(curDate, day);
+                e.target.reset();
+                renderOpen();
+                msg('✓ Opening stock added', 'success');
+            });
+        }
+        
+        // INVENTORY
+        function renderInv() { renderTrans(); renderStock(); }
+        
+        function renderTrans() {
+            const day = getDay(curDate);
+            const list = document.getElementById('trans-list');
+            if (day.transactions.length === 0) {
+                list.innerHTML = '<div class="empty-state">No transactions</div>';
+                return;
+            }
+            list.innerHTML = day.transactions.map((t, i) => {
+                const val = t.qty * (t.unitPrice || 0);
+                return `
+                    <div class="transaction-item ${t.type}">
+                        <div class="transaction-header">${t.type === 'purchase' ? '📥' : '📤'} ${t.item}</div>
+                        <div class="transaction-detail"><span>Qty: ${t.qty} ${t.unit}</span><span>@ UGX ${fmt(t.unitPrice || 0)}</span></div>
+                        <div class="transaction-detail"><span>Total: UGX ${fmt(val)}</span><button class="btn btn-small btn-danger" onclick="delTrans('${curDate}', ${i})">X</button></div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function delTrans(dt, i) { const day = getDay(dt); day.transactions.splice(i, 1); saveDay(dt, day); renderInv(); }
+        
+        function renderStock() {
+            const day = getDay(curDate);
+            const stock = {};
+            
+            day.opening.forEach(o => {
+                if (!stock[o.item]) stock[o.item] = { qty: 0, unit: o.unit, price: o.unitCost };
+                stock[o.item].qty += o.qty;
+            });
+            
+            day.transactions.forEach(t => {
+                if (!stock[t.item]) stock[t.item] = { qty: 0, unit: t.unit, price: t.unitPrice };
+                stock[t.item].qty += (t.type === 'usage' ? -t.qty : t.qty);
+                stock[t.item].price = t.unitPrice;
+            });
+            
+            const tbody = document.getElementById('stock-tbody');
+            if (Object.keys(stock).length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No inventory</td></tr>';
+                return;
+            }
+            tbody.innerHTML = Object.entries(stock).map(([item, data]) => `
+                <tr>
+                    <td>${item}</td>
+                    <td>${data.qty.toFixed(1)}</td>
+                    <td>${data.unit}</td>
+                    <td>UGX ${fmt(data.qty * (data.price || 0))}</td>
+                </tr>
+            `).join('');
+        }
+        
+        document.getElementById('purch-qty')?.addEventListener('input', calcPurchTotal);
+        document.getElementById('purch-price')?.addEventListener('input', calcPurchTotal);
+        
+        function calcPurchTotal() {
+            const qty = parseFloat(document.getElementById('purch-qty').value) || 0;
+            const price = parseFloat(document.getElementById('purch-price').value) || 0;
+            document.getElementById('purch-total').value = (qty * price).toFixed(0);
+        }
+        
+        const purchaseForm = document.getElementById('purchase-form');
+        if (purchaseForm) {
+            purchaseForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const day = getDay(curDate);
+                day.transactions.push({
+                    type: 'purchase',
+                    item: document.getElementById('purch-item').value,
+                    qty: parseFloat(document.getElementById('purch-qty').value),
+                    unit: document.getElementById('purch-unit').value,
+                    unitPrice: parseFloat(document.getElementById('purch-price').value),
+                    ts: new Date().toISOString()
+                });
+                saveDay(curDate, day);
+                e.target.reset();
+                renderInv();
+                msg('✓ Purchase recorded', 'success');
+            });
+        }
+        
+        const usageForm = document.getElementById('usage-form');
+        if (usageForm) {
+            usageForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const day = getDay(curDate);
+                const item = document.getElementById('usage-item').value;
+                const qty = parseFloat(document.getElementById('usage-qty').value);
+                
+                let price = 0, unit = 'unit';
+                const lastPurch = day.transactions.filter(t => t.item === item && t.type === 'purchase').sort((a, b) => new Date(b.ts) - new Date(a.ts))[0];
+                if (lastPurch) { price = lastPurch.unitPrice; unit = lastPurch.unit; }
+                const lastOpen = day.opening.find(o => o.item === item);
+                if (lastOpen) { unit = lastOpen.unit; price = lastOpen.unitCost || price; }
+                
+                day.transactions.push({
+                    type: 'usage',
+                    item, qty, unit, unitPrice: price, ts: new Date().toISOString()
+                });
+                saveDay(curDate, day);
+                e.target.reset();
+                renderInv();
+                msg('✓ Usage recorded', 'success');
+            });
+        }
+        
+        // SALES
+        function renderSalesList() {
+            const day = getDay(curDate);
+            const list = document.getElementById('sales-list');
+            if (day.sales.length === 0) {
+                list.innerHTML = '<div class="empty-state">No sales recorded</div>';
+                return;
+            }
+            const total = day.sales.reduce((s, x) => s + x.qty * x.price, 0);
+            list.innerHTML = `
+                <div class="summary-box"><div class="summary-row total"><span>Total Revenue</span><span>UGX ${fmt(total)}</span></div></div>
+                ${day.sales.map((s, i) => `
+                    <div class="transaction-item purchase">
+                        <div class="transaction-header">${s.product}</div>
+                        <div class="transaction-detail"><span>Qty: ${s.qty}</span><span>@ UGX ${fmt(s.price)}</span></div>
+                        <div class="transaction-detail"><span>Total: UGX ${fmt(s.qty * s.price)}</span><button class="btn btn-small btn-danger" onclick="delSale('${curDate}', ${i})">X</button></div>
+                    </div>
+                `).join('')}
+            `;
+        }
+        
+        function delSale(dt, i) { const day = getDay(dt); day.sales.splice(i, 1); saveDay(dt, day); renderSalesList(); }
+        
+        document.getElementById('sales-qty')?.addEventListener('input', calcSalesTotal);
+        document.getElementById('sales-price')?.addEventListener('input', calcSalesTotal);
+        
+        function calcSalesTotal() {
+            const qty = parseFloat(document.getElementById('sales-qty').value) || 0;
+            const price = parseFloat(document.getElementById('sales-price').value) || 0;
+            document.getElementById('sales-total').value = (qty * price).toFixed(0);
+        }
+        
+        const salesForm = document.getElementById('sales-form');
+        if (salesForm) {
+            salesForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const day = getDay(curDate);
+                day.sales.push({
+                    product: document.getElementById('sales-product').value,
+                    qty: parseFloat(document.getElementById('sales-qty').value),
+                    price: parseFloat(document.getElementById('sales-price').value),
+                    ts: new Date().toISOString()
+                });
+                saveDay(curDate, day);
+                e.target.reset();
+                renderSalesList();
+                msg('✓ Sale recorded', 'success');
+            });
+        }
+        
+        // EXPENSES
+        function renderExpList() {
+            const day = getDay(curDate);
+            const list = document.getElementById('exp-list');
+            if (day.expenses.length === 0) {
+                list.innerHTML = '<div class="empty-state">No expenses recorded</div>';
+                return;
+            }
+            const total = day.expenses.reduce((s, e) => s + e.amt, 0);
+            list.innerHTML = `
+                <div class="summary-box"><div class="summary-row total"><span>Total Expenses</span><span>UGX ${fmt(total)}</span></div></div>
+                ${day.expenses.map((e, i) => `
+                    <div class="transaction-item usage">
+                        <div class="transaction-header">${e.desc}</div>
+                        <div class="transaction-detail"><span>${e.cat}</span><span>UGX ${fmt(e.amt)}</span></div>
+                        <button class="btn btn-small btn-danger" onclick="delExp('${curDate}', ${i})">X</button>
+                    </div>
+                `).join('')}
+            `;
+        }
+        
+        function delExp(dt, i) { const day = getDay(dt); day.expenses.splice(i, 1); saveDay(dt, day); renderExpList(); }
+        
+        const expenseForm = document.getElementById('expense-form');
+        if (expenseForm) {
+            expenseForm.addEventListener('submit', e => {
+                e.preventDefault();
+                const day = getDay(curDate);
+                day.expenses.push({
+                    desc: document.getElementById('exp-desc').value,
+                    amt: parseFloat(document.getElementById('exp-amt').value),
+                    cat: document.getElementById('exp-cat').value,
+                    ts: new Date().toISOString()
+                });
+                saveDay(curDate, day);
+                e.target.reset();
+                renderExpList();
+                msg('✓ Expense recorded', 'success');
+            });
+        }
+        
+        // CLOSE DAY
+        function renderClose() {
+            const day = getDay(curDate);
+            const rev = day.sales.reduce((s, x) => s + x.qty * x.price, 0);
+            const cogs = day.transactions.filter(t => t.type === 'usage').reduce((s, t) => s + t.qty * (t.unitPrice || 0), 0);
+            const opex = day.expenses.reduce((s, e) => s + e.amt, 0);
+            const profit = rev - cogs - opex;
+            const share = profit > 0 ? profit / 2 : 0;
+            const remain = day.chapatiMade - day.chapatiSold;
+            
+            const stock = {};
+            day.opening.forEach(o => {
+                if (!stock[o.item]) stock[o.item] = { qty: 0, unit: o.unit, price: o.unitCost };
+                stock[o.item].qty += o.qty;
+            });
+            day.transactions.forEach(t => {
+                if (!stock[t.item]) stock[t.item] = { qty: 0, unit: t.unit, price: t.unitPrice };
+                stock[t.item].qty += (t.type === 'usage' ? -t.qty : t.qty);
+            });
+            
+            document.getElementById('close-content').innerHTML = `
+                <div class="summary-box">
+                    <h3>🫓 Chapati</h3>
+                    <div class="summary-row"><span>Made:</span><span>${day.chapatiMade}</span></div>
+                    <div class="summary-row"><span>Sold:</span><span>${day.chapatiSold}</span></div>
+                    <div class="summary-row total"><span>Remaining (Carryover):</span><span>${remain}</span></div>
+                </div>
+                <div class="summary-box">
+                    <h3>📦 Inventory</h3>
+                    <div class="summary-row"><span>Opening Items:</span><span>${day.opening.length}</span></div>
+                    <div class="summary-row"><span>Purchases:</span><span>${day.transactions.filter(t => t.type === 'purchase').length}</span></div>
+                    <div class="summary-row"><span>Usage Recorded:</span><span>${day.transactions.filter(t => t.type === 'usage').length}</span></div>
+                </div>
+                <div class="summary-box">
+                    <h3>📊 Financials</h3>
+                    <div class="summary-row"><span>Revenue:</span><span>UGX ${fmt(rev)}</span></div>
+                    <div class="summary-row"><span>COGS:</span><span>UGX ${fmt(cogs)}</span></div>
+                    <div class="summary-row"><span>Gross Profit:</span><span>UGX ${fmt(rev - cogs)}</span></div>
+                    <div class="summary-row"><span>Op Expenses:</span><span>UGX ${fmt(opex)}</span></div>
+                    <div class="summary-row total ${profit > 0 ? 'profit' : (profit < 0 ? 'loss' : '')}"><span>${profit > 0 ? '✓ PROFIT' : (profit < 0 ? '✗ LOSS' : '= BREAK-EVEN')}</span><span>UGX ${fmt(Math.abs(profit))}</span></div>
+                </div>
+                <div class="profit-share">
+                    <h3>Profit Share (50/50)</h3>
+                    <div class="profit-share-row"><span>👷 Worker:</span><span class="profit-share-row amount">UGX ${fmt(share)}</span></div>
+                    <div class="profit-share-row"><span>👤 Owner:</span><span class="profit-share-row amount">UGX ${fmt(share)}</span></div>
+                </div>
+                <div style="margin-top: 16px;">
+                    ${day.status === 'open' ? `
+                        <button class="btn btn-primary" onclick="carryoverToTomorrow('${curDate}')">📦 Carry Inventory to Tomorrow</button>
+                        <p style="font-size: 11px; color: #666; margin: 8px 0;">Pre-fills tomorrow's opening stock (you can edit).</p>
+                        <button class="btn btn-primary" onclick="closeDay('${curDate}')" style="margin-top: 8px;">✓ Close This Day</button>
+                        <p style="font-size: 11px; color: #999; margin-top: 8px;">All records preserved in History.</p>
+                    ` : `
+                        <div class="alert alert-info">✓ Day closed. Records preserved in History.</div>
+                        <button class="btn btn-secondary" onclick="reopenDay('${curDate}')">Reopen Day</button>
+                    `}
+                </div>
+            `;
+        }
+        
+        function carryoverToTomorrow(dt) {
+            const day = getDay(dt);
+            const stock = {};
+            let lastPrice = {};
+            
+            // Start with opening items
+            day.opening.forEach(o => {
+                if (!stock[o.item]) stock[o.item] = { qty: 0, unit: o.unit };
+                stock[o.item].qty += o.qty;
+                lastPrice[o.item] = o.unitCost;
+            });
+            
+            // Apply transactions and track latest price
+            day.transactions.forEach(t => {
+                if (!stock[t.item]) stock[t.item] = { qty: 0, unit: t.unit };
+                stock[t.item].qty += (t.type === 'usage' ? -t.qty : t.qty);
+                lastPrice[t.item] = t.unitPrice;
+            });
+            
+            const tomorrow = new Date(dt);
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            const tmrStr = tomorrow.toISOString().split('T')[0];
+            const tmrDay = getDay(tmrStr);
+            
+            // Carry chapatis
+            const chapatiRemaining = day.chapatiMade - day.chapatiSold;
+            if (chapatiRemaining > 0 && !tmrDay.opening.find(o => o.item === 'Remaining Chapatis' && o.notes?.includes('Carryover'))) {
+                tmrDay.opening.push({
+                    item: 'Remaining Chapatis',
+                    qty: chapatiRemaining,
+                    unit: 'piece',
+                    unitCost: 0,
+                    notes: `Carryover from ${dt}`
+                });
+            }
+            
+            // Carry inventory
+            Object.entries(stock).forEach(([item, data]) => {
+                if (data.qty > 0 && item !== 'Remaining Chapatis' && !tmrDay.opening.find(o => o.item === item && o.notes?.includes('Carryover'))) {
+                    tmrDay.opening.push({
+                        item: item,
+                        qty: data.qty,
+                        unit: data.unit,
+                        unitCost: lastPrice[item] || 0,
+                        notes: `Carryover from ${dt}`
+                    });
+                }
+            });
+            
+            saveDay(tmrStr, tmrDay);
+            msg(`✓ ${chapatiRemaining > 0 ? chapatiRemaining + ' chapatis + ' : ''}Inventory carried over to ${tmrStr}.`, 'success');
+        }
+        
+        function closeDay(dt) { const day = getDay(dt); day.status = 'closed'; saveDay(dt, day); msg('✓ Day closed and preserved!', 'success'); renderClose(); }
+        function reopenDay(dt) { const day = getDay(dt); day.status = 'open'; saveDay(dt, day); msg('✓ Day reopened', 'success'); renderClose(); }
+        
+        // HISTORY
+        function renderHist() {
+            const d = load();
+            const dates = Object.keys(d.days).sort().reverse();
+            const list = document.getElementById('hist-list');
+            
+            if (dates.length === 0) {
+                list.innerHTML = '<div class="empty-state">No business records yet</div>';
+                return;
+            }
+            
+            list.innerHTML = dates.map(dt => {
+                const day = d.days[dt];
+                const rev = day.sales.reduce((s, x) => s + x.qty * x.price, 0);
+                const cogs = day.transactions.filter(t => t.type === 'usage').reduce((s, t) => s + t.qty * (t.unitPrice || 0), 0);
+                const opex = day.expenses.reduce((s, e) => s + e.amt, 0);
+                const profit = rev - cogs - opex;
+                const remain = day.chapatiMade - day.chapatiSold;
+                const profitLabel = profit > 0 ? '✓ PROFIT' : (profit < 0 ? '✗ LOSS' : '= BREAK-EVEN');
+                const profitColor = profit > 0 ? '#27a745' : (profit < 0 ? '#dc3545' : '#999');
+                
+                return `
+                    <div class="day-item" onclick="viewHistoryDay('${dt}')">
+                        <div class="day-item-date">${new Date(dt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', weekday: 'short' })}</div>
+                        <div class="day-item-summary">
+                            <span>Revenue: UGX ${fmt(rev)}</span>
+                            <span style="color: ${profitColor}; font-weight: 600;">${profitLabel}: UGX ${fmt(Math.abs(profit))}</span>
+                        </div>
+                        <div style="font-size: 10px; color: #666; margin-top: 4px;">Made: ${day.chapatiMade} | Sold: ${day.chapatiSold} | Remain: ${remain} | <span style="background: ${day.status === 'open' ? '#d4edda' : '#e2e3e5'}; padding: 1px 4px; border-radius: 2px;">${day.status.toUpperCase()}</span></div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // BACKUP
+        function downloadBackup() {
+            const d = load();
+            const json = JSON.stringify(d, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `chapati-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            msg('✓ Backup downloaded', 'success');
+        }
+        
+        function uploadBackup() {
+            const file = document.getElementById('backup-file').files[0];
+            if (!file) { msg('Please select a file', 'error'); return; }
+            
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    save(data);
+                    msg('✓ Backup restored! Page will reload.', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } catch (err) {
+                    msg('Error: Invalid backup file', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+        
+        function clearAllData() {
+            if (confirm('⚠️ DELETE ALL business records? Cannot undo!')) {
+                if (confirm('Really? All data will be gone!')) {
+                    localStorage.removeItem(KEY);
+                    msg('✓ All data cleared', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                }
+            }
+        }
+        
+        // UTILS
+        function fmt(n) { return parseInt(n).toLocaleString(); }
+        function msg(text, type) {
+            const c = document.querySelector('.container');
+            const a = document.createElement('div');
+            a.className = `alert alert-${type}`;
+            a.textContent = text;
+            c.insertBefore(a, c.firstChild);
+            setTimeout(() => a.remove(), 3000);
+        }
+    </script>
+</body>
+</html>
