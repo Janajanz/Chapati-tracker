@@ -146,7 +146,7 @@
                 <h3>🫓 Chapati Production</h3>
                 <form id="chapati-form">
                     <div class="form-row full">
-                        <div class="form-group"><label>📦 Carried from Yesterday</label><input type="number" id="chap-carried" disabled style="background: #f0ede8; color: #666;"></div>
+                        <div class="form-group"><label>📦 Remaining from Yesterday (Edit if needed)</label><input type="number" id="chap-carried" min="0"></div>
                     </div>
                     <div class="form-row">
                         <div class="form-group"><label>Made Today</label><input type="number" id="chap-made" min="0"></div>
@@ -373,11 +373,18 @@
             if (!d.days[dt]) {
                 d.days[dt] = {
                     date: dt, status: 'open',
-                    chapatiMade: 0, chapatiSold: 0,
+                    chapatiCarried: 0, chapatiMade: 0, chapatiRemaining: 0,
                     opening: [], transactions: [], sales: [], expenses: []
                 };
                 save(d);
             }
+            // Ensure all fields exist (for old data)
+            if (!d.days[dt].chapatiCarried) d.days[dt].chapatiCarried = 0;
+            if (!d.days[dt].chapatiRemaining) d.days[dt].chapatiRemaining = 0;
+            if (!d.days[dt].opening) d.days[dt].opening = [];
+            if (!d.days[dt].transactions) d.days[dt].transactions = [];
+            if (!d.days[dt].sales) d.days[dt].sales = [];
+            if (!d.days[dt].expenses) d.days[dt].expenses = [];
             return d.days[dt];
         }
         
@@ -586,6 +593,17 @@
         }
         
         function delOpen(dt, i) { const day = getDay(dt); day.opening.splice(i, 1); saveDay(dt, day); renderOpen(); }
+        
+        document.getElementById('chap-carried')?.addEventListener('input', () => {
+            const carried = parseInt(document.getElementById('chap-carried').value) || 0;
+            const made = parseInt(document.getElementById('chap-made').value) || 0;
+            const total = carried + made;
+            document.getElementById('chap-total-made').value = total;
+            
+            const remaining = parseInt(document.getElementById('chap-remain').value) || 0;
+            const sold = total - remaining;
+            document.getElementById('chap-sold').value = sold;
+        });
         
         document.getElementById('chap-made')?.addEventListener('input', () => {
             const carried = parseInt(document.getElementById('chap-carried').value) || 0;
@@ -1054,6 +1072,39 @@
             c.insertBefore(a, c.firstChild);
             setTimeout(() => a.remove(), 3000);
         }
+        
+        // STARTUP VERIFICATION - Ensure data loads correctly
+        function verifyDataOnStartup() {
+            try {
+                const data = load();
+                const dayCount = Object.keys(data.days || {}).length;
+                console.log(`✓ Data loaded: ${dayCount} day(s) found in localStorage`);
+                
+                // If no data, show message
+                if (dayCount === 0) {
+                    console.log('Note: No historical data found. Start entering data for today!');
+                }
+                
+                // Pre-load today
+                getDay(curDate);
+                
+            } catch (err) {
+                console.error('❌ Data load error:', err);
+                msg('⚠️ Data error. Check browser console.', 'error');
+            }
+        }
+        
+        // Run verification when page loads
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(verifyDataOnStartup, 100);
+        });
+        
+        // Also verify on visibility change (when app comes back to focus)
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                verifyDataOnStartup();
+            }
+        });
     </script>
 </body>
 </html>
