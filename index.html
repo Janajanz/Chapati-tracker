@@ -145,12 +145,16 @@
                 
                 <h3>🫓 Chapati Production</h3>
                 <form id="chapati-form">
-                    <div class="form-row">
-                        <div class="form-group"><label>Made</label><input type="number" id="chap-made" min="0"></div>
-                        <div class="form-group"><label>Sold</label><input type="number" id="chap-sold" min="0"></div>
-                    </div>
                     <div class="form-row full">
-                        <div class="form-group"><label>Remaining</label><input type="number" id="chap-remain" disabled></div>
+                        <div class="form-group"><label>📦 Carried from Yesterday</label><input type="number" id="chap-carried" disabled style="background: #f0ede8; color: #666;"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Made Today</label><input type="number" id="chap-made" min="0"></div>
+                        <div class="form-group"><label>Total Made</label><input type="number" id="chap-total-made" disabled style="background: #f0ede8; color: #666;"></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Remaining (Count)</label><input type="number" id="chap-remain" min="0"></div>
+                        <div class="form-group"><label>Sold (Auto)</label><input type="number" id="chap-sold" disabled style="background: #f0ede8; color: #666;"></div>
                     </div>
                     <button type="submit" class="btn btn-primary">Record Production</button>
                 </form>
@@ -455,8 +459,6 @@
         function checkDateChanged() {
             const today = new Date().toISOString().split('T')[0];
             if (today !== curDate && !viewingDate) {
-                // Date has changed!
-                // Auto-carry over inventory from yesterday to today
                 const yesterday = new Date(today);
                 yesterday.setDate(yesterday.getDate() - 1);
                 const ystStr = yesterday.toISOString().split('T')[0];
@@ -464,30 +466,21 @@
                 const ystDay = getDay(ystStr);
                 const todayDay = getDay(today);
                 
-                // Carry over remaining CHAPATIS
+                // Carry over remaining CHAPATIS - add to today's Made count
                 const chapatiRemaining = ystDay.chapatiMade - ystDay.chapatiSold;
                 if (chapatiRemaining > 0) {
-                    todayDay.opening.push({
-                        item: 'Remaining Chapatis',
-                        qty: chapatiRemaining,
-                        unit: 'piece',
-                        unitCost: 0,
-                        notes: `Carryover from ${ystStr}`
-                    });
+                    todayDay.chapatiMade += chapatiRemaining;
                 }
                 
                 // Carry over remaining INVENTORY items
                 const ystStock = {};
-                
-                // Start with opening items
                 ystDay.opening.forEach(o => {
                     if (!ystStock[o.item]) {
-                        ystStock[o.item] = { qty: 0, unit: o.unit, price: o.unitCost, originalItem: o };
+                        ystStock[o.item] = { qty: 0, unit: o.unit, price: o.unitCost };
                     }
                     ystStock[o.item].qty += o.qty;
                 });
                 
-                // Subtract usage
                 ystDay.transactions.forEach(t => {
                     if (!ystStock[t.item]) {
                         ystStock[t.item] = { qty: 0, unit: t.unit, price: t.unitPrice };
@@ -496,9 +489,8 @@
                     ystStock[t.item].price = t.unitPrice;
                 });
                 
-                // Add carryover items to today's opening (but avoid duplicates)
                 Object.entries(ystStock).forEach(([item, data]) => {
-                    if (data.qty > 0 && item !== 'Remaining Chapatis' && !todayDay.opening.find(o => o.item === item && o.notes?.includes('Carryover'))) {
+                    if (data.qty > 0 && !todayDay.opening.find(o => o.item === item && o.notes?.includes('Carryover'))) {
                         todayDay.opening.push({
                             item: item,
                             qty: data.qty,
@@ -510,8 +502,6 @@
                 });
                 
                 saveDay(today, todayDay);
-                
-                // Update display
                 curDate = today;
                 updateAllDateInputs();
                 renderDash();
@@ -522,7 +512,12 @@
         // DASHBOARD
         function renderDash() {
             const day = getDay(curDate);
-            const remain = day.chapatiMade - day.chapatiSold;
+            const carried = day.chapatiCarried || 0;
+            const made = day.chapatiMade || 0;
+            const total = carried + made;
+            const remaining = day.chapatiRemaining || 0;
+            const sold = total - remaining;
+            
             const rev = day.sales.reduce((s, x) => s + x.qty * x.price, 0);
             const cogs = day.transactions.filter(t => t.type === 'usage').reduce((s, t) => s + t.qty * (t.unitPrice || 0), 0);
             const opex = day.expenses.reduce((s, e) => s + e.amt, 0);
@@ -533,9 +528,11 @@
             document.getElementById('dash-content').innerHTML = `
                 <div class="summary-box">
                     <h3>🫓 Production</h3>
-                    <div class="summary-row"><span>Made:</span><span>${day.chapatiMade}</span></div>
-                    <div class="summary-row"><span>Sold:</span><span>${day.chapatiSold}</span></div>
-                    <div class="summary-row total"><span>Remaining:</span><span>${remain}</span></div>
+                    <div class="summary-row"><span>📦 Carried:</span><span>${carried}</span></div>
+                    <div class="summary-row"><span>Made Today:</span><span>${made}</span></div>
+                    <div class="summary-row total"><span>Total Made:</span><span>${total}</span></div>
+                    <div class="summary-row"><span>Remaining:</span><span>${remaining}</span></div>
+                    <div class="summary-row total"><span>Sold:</span><span>${sold}</span></div>
                 </div>
                 <div class="summary-box">
                     <h3>💵 Financials</h3>
@@ -558,9 +555,17 @@
         // OPENING
         function renderOpen() {
             const day = getDay(curDate);
-            document.getElementById('chap-made').value = day.chapatiMade || '';
-            document.getElementById('chap-sold').value = day.chapatiSold || '';
-            document.getElementById('chap-remain').value = (day.chapatiMade - day.chapatiSold) || '';
+            const carried = day.chapatiCarried || 0;
+            const made = day.chapatiMade || 0;
+            const total = carried + made;
+            const remaining = day.chapatiRemaining || 0;
+            const sold = total - remaining;
+            
+            document.getElementById('chap-carried').value = carried;
+            document.getElementById('chap-made').value = made;
+            document.getElementById('chap-total-made').value = total;
+            document.getElementById('chap-remain').value = remaining;
+            document.getElementById('chap-sold').value = sold;
             
             const list = document.getElementById('open-list');
             if (day.opening.length === 0) {
@@ -583,14 +588,23 @@
         function delOpen(dt, i) { const day = getDay(dt); day.opening.splice(i, 1); saveDay(dt, day); renderOpen(); }
         
         document.getElementById('chap-made')?.addEventListener('input', () => {
-            const m = parseInt(document.getElementById('chap-made').value) || 0;
-            const s = parseInt(document.getElementById('chap-sold').value) || 0;
-            document.getElementById('chap-remain').value = m - s;
+            const carried = parseInt(document.getElementById('chap-carried').value) || 0;
+            const made = parseInt(document.getElementById('chap-made').value) || 0;
+            const total = carried + made;
+            document.getElementById('chap-total-made').value = total;
+            
+            const remaining = parseInt(document.getElementById('chap-remain').value) || 0;
+            const sold = total - remaining;
+            document.getElementById('chap-sold').value = sold;
         });
-        document.getElementById('chap-sold')?.addEventListener('input', () => {
-            const m = parseInt(document.getElementById('chap-made').value) || 0;
-            const s = parseInt(document.getElementById('chap-sold').value) || 0;
-            document.getElementById('chap-remain').value = m - s;
+        
+        document.getElementById('chap-remain')?.addEventListener('input', () => {
+            const carried = parseInt(document.getElementById('chap-carried').value) || 0;
+            const made = parseInt(document.getElementById('chap-made').value) || 0;
+            const total = carried + made;
+            const remaining = parseInt(document.getElementById('chap-remain').value) || 0;
+            const sold = total - remaining;
+            document.getElementById('chap-sold').value = sold;
         });
         
         const chapatiForm = document.getElementById('chapati-form');
@@ -598,8 +612,15 @@
             chapatiForm.addEventListener('submit', e => {
                 e.preventDefault();
                 const day = getDay(curDate);
-                day.chapatiMade = parseInt(document.getElementById('chap-made').value) || 0;
-                day.chapatiSold = parseInt(document.getElementById('chap-sold').value) || 0;
+                const carried = parseInt(document.getElementById('chap-carried').value) || 0;
+                const made = parseInt(document.getElementById('chap-made').value) || 0;
+                const remaining = parseInt(document.getElementById('chap-remain').value) || 0;
+                const total = carried + made;
+                
+                day.chapatiCarried = carried;
+                day.chapatiMade = made;
+                day.chapatiRemaining = remaining;
+                
                 saveDay(curDate, day);
                 msg('✓ Production recorded', 'success');
                 renderOpen();
@@ -828,12 +849,17 @@
         // CLOSE DAY
         function renderClose() {
             const day = getDay(curDate);
+            const carried = day.chapatiCarried || 0;
+            const made = day.chapatiMade || 0;
+            const total = carried + made;
+            const remaining = day.chapatiRemaining || 0;
+            const sold = total - remaining;
+            
             const rev = day.sales.reduce((s, x) => s + x.qty * x.price, 0);
             const cogs = day.transactions.filter(t => t.type === 'usage').reduce((s, t) => s + t.qty * (t.unitPrice || 0), 0);
             const opex = day.expenses.reduce((s, e) => s + e.amt, 0);
             const profit = rev - cogs - opex;
             const share = profit > 0 ? profit / 2 : 0;
-            const remain = day.chapatiMade - day.chapatiSold;
             
             const stock = {};
             day.opening.forEach(o => {
@@ -848,9 +874,11 @@
             document.getElementById('close-content').innerHTML = `
                 <div class="summary-box">
                     <h3>🫓 Chapati</h3>
-                    <div class="summary-row"><span>Made:</span><span>${day.chapatiMade}</span></div>
-                    <div class="summary-row"><span>Sold:</span><span>${day.chapatiSold}</span></div>
-                    <div class="summary-row total"><span>Remaining (Carryover):</span><span>${remain}</span></div>
+                    <div class="summary-row"><span>📦 Carried:</span><span>${carried}</span></div>
+                    <div class="summary-row"><span>Made Today:</span><span>${made}</span></div>
+                    <div class="summary-row total"><span>Total Made:</span><span>${total}</span></div>
+                    <div class="summary-row"><span>Remaining:</span><span>${remaining}</span></div>
+                    <div class="summary-row total"><span>Sold:</span><span>${sold}</span></div>
                 </div>
                 <div class="summary-box">
                     <h3>📦 Inventory</h3>
@@ -873,8 +901,8 @@
                 </div>
                 <div style="margin-top: 16px;">
                     ${day.status === 'open' ? `
-                        <button class="btn btn-primary" onclick="carryoverToTomorrow('${curDate}')">📦 Carry Inventory to Tomorrow</button>
-                        <p style="font-size: 11px; color: #666; margin: 8px 0;">Pre-fills tomorrow's opening stock (you can edit).</p>
+                        <button class="btn btn-primary" onclick="carryoverToTomorrow('${curDate}')">📦 Carry to Tomorrow</button>
+                        <p style="font-size: 11px; color: #666; margin: 8px 0;">Moves remaining chapatis and inventory to tomorrow.</p>
                         <button class="btn btn-primary" onclick="closeDay('${curDate}')" style="margin-top: 8px;">✓ Close This Day</button>
                         <p style="font-size: 11px; color: #999; margin-top: 8px;">All records preserved in History.</p>
                     ` : `
@@ -909,21 +937,15 @@
             const tmrStr = tomorrow.toISOString().split('T')[0];
             const tmrDay = getDay(tmrStr);
             
-            // Carry chapatis
-            const chapatiRemaining = day.chapatiMade - day.chapatiSold;
-            if (chapatiRemaining > 0 && !tmrDay.opening.find(o => o.item === 'Remaining Chapatis' && o.notes?.includes('Carryover'))) {
-                tmrDay.opening.push({
-                    item: 'Remaining Chapatis',
-                    qty: chapatiRemaining,
-                    unit: 'piece',
-                    unitCost: 0,
-                    notes: `Carryover from ${dt}`
-                });
+            // Carry chapatis - add to tomorrow's chapatiCarried
+            const chapatiRemaining = day.chapatiRemaining || 0;
+            if (chapatiRemaining > 0) {
+                tmrDay.chapatiCarried = (tmrDay.chapatiCarried || 0) + chapatiRemaining;
             }
             
             // Carry inventory
             Object.entries(stock).forEach(([item, data]) => {
-                if (data.qty > 0 && item !== 'Remaining Chapatis' && !tmrDay.opening.find(o => o.item === item && o.notes?.includes('Carryover'))) {
+                if (data.qty > 0 && !tmrDay.opening.find(o => o.item === item && o.notes?.includes('Carryover'))) {
                     tmrDay.opening.push({
                         item: item,
                         qty: data.qty,
@@ -954,11 +976,16 @@
             
             list.innerHTML = dates.map(dt => {
                 const day = d.days[dt];
+                const carried = day.chapatiCarried || 0;
+                const made = day.chapatiMade || 0;
+                const total = carried + made;
+                const remaining = day.chapatiRemaining || 0;
+                const sold = total - remaining;
+                
                 const rev = day.sales.reduce((s, x) => s + x.qty * x.price, 0);
                 const cogs = day.transactions.filter(t => t.type === 'usage').reduce((s, t) => s + t.qty * (t.unitPrice || 0), 0);
                 const opex = day.expenses.reduce((s, e) => s + e.amt, 0);
                 const profit = rev - cogs - opex;
-                const remain = day.chapatiMade - day.chapatiSold;
                 const profitLabel = profit > 0 ? '✓ PROFIT' : (profit < 0 ? '✗ LOSS' : '= BREAK-EVEN');
                 const profitColor = profit > 0 ? '#27a745' : (profit < 0 ? '#dc3545' : '#999');
                 
@@ -969,7 +996,7 @@
                             <span>Revenue: UGX ${fmt(rev)}</span>
                             <span style="color: ${profitColor}; font-weight: 600;">${profitLabel}: UGX ${fmt(Math.abs(profit))}</span>
                         </div>
-                        <div style="font-size: 10px; color: #666; margin-top: 4px;">Made: ${day.chapatiMade} | Sold: ${day.chapatiSold} | Remain: ${remain} | <span style="background: ${day.status === 'open' ? '#d4edda' : '#e2e3e5'}; padding: 1px 4px; border-radius: 2px;">${day.status.toUpperCase()}</span></div>
+                        <div style="font-size: 10px; color: #666; margin-top: 4px;">Made: ${made} | Sold: ${sold} | Remain: ${remaining} | <span style="background: ${day.status === 'open' ? '#d4edda' : '#e2e3e5'}; padding: 1px 4px; border-radius: 2px;">${day.status.toUpperCase()}</span></div>
                     </div>
                 `;
             }).join('');
