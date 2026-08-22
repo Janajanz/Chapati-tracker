@@ -244,6 +244,9 @@
                 
                 <h3>Current Stock</h3>
                 <table class="inventory-table"><thead><tr><th>Item</th><th>Qty</th><th>Unit</th><th>Value</th></tr></thead><tbody id="stock-tbody"></tbody></table>
+                <div id="stock-summary" style="margin-top: 12px; padding: 12px; background: #f9f7f4; border-left: 4px solid #d4a574; border-radius: 4px;">
+                    <div style="font-size: 14px; font-weight: 600; color: #333;">Total Inventory Value: <span id="stock-total-value">UGX 0</span></div>
+                </div>
             </div>
         </div>
         
@@ -705,18 +708,28 @@
             });
             
             const tbody = document.getElementById('stock-tbody');
+            let totalValue = 0;
+            
             if (Object.keys(stock).length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999;">No inventory</td></tr>';
+                document.getElementById('stock-total-value').textContent = 'UGX 0';
                 return;
             }
-            tbody.innerHTML = Object.entries(stock).map(([item, data]) => `
-                <tr>
-                    <td>${item}</td>
-                    <td>${data.qty.toFixed(1)}</td>
-                    <td>${data.unit}</td>
-                    <td>UGX ${fmt(data.qty * (data.price || 0))}</td>
-                </tr>
-            `).join('');
+            
+            tbody.innerHTML = Object.entries(stock).map(([item, data]) => {
+                const itemValue = data.qty * (data.price || 0);
+                totalValue += itemValue;
+                return `
+                    <tr>
+                        <td>${item}</td>
+                        <td>${data.qty.toFixed(1)}</td>
+                        <td>${data.unit}</td>
+                        <td>UGX ${fmt(itemValue)}</td>
+                    </tr>
+                `;
+            }).join('');
+            
+            document.getElementById('stock-total-value').textContent = `UGX ${fmt(totalValue)}`;
         }
         
         document.getElementById('purch-qty')?.addEventListener('input', calcPurchTotal);
