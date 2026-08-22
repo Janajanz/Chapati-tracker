@@ -806,23 +806,87 @@
         
         // SALES
         function renderSalesList() {
+            const d = load();
             const day = getDay(curDate);
+            const today = new Date();
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay());
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            // Calculate week & month totals
+            let weekTotal = 0, monthTotal = 0;
+            Object.keys(d.days).forEach(dt => {
+                const dayDate = new Date(dt);
+                const dayData = d.days[dt];
+                const dayRev = dayData.sales.reduce((s, x) => s + x.qty * x.price, 0);
+                
+                if (dayDate >= weekStart && dayDate <= today) {
+                    weekTotal += dayRev;
+                }
+                if (dayDate >= monthStart && dayDate <= today) {
+                    monthTotal += dayRev;
+                }
+            });
+            
+            const todayTotal = day.sales.reduce((s, x) => s + x.qty * x.price, 0);
+            
             const list = document.getElementById('sales-list');
+            
+            let html = `
+                <div style="margin-bottom: 16px;">
+                    <h4 style="margin: 0 0 8px 0; font-size: 13px; color: #666;">📊 SALES SUMMARY</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+                        <div style="background: #fff3e0; padding: 8px; border-radius: 4px; text-align: center;">
+                            <div style="font-size: 11px; color: #666;">Today</div>
+                            <div style="font-size: 14px; font-weight: 600;">UGX ${fmt(todayTotal)}</div>
+                        </div>
+                        <div style="background: #e3f2fd; padding: 8px; border-radius: 4px; text-align: center;">
+                            <div style="font-size: 11px; color: #666;">This Week</div>
+                            <div style="font-size: 14px; font-weight: 600;">UGX ${fmt(weekTotal)}</div>
+                        </div>
+                        <div style="background: #f3e5f5; padding: 8px; border-radius: 4px; text-align: center;">
+                            <div style="font-size: 11px; color: #666;">This Month</div>
+                            <div style="font-size: 14px; font-weight: 600;">UGX ${fmt(monthTotal)}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <h4 style="margin: 16px 0 8px 0; font-size: 13px; color: #666;">📅 TODAY'S SALES</h4>
+            `;
+            
             if (day.sales.length === 0) {
-                list.innerHTML = '<div class="empty-state">No sales recorded</div>';
-                return;
-            }
-            const total = day.sales.reduce((s, x) => s + x.qty * x.price, 0);
-            list.innerHTML = `
-                <div class="summary-box"><div class="summary-row total"><span>Total Revenue</span><span>UGX ${fmt(total)}</span></div></div>
-                ${day.sales.map((s, i) => `
+                html += '<div class="empty-state">No sales recorded today</div>';
+            } else {
+                html += `<div class="summary-box"><div class="summary-row total"><span>Total Revenue</span><span>UGX ${fmt(todayTotal)}</span></div></div>`;
+                html += day.sales.map((s, i) => `
                     <div class="transaction-item purchase">
                         <div class="transaction-header">${s.product}</div>
                         <div class="transaction-detail"><span>Qty: ${s.qty}</span><span>@ UGX ${fmt(s.price)}</span></div>
                         <div class="transaction-detail"><span>Total: UGX ${fmt(s.qty * s.price)}</span><button class="btn btn-small btn-danger" onclick="delSale('${curDate}', ${i})">X</button></div>
                     </div>
-                `).join('')}
-            `;
+                `).join('');
+            }
+            
+            // Daily breakdown for all recorded days
+            html += `<h4 style="margin: 16px 0 8px 0; font-size: 13px; color: #666;">📈 DAILY BREAKDOWN</h4>`;
+            const dates = Object.keys(d.days).sort().reverse();
+            html += '<div style="max-height: 300px; overflow-y: auto;">';
+            html += dates.map(dt => {
+                const dayData = d.days[dt];
+                const dayRev = dayData.sales.reduce((s, x) => s + x.qty * x.price, 0);
+                if (dayRev > 0) {
+                    return `
+                        <div style="padding: 8px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between;">
+                            <span style="font-size: 12px;">${new Date(dt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                            <span style="font-weight: 600; font-size: 12px;">UGX ${fmt(dayRev)}</span>
+                        </div>
+                    `;
+                }
+                return '';
+            }).join('');
+            html += '</div>';
+            
+            list.innerHTML = html;
         }
         
         function delSale(dt, i) { const day = getDay(dt); day.sales.splice(i, 1); saveDay(dt, day); renderSalesList(); }
