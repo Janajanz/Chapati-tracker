@@ -131,6 +131,10 @@
                 <div id="status-badge"></div>
                 <h2>📊 Today's Summary</h2>
                 <div id="dash-content"></div>
+                <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee;">
+                    <button class="btn btn-secondary" onclick="refreshApp()" style="width: 100%; font-size: 12px;">🔄 Refresh App (Load New Changes)</button>
+                    <p style="font-size: 10px; color: #999; margin-top: 8px; text-align: center;">Your data is safe - refresh reloads new updates.</p>
+                </div>
             </div>
         </div>
         
@@ -370,6 +374,13 @@
         function toggleMenu() {
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('sidebarOverlay').classList.toggle('open');
+        }
+        
+        function refreshApp() {
+            msg('🔄 Refreshing app...', 'info');
+            setTimeout(() => {
+                location.reload();
+            }, 500);
         }
         
         function goView(view) {
