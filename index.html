@@ -113,6 +113,7 @@
             <div class="sidebar-item" data-view="sales" onclick="goView('sales')">💰 Sales</div>
             <div class="sidebar-item" data-view="expenses" onclick="goView('expenses')">💸 Expenses</div>
             <div class="sidebar-item" data-view="close" onclick="goView('close')">🔒 Close Day</div>
+            <div class="sidebar-item" data-view="analytics" onclick="goView('analytics')">📈 Analytics</div>
             <div class="sidebar-item" data-view="history" onclick="goView('history')">📅 History</div>
             <div class="sidebar-item" data-view="backup" onclick="goView('backup')">💾 Backup</div>
         </div>
@@ -314,6 +315,22 @@
             </div>
         </div>
         
+        <!-- ANALYTICS -->
+        <div id="analytics" class="view">
+            <div class="card">
+                <h2>📈 Business Analytics</h2>
+                
+                <h3 style="margin-top: 16px;">📊 This Week Summary</h3>
+                <div id="week-summary" style="background: #f9f7f4; padding: 12px; border-radius: 6px; margin-bottom: 12px;"></div>
+                
+                <h3>📅 This Month Summary</h3>
+                <div id="month-summary" style="background: #f9f7f4; padding: 12px; border-radius: 6px; margin-bottom: 12px;"></div>
+                
+                <h3>💰 Worker & Owner Earnings</h3>
+                <div id="earnings-summary" style="background: #f9f7f4; padding: 12px; border-radius: 6px;"></div>
+            </div>
+        </div>
+        
         <!-- HISTORY -->
         <div id="history" class="view">
             <div class="card">
@@ -368,6 +385,7 @@
             else if (view === 'sales') renderSalesList();
             else if (view === 'expenses') renderExpList();
             else if (view === 'close') renderClose();
+            else if (view === 'analytics') renderAnalytics();
             else if (view === 'history') renderHist();
         }
         
@@ -1030,6 +1048,137 @@
                     </div>
                 `;
             }).join('');
+        }
+        
+        function renderAnalytics() {
+            const d = load();
+            const today = new Date();
+            const weekStart = new Date(today);
+            weekStart.setDate(today.getDate() - today.getDay()); // Start of week (Sunday)
+            const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            // Calculate week data
+            let weekRev = 0, weekCogs = 0, weekOpex = 0, weekDays = 0, weekChapatiSold = 0;
+            let weekWorkerShare = 0, weekOwnerShare = 0;
+            
+            Object.keys(d.days).forEach(dt => {
+                const dayDate = new Date(dt);
+                if (dayDate >= weekStart && dayDate <= today) {
+                    const day = d.days[dt];
+                    const rev = day.sales.reduce((s, x) => s + x.qty * x.price, 0);
+                    const cogs = day.transactions.filter(t => t.type === 'usage').reduce((s, t) => s + t.qty * (t.unitPrice || 0), 0);
+                    const opex = day.expenses.reduce((s, e) => s + e.amt, 0);
+                    const profit = rev - cogs - opex;
+                    const share = profit > 0 ? profit / 2 : 0;
+                    
+                    weekRev += rev;
+                    weekCogs += cogs;
+                    weekOpex += opex;
+                    weekDays += 1;
+                    weekWorkerShare += share;
+                    weekOwnerShare += share;
+                    
+                    const carried = day.chapatiCarried || 0;
+                    const made = day.chapatiMade || 0;
+                    const total = carried + made;
+                    const remaining = day.chapatiRemaining || 0;
+                    weekChapatiSold += (total - remaining);
+                }
+            });
+            
+            const weekProfit = weekRev - weekCogs - weekOpex;
+            
+            // Calculate month data
+            let monthRev = 0, monthCogs = 0, monthOpex = 0, monthDays = 0, monthChapatiSold = 0;
+            let monthWorkerShare = 0, monthOwnerShare = 0;
+            
+            Object.keys(d.days).forEach(dt => {
+                const dayDate = new Date(dt);
+                if (dayDate >= monthStart && dayDate <= today) {
+                    const day = d.days[dt];
+                    const rev = day.sales.reduce((s, x) => s + x.qty * x.price, 0);
+                    const cogs = day.transactions.filter(t => t.type === 'usage').reduce((s, t) => s + t.qty * (t.unitPrice || 0), 0);
+                    const opex = day.expenses.reduce((s, e) => s + e.amt, 0);
+                    const profit = rev - cogs - opex;
+                    const share = profit > 0 ? profit / 2 : 0;
+                    
+                    monthRev += rev;
+                    monthCogs += cogs;
+                    monthOpex += opex;
+                    monthDays += 1;
+                    monthWorkerShare += share;
+                    monthOwnerShare += share;
+                    
+                    const carried = day.chapatiCarried || 0;
+                    const made = day.chapatiMade || 0;
+                    const total = carried + made;
+                    const remaining = day.chapatiRemaining || 0;
+                    monthChapatiSold += (total - remaining);
+                }
+            });
+            
+            const monthProfit = monthRev - monthCogs - monthOpex;
+            
+            // Render week summary
+            document.getElementById('week-summary').innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div><span style="color: #666; font-size: 12px;">Days Tracked:</span><div style="font-size: 18px; font-weight: 600;">${weekDays}</div></div>
+                    <div><span style="color: #666; font-size: 12px;">Chapati Sold:</span><div style="font-size: 18px; font-weight: 600;">${weekChapatiSold}</div></div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div><span style="color: #666; font-size: 12px;">Revenue:</span><div style="font-size: 16px; font-weight: 600;">UGX ${fmt(weekRev)}</div></div>
+                    <div><span style="color: #666; font-size: 12px;">Expenses:</span><div style="font-size: 16px; font-weight: 600;">UGX ${fmt(weekCogs + weekOpex)}</div></div>
+                </div>
+                <div style="padding-top: 12px; border-top: 1px solid #ddd; color: ${weekProfit > 0 ? '#27a745' : (weekProfit < 0 ? '#dc3545' : '#999')}; font-weight: 600; font-size: 16px;">
+                    ${weekProfit > 0 ? '✓ PROFIT' : (weekProfit < 0 ? '✗ LOSS' : '= BREAK-EVEN')}: UGX ${fmt(Math.abs(weekProfit))}
+                </div>
+            `;
+            
+            // Render month summary
+            document.getElementById('month-summary').innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div><span style="color: #666; font-size: 12px;">Days Tracked:</span><div style="font-size: 18px; font-weight: 600;">${monthDays}</div></div>
+                    <div><span style="color: #666; font-size: 12px;">Chapati Sold:</span><div style="font-size: 18px; font-weight: 600;">${monthChapatiSold}</div></div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
+                    <div><span style="color: #666; font-size: 12px;">Revenue:</span><div style="font-size: 16px; font-weight: 600;">UGX ${fmt(monthRev)}</div></div>
+                    <div><span style="color: #666; font-size: 12px;">Expenses:</span><div style="font-size: 16px; font-weight: 600;">UGX ${fmt(monthCogs + monthOpex)}</div></div>
+                </div>
+                <div style="padding-top: 12px; border-top: 1px solid #ddd; color: ${monthProfit > 0 ? '#27a745' : (monthProfit < 0 ? '#dc3545' : '#999')}; font-weight: 600; font-size: 16px;">
+                    ${monthProfit > 0 ? '✓ PROFIT' : (monthProfit < 0 ? '✗ LOSS' : '= BREAK-EVEN')}: UGX ${fmt(Math.abs(monthProfit))}
+                </div>
+            `;
+            
+            // Render earnings
+            document.getElementById('earnings-summary').innerHTML = `
+                <div style="margin-bottom: 16px;">
+                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">This Week (${weekDays} days)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div style="background: white; padding: 8px; border-radius: 4px; border-left: 4px solid #d4a574;">
+                            <div style="font-size: 12px; color: #666;">👷 Worker Earned</div>
+                            <div style="font-size: 16px; font-weight: 600;">UGX ${fmt(weekWorkerShare)}</div>
+                        </div>
+                        <div style="background: white; padding: 8px; border-radius: 4px; border-left: 4px solid #8B4513;">
+                            <div style="font-size: 12px; color: #666;">👤 Owner Earned</div>
+                            <div style="font-size: 16px; font-weight: 600;">UGX ${fmt(weekOwnerShare)}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="padding-top: 16px; border-top: 1px solid #ddd;">
+                    <div style="font-weight: 600; font-size: 14px; margin-bottom: 8px;">This Month (${monthDays} days)</div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div style="background: white; padding: 8px; border-radius: 4px; border-left: 4px solid #d4a574;">
+                            <div style="font-size: 12px; color: #666;">👷 Worker Earned</div>
+                            <div style="font-size: 16px; font-weight: 600;">UGX ${fmt(monthWorkerShare)}</div>
+                        </div>
+                        <div style="background: white; padding: 8px; border-radius: 4px; border-left: 4px solid #8B4513;">
+                            <div style="font-size: 12px; color: #666;">👤 Owner Earned</div>
+                            <div style="font-size: 16px; font-weight: 600;">UGX ${fmt(monthOwnerShare)}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
         
         // BACKUP
