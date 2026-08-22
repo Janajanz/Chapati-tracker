@@ -473,10 +473,10 @@
                 const ystDay = getDay(ystStr);
                 const todayDay = getDay(today);
                 
-                // Carry over remaining CHAPATIS - add to today's Made count
-                const chapatiRemaining = ystDay.chapatiMade - ystDay.chapatiSold;
+                // Carry over remaining CHAPATIS
+                const chapatiRemaining = ystDay.chapatiRemaining || 0;
                 if (chapatiRemaining > 0) {
-                    todayDay.chapatiMade += chapatiRemaining;
+                    todayDay.chapatiCarried = (todayDay.chapatiCarried || 0) + chapatiRemaining;
                 }
                 
                 // Carry over remaining INVENTORY items
@@ -919,9 +919,8 @@
                 </div>
                 <div style="margin-top: 16px;">
                     ${day.status === 'open' ? `
-                        <button class="btn btn-primary" onclick="carryoverToTomorrow('${curDate}')">📦 Carry to Tomorrow</button>
-                        <p style="font-size: 11px; color: #666; margin: 8px 0;">Moves remaining chapatis and inventory to tomorrow.</p>
-                        <button class="btn btn-primary" onclick="closeDay('${curDate}')" style="margin-top: 8px;">✓ Close This Day</button>
+                        <p style="font-size: 12px; color: #666; margin-bottom: 12px;">✓ Stock will automatically carry over at midnight. You can edit carried amounts tomorrow if needed.</p>
+                        <button class="btn btn-primary" onclick="closeDay('${curDate}')">✓ Close This Day</button>
                         <p style="font-size: 11px; color: #999; margin-top: 8px;">All records preserved in History.</p>
                     ` : `
                         <div class="alert alert-info">✓ Day closed. Records preserved in History.</div>
