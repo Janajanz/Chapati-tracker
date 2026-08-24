@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Chapati Business Tracker - v4.0 - With Usage</title>
+    <title>Chapati Tracker - With Usage</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; }
         html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; }
@@ -13,7 +13,7 @@
         .header h1 { font-size: 20px; font-weight: 700; }
         .menu-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
         
-        .sidebar { position: fixed; right: -280px; top: 0; width: 280px; height: 100%; background: #fff; z-index: 200; transition: right 0.3s; overflow-y: auto; padding-top: 60px; box-shadow: -2px 0 8px rgba(0,0,0,0.1); border-left: 1px solid #e0e0e0; }
+        .sidebar { position: fixed; right: -280px; top: 0; width: 280px; height: 100%; background: #fff; z-index: 200; transition: right 0.3s; overflow-y: auto; padding-top: 60px; box-shadow: -2px 0 8px rgba(0,0,0,0.1); }
         .sidebar.open { right: 0; }
         .sidebar-item { padding: 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 14px; color: #333; font-weight: 500; }
         .sidebar-item:hover { background: #f5f5f5; }
@@ -28,51 +28,36 @@
         
         .card { background: white; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .card h2 { font-size: 18px; margin-bottom: 16px; color: #333; font-weight: 700; }
-        .card h3 { font-size: 13px; margin: 16px 0 12px 0; color: #666; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .card h3 { font-size: 13px; margin: 16px 0 12px 0; color: #666; font-weight: 700; text-transform: uppercase; }
         
         .form-group { margin-bottom: 14px; }
         .form-group label { font-size: 12px; font-weight: 600; color: #666; display: block; margin-bottom: 6px; }
-        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; background: white; }
+        .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
         
-        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px; transition: all 0.2s; }
+        .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
         .btn-primary { background: linear-gradient(135deg, #8B4513 0%, #a0522d 100%); color: white; }
-        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3); }
         .btn-secondary { background: #f5f1ed; color: #333; border: 1px solid #ddd; }
         .btn-danger { background: #dc3545; color: white; }
         
         .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
         .stat-card { background: linear-gradient(135deg, #f9f7f4 0%, #f5f1ed 100%); padding: 16px; border-radius: 10px; border-left: 4px solid #8B4513; }
-        .stat-label { font-size: 11px; font-weight: 600; color: #999; text-transform: uppercase; letter-spacing: 0.5px; }
+        .stat-label { font-size: 11px; font-weight: 600; color: #999; }
         .stat-value { font-size: 20px; font-weight: 800; color: #8B4513; margin-top: 8px; }
         
         .summary-section { background: #f9f7f4; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
-        .summary-row { display: flex; justify-content: space-between; align-items: center; font-size: 13px; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); }
-        .summary-row:last-child { border-bottom: none; }
-        .summary-row.total { font-weight: 700; color: #8B4513; border-top: 2px solid #8B4513; border-bottom: none; padding-top: 12px; margin-top: 8px; }
+        .summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 13px; }
+        .summary-row.total { font-weight: 700; color: #8B4513; border-top: 2px solid #8B4513; border-bottom: none; padding-top: 12px; }
         .summary-row.share { background: white; padding: 12px; border-radius: 6px; margin-top: 8px; border-left: 3px solid #0066cc; }
         
         .item-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
-        .item-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .item-name { font-weight: 700; font-size: 14px; color: #333; }
+        .item-header { display: flex; justify-content: space-between; margin-bottom: 8px; }
+        .item-name { font-weight: 700; font-size: 14px; }
         .item-amount { font-weight: 700; font-size: 14px; color: #8B4513; }
-        .item-meta { font-size: 12px; color: #999; margin-top: 6px; }
+        .item-meta { font-size: 12px; color: #999; }
         
         .alert { padding: 12px; border-radius: 8px; margin-bottom: 12px; font-size: 13px; font-weight: 600; }
-        .alert-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-        .alert-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-        
-        .status { display: inline-block; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
-        .status.open { background: #d4edda; color: #155724; }
-        .status.closed { background: #e2e3e5; color: #383d41; }
-        
-        .analytics-card { background: white; border-radius: 10px; padding: 16px; margin-bottom: 14px; border-top: 3px solid #8B4513; }
-        .analytics-period { font-size: 12px; font-weight: 700; color: #8B4513; text-transform: uppercase; margin-bottom: 12px; }
-        .analytics-metric { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #f0f0f0; }
-        .analytics-metric:last-child { border-bottom: none; }
-        .analytics-label { font-size: 12px; color: #666; }
-        .analytics-value { font-size: 14px; font-weight: 700; color: #333; }
-        
-        .back-btn { background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 16px; text-align: center; font-weight: 600; cursor: pointer; }
+        .alert-success { background: #d4edda; color: #155724; }
+        .alert-error { background: #f8d7da; color: #721c24; }
         
         .calc-display { background: #f9f7f4; padding: 12px; border-radius: 8px; margin-bottom: 12px; font-weight: 700; color: #8B4513; text-align: right; }
     </style>
@@ -91,6 +76,7 @@
         <div class="sidebar-item" onclick="showView('sales')">💰 Sales</div>
         <div class="sidebar-item" onclick="showView('expenses')">💸 Expenses</div>
         <div class="sidebar-item" onclick="showView('analytics')">📈 Analytics</div>
+        <div class="sidebar-item" onclick="showView('capital')">💰 Capital</div>
         <div class="sidebar-item" onclick="showView('history')">📅 History</div>
         <div class="sidebar-item" onclick="showView('close')">🔒 Close Day</div>
         <div class="sidebar-item" onclick="showView('backup')">💾 Backup</div>
@@ -102,40 +88,27 @@
         <div id="sales" class="view"><div class="card"><h2>💰 Sales</h2><div id="sales-content"></div></div></div>
         <div id="expenses" class="view"><div class="card"><h2>💸 Expenses</h2><div id="expenses-content"></div></div></div>
         <div id="analytics" class="view"><div class="card"><h2>📈 Analytics</h2><div id="analytics-content"></div></div></div>
+        <div id="capital" class="view"><div class="card"><h2>💰 Capital Position</h2><div id="capital-content"></div></div></div>
         <div id="history" class="view"><div class="card"><h2>📅 History</h2><div id="history-content"></div></div></div>
         <div id="close" class="view"><div class="card"><h2>🔒 Close Day</h2><div id="close-content"></div></div></div>
-        <div id="backup" class="view"><div class="card"><h2>💾 Backup & Restore</h2><button class="btn btn-primary" onclick="downloadBackup()">📥 Download Backup</button><input type="file" id="restore-file" accept=".json" style="margin-bottom: 12px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 100%;"><button class="btn btn-secondary" onclick="restoreBackup()">📤 Restore Backup</button><button class="btn btn-danger" onclick="clearData()" style="margin-top: 16px;">🗑️ Clear All Data</button></div></div>
+        <div id="backup" class="view"><div class="card"><h2>💾 Backup</h2><button class="btn btn-primary" onclick="downloadBackup()">📥 Download</button><input type="file" id="restore-file" accept=".json" style="margin-bottom: 12px; padding: 8px; width: 100%; border: 1px solid #ddd; border-radius: 4px;"><button class="btn btn-secondary" onclick="restoreBackup()">📤 Restore</button><button class="btn btn-danger" onclick="clearData()" style="margin-top: 16px;">🗑️ Clear All</button></div></div>
     </div>
 
     <script>
         const KEY = 'chapatiBizTracker';
         let today = new Date().toISOString().split('T')[0];
         
-        function load() {
-            const data = localStorage.getItem(KEY);
-            return data ? JSON.parse(data) : { days: {} };
-        }
-        
-        function save(data) {
-            localStorage.setItem(KEY, JSON.stringify(data));
-        }
+        function load() { return JSON.parse(localStorage.getItem(KEY) || '{"days":{}}'); }
+        function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
         
         function getDay(date) {
             const data = load();
             if (!data.days[date]) {
                 const yesterday = new Date(new Date(date) - 86400000).toISOString().split('T')[0];
-                const yesterdayClosing = data.days[yesterday] ? data.days[yesterday].closingInventory : [];
-                
+                const yesterdayClosing = data.days[yesterday] ? data.days[yesterday].closingInventory : {};
                 data.days[date] = {
-                    date, status: 'open',
-                    chapatiCarried: yesterdayClosing.chapati || 0, 
-                    chapatiMade: 0, 
-                    chapatiRemaining: 0,
-                    openingInventory: yesterdayClosing.items || [],
-                    purchases: [], 
-                    usage: [], 
-                    sales: [], 
-                    expenses: [],
+                    date, status: 'open', chapatiCarried: yesterdayClosing.chapati || 0, chapatiMade: 0, chapatiRemaining: 0,
+                    openingInventory: yesterdayClosing.items || [], purchases: [], usage: [], sales: [], expenses: [],
                     closingInventory: { chapati: 0, items: [] }
                 };
                 save(data);
@@ -146,29 +119,27 @@
         function fmt(n) { return parseInt(n || 0).toLocaleString(); }
         function msg(text, type = 'success') {
             const div = document.createElement('div');
-            div.className = `alert alert-${type}`;
+            div.className = 'alert alert-' + type;
             div.textContent = text;
             document.getElementById('container').insertBefore(div, document.getElementById('container').firstChild);
             setTimeout(() => div.remove(), 3000);
         }
-        
         function toggleMenu() {
             document.getElementById('sidebar').classList.toggle('open');
             document.getElementById('overlay').classList.toggle('open');
         }
-        
         function showView(name) {
             document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
             document.getElementById(name).classList.add('active');
             document.querySelectorAll('.sidebar-item').forEach(item => item.classList.remove('active'));
             event.target.classList.add('active');
             toggleMenu();
-            
             if (name === 'dashboard') renderDashboard();
             else if (name === 'inventory') renderInventory();
             else if (name === 'sales') renderSales();
             else if (name === 'expenses') renderExpenses();
             else if (name === 'analytics') renderAnalytics();
+            else if (name === 'capital') renderCapital();
             else if (name === 'history') renderHistory();
             else if (name === 'close') renderClose();
         }
@@ -176,48 +147,37 @@
         // DASHBOARD
         function renderDashboard() {
             const day = getDay(today);
-            const chapatiCarried = day.chapatiCarried || 0;
-            const chapatiMade = day.chapatiMade || 0;
-            const chapatiTotal = chapatiCarried + chapatiMade;
-            const chapatiRemaining = day.chapatiRemaining || 0;
-            
             const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
             const profit = revenue - cogs - expenses;
-            const ownerShare = profit > 0 ? profit / 2 : 0;
-            const workerShare = profit > 0 ? profit / 2 : 0;
+            const owner = profit > 0 ? profit / 2 : 0;
+            const worker = profit > 0 ? profit / 2 : 0;
+            const inventory = day.purchases.reduce((s, p) => s + p.totalCost, 0) - cogs;
+            const capital = revenue + inventory;
             
-            const inventoryValue = day.purchases.reduce((s, p) => s + p.totalCost, 0) - day.usage.reduce((s, u) => s + u.cost, 0);
-            const totalCapital = revenue + inventoryValue;
-            
-            let html = '<div class="status ' + day.status + '">' + day.status + '</div>';
-            html += '<div style="color: #8B4513; font-size: 16px; font-weight: 700; margin-bottom: 18px;">' + today + '</div>';
-            
+            let html = '<div style="color: #8B4513; font-size: 16px; font-weight: 700; margin-bottom: 16px;">' + today + '</div>';
             html += '<div class="stat-grid">';
-            html += '<div class="stat-card"><div class="stat-label">Carried</div><div class="stat-value">' + chapatiCarried + '</div></div>';
-            html += '<div class="stat-card"><div class="stat-label">Made</div><div class="stat-value">' + chapatiMade + '</div></div>';
-            html += '<div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">' + chapatiTotal + '</div></div>';
-            html += '<div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value" style="color: #27a745;">' + chapatiRemaining + '</div></div>';
+            html += '<div class="stat-card"><div class="stat-label">Carried</div><div class="stat-value">' + (day.chapatiCarried || 0) + '</div></div>';
+            html += '<div class="stat-card"><div class="stat-label">Made</div><div class="stat-value">' + (day.chapatiMade || 0) + '</div></div>';
+            html += '<div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">' + ((day.chapatiCarried || 0) + (day.chapatiMade || 0)) + '</div></div>';
+            html += '<div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value" style="color: #27a745;">' + (day.chapatiRemaining || 0) + '</div></div>';
             html += '</div>';
-            
-            html += '<h3>Revenue &amp; Profit</h3>';
+            html += '<h3>Revenue & Profit</h3>';
             html += '<div class="summary-section">';
             html += '<div class="summary-row"><span>Revenue</span><span style="color: #0066cc; font-weight: 700;">UGX ' + fmt(revenue) + '</span></div>';
             html += '<div class="summary-row"><span>COGS (Used)</span><span style="color: #ff6b35;">UGX ' + fmt(cogs) + '</span></div>';
             html += '<div class="summary-row"><span>Expenses</span><span style="color: #ff6b35;">UGX ' + fmt(expenses) + '</span></div>';
             html += '<div class="summary-row total"><span>NET PROFIT</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
-            html += '<div class="summary-row share"><span>👤 Owner Share (50%)</span><span style="color: #0066cc; font-weight: 700;">UGX ' + fmt(ownerShare) + '</span></div>';
-            html += '<div class="summary-row share"><span>👷 Worker Share (50%)</span><span style="color: #0066cc; font-weight: 700;">UGX ' + fmt(workerShare) + '</span></div>';
+            html += '<div class="summary-row share"><span>👤 Owner (50%)</span><span style="color: #0066cc;">UGX ' + fmt(owner) + '</span></div>';
+            html += '<div class="summary-row share"><span>👷 Worker (50%)</span><span style="color: #0066cc;">UGX ' + fmt(worker) + '</span></div>';
             html += '</div>';
-            
             html += '<h3>Capital Position</h3>';
             html += '<div class="summary-section">';
-            html += '<div class="summary-row"><span>💵 Cash from Sales</span><span>UGX ' + fmt(revenue) + '</span></div>';
-            html += '<div class="summary-row"><span>📦 Stock Value</span><span>UGX ' + fmt(inventoryValue) + '</span></div>';
-            html += '<div class="summary-row total"><span>TOTAL CAPITAL</span><span style="color: ' + (totalCapital > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(totalCapital)) + '</span></div>';
+            html += '<div class="summary-row"><span>💵 Cash</span><span>UGX ' + fmt(revenue) + '</span></div>';
+            html += '<div class="summary-row"><span>📦 Stock</span><span>UGX ' + fmt(inventory) + '</span></div>';
+            html += '<div class="summary-row total"><span>TOTAL CAPITAL</span><span style="color: ' + (capital > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(capital)) + '</span></div>';
             html += '</div>';
-            
             document.getElementById('dashboard-content').innerHTML = html;
         }
         
@@ -225,96 +185,67 @@
         function renderInventory() {
             const day = getDay(today);
             const total = (day.chapatiCarried || 0) + (day.chapatiMade || 0);
-            const sold = total - (day.chapatiRemaining || 0);
             
-            let html = '<h3>Opening Inventory</h3>';
-            html += '<div id="opening-inventory" style="background: #f9f7f4; padding: 12px; border-radius: 8px; margin-bottom: 16px;"></div>';
-            html += '<h3>Production</h3>';
-            html += '<div class="form-group"><label>Carried from Yesterday</label><input type="number" id="inv-carried" value="' + (day.chapatiCarried || 0) + '" onchange="updateChapati()" style="background: #f0f0f0;"></div>';
-            html += '<div class="form-group"><label>Made Today</label><input type="number" id="inv-made" value="' + (day.chapatiMade || 0) + '" onchange="updateChapati()"></div>';
-            html += '<div class="form-group"><label style="color: #8B4513; font-weight: 700;">Total Available</label><div class="calc-display">' + total + ' chapatis</div></div>';
-            html += '<div class="form-group"><label style="color: #8B4513; font-weight: 700;">Sold Today</label><div class="calc-display">' + sold + ' chapatis</div></div>';
-            html += '<div class="form-group"><label>Remaining (Count Physically)</label><input type="number" id="inv-remaining" value="' + (day.chapatiRemaining || 0) + '" onchange="updateChapati()"></div>';
+            let html = '<h3>Production</h3>';
+            html += '<div class="form-group"><label>Carried</label><input type="number" id="inv-carried" value="' + (day.chapatiCarried || 0) + '" onchange="updateChapati()" style="background: #f0f0f0;"></div>';
+            html += '<div class="form-group"><label>Made</label><input type="number" id="inv-made" value="' + (day.chapatiMade || 0) + '" onchange="updateChapati()"></div>';
+            html += '<div class="form-group"><label>Total Available</label><div class="calc-display">' + total + ' chapatis</div></div>';
+            html += '<div class="form-group"><label>Remaining</label><input type="number" id="inv-remaining" value="' + (day.chapatiRemaining || 0) + '" onchange="updateChapati()"></div>';
             
-            html += '<h3 style="margin-top: 24px;">Record Purchase</h3>';
-            html += '<div class="form-group"><label>Item Name</label><input type="text" id="purch-item" placeholder="e.g., Flour, Eggs"></div>';
-            html += '<div class="form-group"><label>Quantity</label><input type="number" id="purch-qty" onchange="calcPurchase()"></div>';
+            html += '<h3>Record Purchase</h3>';
+            html += '<div class="form-group"><label>Item</label><input type="text" id="purch-item" placeholder="Flour, Eggs"></div>';
+            html += '<div class="form-group"><label>Qty</label><input type="number" id="purch-qty" onchange="calcPurchase()"></div>';
             html += '<div class="form-group"><label>Unit Cost</label><input type="number" id="purch-unit" onchange="calcPurchase()"></div>';
-            html += '<div class="form-group"><label style="color: #8B4513; font-weight: 700;">Total Cost</label><div class="calc-display" id="purch-total">0</div></div>';
+            html += '<div class="form-group"><label>Total</label><div class="calc-display" id="purch-total">0</div></div>';
             html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add Purchase</button>';
             
-            html += '<h3 style="margin-top: 24px;">Record Usage (What was used today)</h3>';
-            html += '<div class="form-group"><label>Item Name</label><input type="text" id="usage-item" placeholder="e.g., Flour, Eggs"></div>';
-            html += '<div class="form-group"><label>Quantity Used</label><input type="number" id="usage-qty"></div>';
+            html += '<h3>Record Usage (What was used)</h3>';
+            html += '<div class="form-group"><label>Item</label><input type="text" id="usage-item" placeholder="Flour, Eggs"></div>';
+            html += '<div class="form-group"><label>Qty Used</label><input type="number" id="usage-qty" onchange="calcUsage()"></div>';
             html += '<div class="form-group"><label>Cost Per Unit</label><input type="number" id="usage-cost" onchange="calcUsage()"></div>';
-            html += '<div class="form-group"><label style="color: #8B4513; font-weight: 700;">Total Cost</label><div class="calc-display" id="usage-total">0</div></div>';
+            html += '<div class="form-group"><label>Total</label><div class="calc-display" id="usage-total">0</div></div>';
             html += '<button class="btn btn-primary" onclick="addUsage()">✓ Record Usage</button>';
-            html += '<div id="usage-list" style="margin-top: 16px;"></div>';
+            html += '<div id="usage-list"></div>';
             
-            html += '<h3 style="margin-top: 24px;">Current Stock</h3>';
+            html += '<h3>Current Stock</h3>';
             html += '<div id="inventory-list"></div>';
             
             document.getElementById('inventory-content').innerHTML = html;
             
-            let openingHtml = '';
-            if (day.openingInventory && day.openingInventory.length > 0) {
-                day.openingInventory.forEach(item => {
-                    openingHtml += '<div class="item-card"><div class="item-name">' + item.name + '</div><div class="item-meta">' + item.qty + ' @ UGX ' + fmt(item.unitCost) + '</div></div>';
-                });
-            } else {
-                openingHtml = '<p style="color: #999; font-size: 12px;">No opening inventory</p>';
-            }
-            document.getElementById('opening-inventory').innerHTML = openingHtml;
-            
-            // Show usage
             let usageHtml = '';
-            let totalUsageCost = 0;
+            let usageTotal = 0;
             day.usage.forEach(u => {
-                totalUsageCost += u.cost;
-                usageHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + u.item + '</div><div class="item-amount">UGX ' + fmt(u.cost) + '</div></div><div class="item-meta">' + u.qty + ' used @ UGX ' + fmt(u.cost / u.qty) + '</div></div>';
+                usageTotal += u.cost;
+                usageHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + u.item + '</div><div class="item-amount">UGX ' + fmt(u.cost) + '</div></div><div class="item-meta">' + u.qty + ' used</div></div>';
             });
-            usageHtml = '<div class="summary-section" style="font-weight: 700; margin-bottom: 12px; color: #ff6b35;">Total Used Cost: UGX ' + fmt(totalUsageCost) + '</div>' + usageHtml;
-            document.getElementById('usage-list').innerHTML = usageHtml || '<p style="color: #999; font-size: 12px;">No usage recorded</p>';
+            if (usageHtml) usageHtml = '<div class="summary-section" style="font-weight: 700; color: #ff6b35; margin-bottom: 12px;">Total Used: UGX ' + fmt(usageTotal) + '</div>' + usageHtml;
+            document.getElementById('usage-list').innerHTML = usageHtml || '';
             
             let stockHtml = '';
-            let totalValue = 0;
+            let stockValue = 0;
             day.purchases.forEach(p => {
                 const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
                 const remain = p.qty - used;
                 const value = remain * p.unitCost;
-                totalValue += value;
+                stockValue += value;
                 if (remain > 0) {
-                    stockHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + p.item + '</div><div class="item-amount">UGX ' + fmt(value) + '</div></div><div class="item-meta">Remaining: ' + remain + '/' + p.qty + ' @ UGX ' + fmt(p.unitCost) + '</div></div>';
+                    stockHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + p.item + '</div><div class="item-amount">UGX ' + fmt(value) + '</div></div><div class="item-meta">' + remain + '/' + p.qty + ' @ UGX ' + fmt(p.unitCost) + '</div></div>';
                 }
             });
-            stockHtml = '<div class="summary-section" style="font-weight: 700; margin-bottom: 16px;">Total Stock Value: UGX ' + fmt(totalValue) + '</div>' + stockHtml;
-            document.getElementById('inventory-list').innerHTML = stockHtml || '<p style="color: #999; font-size: 12px;">No inventory</p>';
+            if (stockHtml) stockHtml = '<div class="summary-section" style="font-weight: 700; margin-bottom: 16px;">Stock Value: UGX ' + fmt(stockValue) + '</div>' + stockHtml;
+            document.getElementById('inventory-list').innerHTML = stockHtml || '<p style="color: #999; font-size: 12px;">No stock</p>';
         }
         
         function calcPurchase() {
             const qty = parseFloat(document.getElementById('purch-qty').value) || 0;
             const unit = parseFloat(document.getElementById('purch-unit').value) || 0;
-            const total = qty * unit;
-            document.getElementById('purch-total').textContent = fmt(total);
+            document.getElementById('purch-total').textContent = fmt(qty * unit);
         }
-        
         function calcUsage() {
             const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
             const cost = parseFloat(document.getElementById('usage-cost').value) || 0;
-            const total = qty * cost;
-            document.getElementById('usage-total').textContent = fmt(total);
+            document.getElementById('usage-total').textContent = fmt(qty * cost);
         }
-        
-        function updateChapati() {
-            const day = getDay(today);
-            day.chapatiCarried = parseFloat(document.getElementById('inv-carried').value) || 0;
-            day.chapatiMade = parseFloat(document.getElementById('inv-made').value) || 0;
-            day.chapatiRemaining = parseFloat(document.getElementById('inv-remaining').value) || 0;
-            save({...load(), days: {...load().days, [today]: day}});
-            renderInventory();
-            renderDashboard();
-        }
-        
         function addPurchase() {
             const day = getDay(today);
             const item = document.getElementById('purch-item').value;
@@ -330,15 +261,13 @@
             renderInventory();
             renderDashboard();
         }
-        
         function addUsage() {
             const day = getDay(today);
             const item = document.getElementById('usage-item').value;
             const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
             const costPerUnit = parseFloat(document.getElementById('usage-cost').value) || 0;
-            const totalCost = qty * costPerUnit;
             if (!item || qty <= 0 || costPerUnit <= 0) { msg('Fill all fields', 'error'); return; }
-            day.usage.push({ item, qty, cost: totalCost });
+            day.usage.push({ item, qty, cost: qty * costPerUnit });
             save({...load(), days: {...load().days, [today]: day}});
             msg('✓ Usage recorded');
             document.getElementById('usage-item').value = '';
@@ -347,21 +276,27 @@
             renderInventory();
             renderDashboard();
         }
+        function updateChapati() {
+            const day = getDay(today);
+            day.chapatiCarried = parseFloat(document.getElementById('inv-carried').value) || 0;
+            day.chapatiMade = parseFloat(document.getElementById('inv-made').value) || 0;
+            day.chapatiRemaining = parseFloat(document.getElementById('inv-remaining').value) || 0;
+            save({...load(), days: {...load().days, [today]: day}});
+            renderInventory();
+            renderDashboard();
+        }
         
         // SALES
         function renderSales() {
             const day = getDay(today);
             const totalRev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
-            
             let html = '<h3>Add Sale</h3>';
             html += '<div class="form-group"><label>Product</label><select id="sale-prod"><option>Chapati</option><option>Eggs</option><option>Rolex</option></select></div>';
-            html += '<div class="form-group"><label>Quantity</label><input type="number" id="sale-qty"></div>';
-            html += '<div class="form-group"><label>Price Each</label><input type="number" id="sale-price"></div>';
-            html += '<button class="btn btn-primary" onclick="addSale()">✓ Add Sale</button>';
-            html += '<h3 style="margin-top: 24px;">Sales Summary</h3>';
-            html += '<div id="sales-list"></div>';
+            html += '<div class="form-group"><label>Qty</label><input type="number" id="sale-qty"></div>';
+            html += '<div class="form-group"><label>Price</label><input type="number" id="sale-price"></div>';
+            html += '<button class="btn btn-primary" onclick="addSale()">✓ Add</button>';
+            html += '<h3>Summary</h3><div id="sales-list"></div>';
             html += '<div class="summary-section"><div class="summary-row total"><span>TOTAL REVENUE</span><span style="color: #0066cc;">UGX ' + fmt(totalRev) + '</span></div></div>';
-            
             document.getElementById('sales-content').innerHTML = html;
             
             let salesHtml = '';
@@ -372,17 +307,16 @@
                 byProduct[s.product].total += s.qty * s.price;
             });
             for (const [prod, data] of Object.entries(byProduct)) {
-                salesHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + prod + '</div><div class="item-amount">UGX ' + fmt(data.total) + '</div></div><div class="item-meta">' + data.qty + ' units sold</div></div>';
+                salesHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + prod + '</div><div class="item-amount">UGX ' + fmt(data.total) + '</div></div><div class="item-meta">' + data.qty + ' units</div></div>';
             }
             document.getElementById('sales-list').innerHTML = salesHtml || '<p style="color: #999; font-size: 12px;">No sales</p>';
         }
-        
         function addSale() {
             const day = getDay(today);
             const product = document.getElementById('sale-prod').value;
             const qty = parseFloat(document.getElementById('sale-qty').value) || 0;
             const price = parseFloat(document.getElementById('sale-price').value) || 0;
-            if (qty <= 0 || price <= 0) { msg('Fill all fields', 'error'); return; }
+            if (qty <= 0 || price <= 0) { msg('Fill all', 'error'); return; }
             day.sales.push({ product, qty, price });
             save({...load(), days: {...load().days, [today]: day}});
             msg('✓ Sale added');
@@ -396,15 +330,12 @@
         function renderExpenses() {
             const day = getDay(today);
             const totalExp = day.expenses.reduce((s, e) => s + e.amount, 0);
-            
-            let html = '<div class="form-group"><label>Description</label><input type="text" id="exp-desc" placeholder="e.g., Worker meals"></div>';
+            let html = '<div class="form-group"><label>Description</label><input type="text" id="exp-desc" placeholder="Meals"></div>';
             html += '<div class="form-group"><label>Category</label><select id="exp-cat"><option>Meals</option><option>Transport</option><option>Packaging</option><option>Other</option></select></div>';
-            html += '<div class="form-group"><label>Amount (UGX)</label><input type="number" id="exp-amt"></div>';
-            html += '<button class="btn btn-primary" onclick="addExpense()">✓ Add Expense</button>';
-            html += '<h3 style="margin-top: 24px;">Today\'s Expenses</h3>';
-            html += '<div id="exp-list"></div>';
-            html += '<div class="summary-section"><div class="summary-row total"><span>TOTAL EXPENSES</span><span style="color: #ff6b35;">UGX ' + fmt(totalExp) + '</span></div></div>';
-            
+            html += '<div class="form-group"><label>Amount</label><input type="number" id="exp-amt"></div>';
+            html += '<button class="btn btn-primary" onclick="addExpense()">✓ Add</button>';
+            html += '<h3>Expenses</h3><div id="exp-list"></div>';
+            html += '<div class="summary-section"><div class="summary-row total"><span>TOTAL</span><span style="color: #ff6b35;">UGX ' + fmt(totalExp) + '</span></div></div>';
             document.getElementById('expenses-content').innerHTML = html;
             
             let expHtml = '';
@@ -413,13 +344,12 @@
             });
             document.getElementById('exp-list').innerHTML = expHtml || '<p style="color: #999; font-size: 12px;">No expenses</p>';
         }
-        
         function addExpense() {
             const day = getDay(today);
             const desc = document.getElementById('exp-desc').value;
             const cat = document.getElementById('exp-cat').value;
             const amt = parseFloat(document.getElementById('exp-amt').value) || 0;
-            if (!desc || amt <= 0) { msg('Fill all fields', 'error'); return; }
+            if (!desc || amt <= 0) { msg('Fill all', 'error'); return; }
             day.expenses.push({ desc, category: cat, amount: amt });
             save({...load(), days: {...load().days, [today]: day}});
             msg('✓ Expense added');
@@ -433,8 +363,8 @@
         function renderAnalytics() {
             const data = load();
             const days = Object.values(data.days || {}).sort((a, b) => new Date(a.date) - new Date(b.date));
-            
             const today2 = new Date().toISOString().split('T')[0];
+            
             const getWeek = () => {
                 const d = [];
                 for (let i = 6; i >= 0; i--) {
@@ -444,28 +374,13 @@
                 }
                 return d;
             };
-            
-            const getMonth = () => {
-                const d = [];
-                const date = new Date();
-                const year = date.getFullYear();
-                const month = date.getMonth();
-                for (let i = 1; i <= new Date(year, month + 1, 0).getDate(); i++) {
-                    d.push(year + '-' + String(month + 1).padStart(2, '0') + '-' + String(i).padStart(2, '0'));
-                }
-                return d;
-            };
-            
             const week = getWeek();
-            const month = getMonth();
             
             const todayDay = data.days[today2] || {};
             const tRev = todayDay.sales ? todayDay.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0) : 0;
             const tCogs = todayDay.usage ? todayDay.usage.reduce((s, u) => s + u.cost, 0) : 0;
             const tExp = todayDay.expenses ? todayDay.expenses.reduce((s, e) => s + e.amount, 0) : 0;
             const tProfit = tRev - tCogs - tExp;
-            const tOwner = tProfit > 0 ? tProfit / 2 : 0;
-            const tWorker = tProfit > 0 ? tProfit / 2 : 0;
             
             let wRev = 0, wCogs = 0, wExp = 0;
             days.forEach(d => {
@@ -476,114 +391,125 @@
                 }
             });
             const wProfit = wRev - wCogs - wExp;
-            const wWorker = wProfit > 0 ? wProfit / 2 : 0;
-            const wOwner = wProfit > 0 ? wProfit / 2 : 0;
             
-            let mRev = 0, mCogs = 0, mExp = 0;
-            days.forEach(d => {
-                if (month.includes(d.date)) {
-                    mRev += d.sales ? d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0) : 0;
-                    mCogs += d.usage ? d.usage.reduce((s, u) => s + u.cost, 0) : 0;
-                    mExp += d.expenses ? d.expenses.reduce((s, e) => s + e.amount, 0) : 0;
-                }
-            });
-            const mProfit = mRev - mCogs - mExp;
-            const mWorker = mProfit > 0 ? mProfit / 2 : 0;
-            const mOwner = mProfit > 0 ? mProfit / 2 : 0;
+            let html = '<div class="card" style="border-top: 3px solid #8B4513;"><div style="font-size: 12px; font-weight: 700; color: #8B4513; text-transform: uppercase; margin-bottom: 12px;">📊 TODAY</div>';
+            html += '<div><div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><span>Revenue</span><span>UGX ' + fmt(tRev) + '</span></div>';
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><span>COGS</span><span>UGX ' + fmt(tCogs) + '</span></div>';
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><span>Expenses</span><span>UGX ' + fmt(tExp) + '</span></div>';
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px 0; font-weight: 700; color: ' + (tProfit > 0 ? '#27a745' : '#dc3545') + ';"><span>Profit</span><span>UGX ' + fmt(Math.abs(tProfit)) + '</span></div>';
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px 0; margin-top: 8px; font-weight: 700;"><span>👤 Owner (50%)</span><span style="color: #0066cc;">UGX ' + fmt(tProfit > 0 ? tProfit / 2 : 0) + '</span></div>';
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px 0; font-weight: 700;"><span>👷 Worker (50%)</span><span style="color: #0066cc;">UGX ' + fmt(tProfit > 0 ? tProfit / 2 : 0) + '</span></div></div></div>';
             
-            let html = '<div class="analytics-card"><div class="analytics-period">📊 TODAY</div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">Revenue</span><span class="analytics-value">UGX ' + fmt(tRev) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">COGS</span><span class="analytics-value">UGX ' + fmt(tCogs) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">Expenses</span><span class="analytics-value">UGX ' + fmt(tExp) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label" style="font-weight: 700; color: #8B4513;">Profit</span><span class="analytics-value" style="color: ' + (tProfit > 0 ? '#27a745' : '#dc3545') + '; font-weight: 800;">UGX ' + fmt(Math.abs(tProfit)) + '</span></div>';
-            html += '<div class="analytics-metric" style="border-top: 2px solid #ddd; padding-top: 10px; margin-top: 8px;"><span class="analytics-label">👤 Owner (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(tOwner) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">👷 Worker (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(tWorker) + '</span></div>';
-            html += '</div>';
-            
-            html += '<div class="analytics-card"><div class="analytics-period">📈 THIS WEEK</div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">Revenue</span><span class="analytics-value">UGX ' + fmt(wRev) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">COGS</span><span class="analytics-value">UGX ' + fmt(wCogs) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">Expenses</span><span class="analytics-value">UGX ' + fmt(wExp) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label" style="font-weight: 700; color: #8B4513;">Profit</span><span class="analytics-value" style="color: ' + (wProfit > 0 ? '#27a745' : '#dc3545') + '; font-weight: 800;">UGX ' + fmt(Math.abs(wProfit)) + '</span></div>';
-            html += '<div class="analytics-metric" style="border-top: 2px solid #ddd; padding-top: 10px; margin-top: 8px;"><span class="analytics-label">👤 Owner (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(wOwner) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">👷 Worker (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(wWorker) + '</span></div>';
-            html += '</div>';
-            
-            html += '<div class="analytics-card"><div class="analytics-period">📅 THIS MONTH</div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">Revenue</span><span class="analytics-value">UGX ' + fmt(mRev) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">COGS</span><span class="analytics-value">UGX ' + fmt(mCogs) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">Expenses</span><span class="analytics-value">UGX ' + fmt(mExp) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label" style="font-weight: 700; color: #8B4513;">Profit</span><span class="analytics-value" style="color: ' + (mProfit > 0 ? '#27a745' : '#dc3545') + '; font-weight: 800;">UGX ' + fmt(Math.abs(mProfit)) + '</span></div>';
-            html += '<div class="analytics-metric" style="border-top: 2px solid #ddd; padding-top: 10px; margin-top: 8px;"><span class="analytics-label">👤 Owner (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(mOwner) + '</span></div>';
-            html += '<div class="analytics-metric"><span class="analytics-label">👷 Worker (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(mWorker) + '</span></div>';
-            html += '</div>';
+            html += '<div class="card" style="border-top: 3px solid #8B4513;"><div style="font-size: 12px; font-weight: 700; color: #8B4513; text-transform: uppercase; margin-bottom: 12px;">📈 THIS WEEK</div>';
+            html += '<div><div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><span>Revenue</span><span>UGX ' + fmt(wRev) + '</span></div>';
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><span>COGS</span><span>UGX ' + fmt(wCogs) + '</span></div>';
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><span>Expenses</span><span>UGX ' + fmt(wExp) + '</span></div>';
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px 0; font-weight: 700; color: ' + (wProfit > 0 ? '#27a745' : '#dc3545') + ';"><span>Profit</span><span>UGX ' + fmt(Math.abs(wProfit)) + '</span></div>';
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px 0; margin-top: 8px; font-weight: 700;"><span>👤 Owner (50%)</span><span style="color: #0066cc;">UGX ' + fmt(wProfit > 0 ? wProfit / 2 : 0) + '</span></div>';
+            html += '<div style="display: flex; justify-content: space-between; padding: 8px 0; font-weight: 700;"><span>👷 Worker (50%)</span><span style="color: #0066cc;">UGX ' + fmt(wProfit > 0 ? wProfit / 2 : 0) + '</span></div></div></div>';
             
             document.getElementById('analytics-content').innerHTML = html;
+        }
+        
+        // CAPITAL POSITION
+        function renderCapital() {
+            const data = load();
+            const days = Object.values(data.days || {}).sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            // Calculate TODAY's capital
+            const day = getDay(today);
+            const revenue = day.sales ? day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0) : 0;
+            const cogs = day.usage ? day.usage.reduce((s, u) => s + u.cost, 0) : 0;
+            const expenses = day.expenses ? day.expenses.reduce((s, e) => s + e.amount, 0) : 0;
+            
+            // Stock value = purchases - usage
+            let stockValue = 0;
+            day.purchases.forEach(p => {
+                const used = day.usage ? day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0) : 0;
+                const remain = p.qty - used;
+                stockValue += remain * p.unitCost;
+            });
+            
+            // Net Capital Today = Revenue + Stock - COGS - Expenses
+            const netCapitalToday = revenue + stockValue - cogs - expenses;
+            
+            // Calculate YESTERDAY's capital to compare
+            let netCapitalYesterday = 0;
+            if (days.length > 0) {
+                const yesterday = new Date(new Date(today) - 86400000).toISOString().split('T')[0];
+                const yesterdayDay = data.days[yesterday];
+                if (yesterdayDay) {
+                    const yRev = yesterdayDay.sales ? yesterdayDay.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0) : 0;
+                    const yCogs = yesterdayDay.usage ? yesterdayDay.usage.reduce((s, u) => s + u.cost, 0) : 0;
+                    const yExp = yesterdayDay.expenses ? yesterdayDay.expenses.reduce((s, e) => s + e.amount, 0) : 0;
+                    let yStockValue = 0;
+                    yesterdayDay.purchases.forEach(p => {
+                        const used = yesterdayDay.usage ? yesterdayDay.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0) : 0;
+                        const remain = p.qty - used;
+                        yStockValue += remain * p.unitCost;
+                    });
+                    netCapitalYesterday = yRev + yStockValue - yCogs - yExp;
+                }
+            }
+            
+            const netChange = netCapitalToday - netCapitalYesterday;
+            const position = netChange > 0 ? '📈 INCREASING' : netChange < 0 ? '📉 DECREASING' : '➡️ STABLE';
+            const posColor = netChange > 0 ? '#27a745' : netChange < 0 ? '#dc3545' : '#ffc107';
+            
+            let html = '<h3>Today\'s Capital</h3>';
+            html += '<div class="summary-section">';
+            html += '<div class="summary-row"><span>Revenue (Cash)</span><span>UGX ' + fmt(revenue) + '</span></div>';
+            html += '<div class="summary-row"><span>+ Stock Value</span><span>UGX ' + fmt(stockValue) + '</span></div>';
+            html += '<div class="summary-row"><span>- COGS (Used)</span><span>UGX ' + fmt(cogs) + '</span></div>';
+            html += '<div class="summary-row"><span>- Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
+            html += '<div class="summary-row total" style="font-size: 16px;"><span>NET CAPITAL</span><span style="color: ' + (netCapitalToday > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(netCapitalToday)) + '</span></div>';
+            html += '</div>';
+            
+            html += '<h3>Net Position</h3>';
+            html += '<div class="summary-section">';
+            html += '<div class="summary-row"><span>Yesterday\'s Capital</span><span>UGX ' + fmt(Math.abs(netCapitalYesterday)) + '</span></div>';
+            html += '<div class="summary-row total" style="font-size: 16px; color: ' + posColor + '; border-top: 2px solid ' + posColor + ';"><span>' + position + '</span><span>UGX ' + fmt(Math.abs(netChange)) + '</span></div>';
+            html += '</div>';
+            
+            html += '<h3>Capital Breakdown</h3>';
+            html += '<div class="item-card"><div class="item-header"><div class="item-name">💵 Cash from Sales</div><div class="item-amount">UGX ' + fmt(revenue) + '</div></div></div>';
+            html += '<div class="item-card"><div class="item-header"><div class="item-name">📦 Remaining Stock</div><div class="item-amount">UGX ' + fmt(stockValue) + '</div></div></div>';
+            html += '<div class="item-card"><div class="item-header"><div class="item-name">❌ Total Used (COGS)</div><div class="item-amount" style="color: #ff6b35;">UGX ' + fmt(cogs) + '</div></div></div>';
+            html += '<div class="item-card"><div class="item-header"><div class="item-name">❌ Expenses</div><div class="item-amount" style="color: #ff6b35;">UGX ' + fmt(expenses) + '</div></div></div>';
+            
+            document.getElementById('capital-content').innerHTML = html;
         }
         
         // HISTORY
         function renderHistory() {
             const data = load();
             const days = Object.values(data.days || {}).sort((a, b) => new Date(b.date) - new Date(a.date));
-            
             let html = '';
             days.forEach(d => {
                 const revenue = d.sales ? d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0) : 0;
                 const cogs = d.usage ? d.usage.reduce((s, u) => s + u.cost, 0) : 0;
                 const expenses = d.expenses ? d.expenses.reduce((s, e) => s + e.amount, 0) : 0;
                 const profit = revenue - cogs - expenses;
-                html += '<div class="item-card" onclick="viewHistoryDay(\'' + d.date + '\')" style="cursor: pointer;"><div class="item-header"><div class="item-name">' + d.date + '</div><div class="item-amount" style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</div></div><div class="item-meta">Revenue: UGX ' + fmt(revenue) + ' | ' + d.status + '</div></div>';
+                html += '<div class="item-card" onclick="viewHistoryDay(\'' + d.date + '\')" style="cursor: pointer;"><div class="item-header"><div class="item-name">' + d.date + '</div><div class="item-amount" style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</div></div><div class="item-meta">Revenue: UGX ' + fmt(revenue) + '</div></div>';
             });
-            
-            document.getElementById('history-content').innerHTML = html || '<p style="color: #999; font-size: 12px;">No history</p>';
+            document.getElementById('history-content').innerHTML = html || '<p style="color: #999;">No history</p>';
         }
-        
         function viewHistoryDay(date) {
             const day = getDay(date);
             const revenue = day.sales ? day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0) : 0;
             const cogs = day.usage ? day.usage.reduce((s, u) => s + u.cost, 0) : 0;
             const expenses = day.expenses ? day.expenses.reduce((s, e) => s + e.amount, 0) : 0;
             const profit = revenue - cogs - expenses;
-            const owner = profit > 0 ? profit / 2 : 0;
-            const worker = profit > 0 ? profit / 2 : 0;
-            
-            let html = '<div class="back-btn" onclick="backToToday()">← Return to Today</div>';
-            html += '<div class="card"><h2>📅 ' + date + '</h2>';
-            html += '<div class="status ' + day.status + '">' + day.status + '</div>';
-            html += '<h3>Production</h3>';
-            html += '<div class="summary-section">';
-            html += '<div class="summary-row"><span>Carried</span><span>' + (day.chapatiCarried || 0) + '</span></div>';
-            html += '<div class="summary-row"><span>Made</span><span>' + (day.chapatiMade || 0) + '</span></div>';
-            html += '<div class="summary-row"><span>Total</span><span>' + ((day.chapatiCarried || 0) + (day.chapatiMade || 0)) + '</span></div>';
-            html += '<div class="summary-row"><span>Sold</span><span>' + ((day.chapatiCarried || 0) + (day.chapatiMade || 0) - (day.chapatiRemaining || 0)) + '</span></div>';
-            html += '<div class="summary-row total"><span>Remaining</span><span>' + (day.chapatiRemaining || 0) + '</span></div>';
-            html += '</div>';
-            html += '<h3>Financial</h3>';
-            html += '<div class="summary-section">';
+            let html = '<div style="background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 12px; border-radius: 8px; margin-bottom: 16px; cursor: pointer; font-weight: 600;" onclick="backToToday()">← Return to Today</div>';
+            html += '<h2>' + date + '</h2>';
+            html += '<h3>Financial</h3><div class="summary-section">';
             html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
             html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
             html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
-            html += '<div class="summary-row total"><span>Profit</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
-            html += '<div class="summary-row share"><span>👤 Owner Share</span><span style="color: #0066cc;">UGX ' + fmt(owner) + '</span></div>';
-            html += '<div class="summary-row share"><span>👷 Worker Share</span><span style="color: #0066cc;">UGX ' + fmt(worker) + '</span></div>';
-            html += '</div>';
-            html += '<h3>Sales</h3>';
-            day.sales.forEach(s => {
-                html += '<div class="item-card"><div class="item-header"><div class="item-name">' + s.product + '</div><div class="item-amount">UGX ' + fmt(s.qty * s.price) + '</div></div><div class="item-meta">' + s.qty + ' @ UGX ' + fmt(s.price) + '</div></div>';
-            });
-            html += '<h3>Expenses</h3>';
-            day.expenses.forEach(e => {
-                html += '<div class="item-card"><div class="item-header"><div class="item-name">' + e.desc + '</div><div class="item-amount">UGX ' + fmt(e.amount) + '</div></div><div class="item-meta">' + e.category + '</div></div>';
-            });
-            html += '</div>';
-            
+            html += '<div class="summary-row total"><span>Profit</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div></div>';
             document.getElementById('container').innerHTML = html;
         }
-        
-        function backToToday() {
-            today = new Date().toISOString().split('T')[0];
-            location.reload();
-        }
+        function backToToday() { today = new Date().toISOString().split('T')[0]; location.reload(); }
         
         // CLOSE DAY
         function renderClose() {
@@ -595,54 +521,36 @@
             const owner = profit > 0 ? profit / 2 : 0;
             const worker = profit > 0 ? profit / 2 : 0;
             
-            let html = '<h3>Daily Summary</h3>';
-            html += '<div class="summary-section">';
-            html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
+            let html = '<div class="summary-section"><div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
             html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
             html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
-            html += '<div class="summary-row total"><span>Net Profit</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
-            html += '<div class="summary-row share"><span>👤 Owner Share (50%)</span><span style="color: #0066cc;">UGX ' + fmt(owner) + '</span></div>';
-            html += '<div class="summary-row share"><span>👷 Worker Share (50%)</span><span style="color: #0066cc;">UGX ' + fmt(worker) + '</span></div>';
-            html += '</div>';
-            html += '<h3>Closing Inventory</h3>';
-            html += '<p style="font-size: 12px; color: #666; margin-bottom: 12px;">This becomes tomorrow\'s opening inventory</p>';
-            html += '<div id="closing-inventory"></div>';
-            html += '<button class="btn btn-primary" onclick="closeDay()" style="margin-top: 20px;">✓ Close Day &amp; Move to Tomorrow</button>';
-            
+            html += '<div class="summary-row total"><span>Profit</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
+            html += '<div class="summary-row share"><span>👤 Owner (50%)</span><span>UGX ' + fmt(owner) + '</span></div>';
+            html += '<div class="summary-row share"><span>👷 Worker (50%)</span><span>UGX ' + fmt(worker) + '</span></div></div>';
+            html += '<h3>Closing Inventory</h3><div id="closing-inv"></div>';
+            html += '<button class="btn btn-primary" onclick="closeDay()">✓ Close & Next Day</button>';
             document.getElementById('close-content').innerHTML = html;
             
             let closingHtml = '';
             day.purchases.forEach(p => {
                 const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
                 const remain = p.qty - used;
-                if (remain > 0) {
-                    closingHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + p.item + '</div><div class="item-meta">' + remain + ' items @ UGX ' + fmt(p.unitCost) + '</div></div></div>';
-                }
+                if (remain > 0) closingHtml += '<div class="item-card"><div class="item-name">' + p.item + '</div><div class="item-meta">' + remain + ' remaining</div></div>';
             });
-            document.getElementById('closing-inventory').innerHTML = closingHtml || '<p style="color: #999; font-size: 12px;">No inventory to carry over</p>';
+            document.getElementById('closing-inv').innerHTML = closingHtml || '<p style="color: #999;">No inventory</p>';
         }
-        
         function closeDay() {
             const day = getDay(today);
-            
             const closingItems = [];
             day.purchases.forEach(p => {
                 const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
                 const remain = p.qty - used;
-                if (remain > 0) {
-                    closingItems.push({ name: p.item, qty: remain, unitCost: p.unitCost });
-                }
+                if (remain > 0) closingItems.push({ name: p.item, qty: remain, unitCost: p.unitCost });
             });
-            
-            day.closingInventory = { 
-                chapati: day.chapatiRemaining || 0, 
-                items: closingItems 
-            };
-            
+            day.closingInventory = { chapati: day.chapatiRemaining || 0, items: closingItems };
             day.status = 'closed';
             save({...load(), days: {...load().days, [today]: day}});
-            msg('✓ Day closed! Starting new day...');
-            
+            msg('✓ Day closed');
             today = new Date(new Date(today).getTime() + 86400000).toISOString().split('T')[0];
             renderDashboard();
             showView('dashboard');
@@ -650,46 +558,35 @@
         
         // BACKUP
         function downloadBackup() {
-            const json = JSON.stringify(load(), null, 2);
-            const blob = new Blob([json], { type: 'application/json' });
+            const blob = new Blob([JSON.stringify(load(), null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
             a.download = 'chapati-backup-' + today + '.json';
             a.click();
             URL.revokeObjectURL(url);
-            msg('✓ Backup downloaded');
+            msg('✓ Downloaded');
         }
-        
         function restoreBackup() {
             const file = document.getElementById('restore-file').files[0];
             if (!file) { msg('Select file', 'error'); return; }
             const reader = new FileReader();
             reader.onload = e => {
                 try {
-                    const data = JSON.parse(e.target.result);
-                    save(data);
-                    msg('✓ Restored! Reloading...');
+                    save(JSON.parse(e.target.result));
+                    msg('✓ Restored!');
                     setTimeout(() => location.reload(), 1000);
-                } catch (err) {
-                    msg('Invalid file', 'error');
-                }
+                } catch (err) { msg('Invalid file', 'error'); }
             };
             reader.readAsText(file);
         }
-        
         function clearData() {
-            if (confirm('DELETE ALL DATA?')) {
-                if (confirm('Really?')) {
-                    localStorage.removeItem(KEY);
-                    location.reload();
-                }
+            if (confirm('DELETE ALL?')) {
+                if (confirm('Really?')) { localStorage.removeItem(KEY); location.reload(); }
             }
         }
         
-        window.addEventListener('load', () => {
-            renderDashboard();
-        });
+        window.addEventListener('load', () => { renderDashboard(); });
     </script>
 </body>
 </html>
