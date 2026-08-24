@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Chapati Business Tracker v2</title>
+    <title>Chapati Business Tracker</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; }
         html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; }
@@ -136,9 +136,7 @@
                     usage: [], 
                     sales: [], 
                     expenses: [],
-                    closingInventory: { chapati: 0, items: [] },
-                    ownerShare: 0,
-                    workerShare: 0
+                    closingInventory: { chapati: 0, items: [] }
                 };
                 save(data);
             }
@@ -182,7 +180,6 @@
             const chapatiMade = day.chapatiMade || 0;
             const chapatiTotal = chapatiCarried + chapatiMade;
             const chapatiRemaining = day.chapatiRemaining || 0;
-            const chapatiSold = chapatiTotal - chapatiRemaining;
             
             const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
@@ -191,65 +188,37 @@
             const ownerShare = profit > 0 ? profit / 2 : 0;
             const workerShare = profit > 0 ? profit / 2 : 0;
             
-            // Capital Position calculation
-            const inventory = day.purchases.reduce((s, p) => s + p.totalCost, 0) - day.usage.reduce((s, u) => s + u.cost, 0);
-            const capital = revenue + inventory;
+            const inventoryValue = day.purchases.reduce((s, p) => s + p.totalCost, 0) - day.usage.reduce((s, u) => s + u.cost, 0);
+            const totalCapital = revenue + inventoryValue;
             
-            document.getElementById('dashboard-content').innerHTML = `
-                <div class="status ${day.status}">${day.status}</div>
-                <div style="color: #8B4513; font-size: 16px; font-weight: 700; margin-bottom: 18px;">${today}</div>
-                
-                <div class="stat-grid">
-                    <div class="stat-card"><div class="stat-label">Carried</div><div class="stat-value">${chapatiCarried}</div></div>
-                    <div class="stat-card"><div class="stat-label">Made</div><div class="stat-value">${chapatiMade}</div></div>
-                    <div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">${chapatiTotal}</div></div>
-                    <div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value" style="color: #27a745;">${chapatiRemaining}</div></div>
-                </div>
-                
-                <h3>Revenue & Profit</h3>
-                <div class="summary-section">
-                    <div class="summary-row">
-                        <span>Revenue</span>
-                        <span style="color: #0066cc; font-weight: 700;">UGX ${fmt(revenue)}</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>COGS (Used)</span>
-                        <span style="color: #ff6b35;">UGX ${fmt(cogs)}</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>Expenses</span>
-                        <span style="color: #ff6b35;">UGX ${fmt(expenses)}</span>
-                    </div>
-                    <div class="summary-row total">
-                        <span>NET PROFIT</span>
-                        <span style="color: ${profit > 0 ? '#27a745' : '#dc3545'};">UGX ${fmt(Math.abs(profit))}</span>
-                    </div>
-                    <div class="summary-row share">
-                        <span>👤 Owner Share (50%)</span>
-                        <span style="color: #0066cc; font-weight: 700;">UGX ${fmt(ownerShare)}</span>
-                    </div>
-                    <div class="summary-row share">
-                        <span>👷 Worker Share (50%)</span>
-                        <span style="color: #0066cc; font-weight: 700;">UGX ${fmt(workerShare)}</span>
-                    </div>
-                </div>
-                
-                <h3>Capital Position</h3>
-                <div class="summary-section">
-                    <div class="summary-row">
-                        <span>💵 Cash from Sales</span>
-                        <span>UGX ${fmt(revenue)}</span>
-                    </div>
-                    <div class="summary-row">
-                        <span>📦 Stock Value</span>
-                        <span>UGX ${fmt(inventory)}</span>
-                    </div>
-                    <div class="summary-row total">
-                        <span>TOTAL CAPITAL</span>
-                        <span style="color: ${capital > 0 ? '#27a745' : '#dc3545'};">UGX ${fmt(Math.abs(capital))}</span>
-                    </div>
-                </div>
-            `;
+            let html = '<div class="status ' + day.status + '">' + day.status + '</div>';
+            html += '<div style="color: #8B4513; font-size: 16px; font-weight: 700; margin-bottom: 18px;">' + today + '</div>';
+            
+            html += '<div class="stat-grid">';
+            html += '<div class="stat-card"><div class="stat-label">Carried</div><div class="stat-value">' + chapatiCarried + '</div></div>';
+            html += '<div class="stat-card"><div class="stat-label">Made</div><div class="stat-value">' + chapatiMade + '</div></div>';
+            html += '<div class="stat-card"><div class="stat-label">Total</div><div class="stat-value">' + chapatiTotal + '</div></div>';
+            html += '<div class="stat-card"><div class="stat-label">Remaining</div><div class="stat-value" style="color: #27a745;">' + chapatiRemaining + '</div></div>';
+            html += '</div>';
+            
+            html += '<h3>Revenue &amp; Profit</h3>';
+            html += '<div class="summary-section">';
+            html += '<div class="summary-row"><span>Revenue</span><span style="color: #0066cc; font-weight: 700;">UGX ' + fmt(revenue) + '</span></div>';
+            html += '<div class="summary-row"><span>COGS (Used)</span><span style="color: #ff6b35;">UGX ' + fmt(cogs) + '</span></div>';
+            html += '<div class="summary-row"><span>Expenses</span><span style="color: #ff6b35;">UGX ' + fmt(expenses) + '</span></div>';
+            html += '<div class="summary-row total"><span>NET PROFIT</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
+            html += '<div class="summary-row share"><span>👤 Owner Share (50%)</span><span style="color: #0066cc; font-weight: 700;">UGX ' + fmt(ownerShare) + '</span></div>';
+            html += '<div class="summary-row share"><span>👷 Worker Share (50%)</span><span style="color: #0066cc; font-weight: 700;">UGX ' + fmt(workerShare) + '</span></div>';
+            html += '</div>';
+            
+            html += '<h3>Capital Position</h3>';
+            html += '<div class="summary-section">';
+            html += '<div class="summary-row"><span>💵 Cash from Sales</span><span>UGX ' + fmt(revenue) + '</span></div>';
+            html += '<div class="summary-row"><span>📦 Stock Value</span><span>UGX ' + fmt(inventoryValue) + '</span></div>';
+            html += '<div class="summary-row total"><span>TOTAL CAPITAL</span><span style="color: ' + (totalCapital > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(totalCapital)) + '</span></div>';
+            html += '</div>';
+            
+            document.getElementById('dashboard-content').innerHTML = html;
         }
         
         // INVENTORY
@@ -258,69 +227,36 @@
             const total = (day.chapatiCarried || 0) + (day.chapatiMade || 0);
             const sold = total - (day.chapatiRemaining || 0);
             
-            document.getElementById('inventory-content').innerHTML = `
-                <h3>Opening Inventory (from yesterday)</h3>
-                <div id="opening-inventory" style="background: #f9f7f4; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
-                </div>
-                
-                <h3>Production</h3>
-                <div class="form-group">
-                    <label>Carried from Yesterday</label>
-                    <input type="number" id="inv-carried" value="${day.chapatiCarried || 0}" onchange="updateChapati()" style="background: #f0f0f0;">
-                </div>
-                <div class="form-group">
-                    <label>Made Today</label>
-                    <input type="number" id="inv-made" value="${day.chapatiMade}" onchange="updateChapati()">
-                </div>
-                <div class="form-group">
-                    <label style="color: #8B4513; font-weight: 700;">Total Available</label>
-                    <div class="calc-display">${total} chapatis</div>
-                </div>
-                <div class="form-group">
-                    <label style="color: #8B4513; font-weight: 700;">Sold Today</label>
-                    <div class="calc-display">${sold} chapatis</div>
-                </div>
-                <div class="form-group">
-                    <label>Remaining (Count Physically)</label>
-                    <input type="number" id="inv-remaining" value="${day.chapatiRemaining}" onchange="updateChapati()">
-                </div>
-                
-                <h3 style="margin-top: 24px;">Record Purchase</h3>
-                <div class="form-group">
-                    <label>Item Name</label>
-                    <input type="text" id="purch-item" placeholder="e.g., Flour, Eggs, Oil">
-                </div>
-                <div class="form-group">
-                    <label>Quantity</label>
-                    <input type="number" id="purch-qty" onchange="calcPurchase()">
-                </div>
-                <div class="form-group">
-                    <label>Unit Cost (price per item)</label>
-                    <input type="number" id="purch-unit" onchange="calcPurchase()">
-                </div>
-                <div class="form-group">
-                    <label style="color: #8B4513; font-weight: 700;">Total Cost</label>
-                    <div class="calc-display" id="purch-total">0</div>
-                </div>
-                <button class="btn btn-primary" onclick="addPurchase()">✓ Add Purchase</button>
-                
-                <h3 style="margin-top: 24px;">Current Stock (Today)</h3>
-                <div id="inventory-list"></div>
-            `;
+            let html = '<h3>Opening Inventory</h3>';
+            html += '<div id="opening-inventory" style="background: #f9f7f4; padding: 12px; border-radius: 8px; margin-bottom: 16px;"></div>';
+            html += '<h3>Production</h3>';
+            html += '<div class="form-group"><label>Carried from Yesterday</label><input type="number" id="inv-carried" value="' + (day.chapatiCarried || 0) + '" onchange="updateChapati()" style="background: #f0f0f0;"></div>';
+            html += '<div class="form-group"><label>Made Today</label><input type="number" id="inv-made" value="' + (day.chapatiMade || 0) + '" onchange="updateChapati()"></div>';
+            html += '<div class="form-group"><label style="color: #8B4513; font-weight: 700;">Total Available</label><div class="calc-display">' + total + ' chapatis</div></div>';
+            html += '<div class="form-group"><label style="color: #8B4513; font-weight: 700;">Sold Today</label><div class="calc-display">' + sold + ' chapatis</div></div>';
+            html += '<div class="form-group"><label>Remaining (Count Physically)</label><input type="number" id="inv-remaining" value="' + (day.chapatiRemaining || 0) + '" onchange="updateChapati()"></div>';
+            html += '<h3 style="margin-top: 24px;">Record Purchase</h3>';
+            html += '<div class="form-group"><label>Item Name</label><input type="text" id="purch-item" placeholder="e.g., Flour, Eggs"></div>';
+            html += '<div class="form-group"><label>Quantity</label><input type="number" id="purch-qty" onchange="calcPurchase()"></div>';
+            html += '<div class="form-group"><label>Unit Cost</label><input type="number" id="purch-unit" onchange="calcPurchase()"></div>';
+            html += '<div class="form-group"><label style="color: #8B4513; font-weight: 700;">Total Cost</label><div class="calc-display" id="purch-total">0</div></div>';
+            html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add Purchase</button>';
+            html += '<h3 style="margin-top: 24px;">Current Stock</h3>';
+            html += '<div id="inventory-list"></div>';
             
-            // Show opening inventory
+            document.getElementById('inventory-content').innerHTML = html;
+            
             let openingHtml = '';
             if (day.openingInventory && day.openingInventory.length > 0) {
                 day.openingInventory.forEach(item => {
-                    openingHtml += `<div class="item-card"><div class="item-name">${item.name}</div><div class="item-meta">${item.qty} @ UGX ${fmt(item.unitCost)}</div></div>`;
+                    openingHtml += '<div class="item-card"><div class="item-name">' + item.name + '</div><div class="item-meta">' + item.qty + ' @ UGX ' + fmt(item.unitCost) + '</div></div>';
                 });
             } else {
                 openingHtml = '<p style="color: #999; font-size: 12px;">No opening inventory</p>';
             }
             document.getElementById('opening-inventory').innerHTML = openingHtml;
             
-            // Show current stock
-            let html = '';
+            let stockHtml = '';
             let totalValue = 0;
             day.purchases.forEach(p => {
                 const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
@@ -328,19 +264,11 @@
                 const value = remain * p.unitCost;
                 totalValue += value;
                 if (remain > 0) {
-                    html += `
-                        <div class="item-card">
-                            <div class="item-header">
-                                <div class="item-name">${p.item}</div>
-                                <div class="item-amount">UGX ${fmt(value)}</div>
-                            </div>
-                            <div class="item-meta">Remaining: ${remain}/${p.qty} @ UGX ${fmt(p.unitCost)}</div>
-                        </div>
-                    `;
+                    stockHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + p.item + '</div><div class="item-amount">UGX ' + fmt(value) + '</div></div><div class="item-meta">Remaining: ' + remain + '/' + p.qty + ' @ UGX ' + fmt(p.unitCost) + '</div></div>';
                 }
             });
-            html = `<div class="summary-section" style="font-weight: 700; margin-bottom: 16px;">Total Stock Value: UGX ${fmt(totalValue)}</div>` + html;
-            document.getElementById('inventory-list').innerHTML = html || '<p style="color: #999; font-size: 12px;">No inventory</p>';
+            stockHtml = '<div class="summary-section" style="font-weight: 700; margin-bottom: 16px;">Total Stock Value: UGX ' + fmt(totalValue) + '</div>' + stockHtml;
+            document.getElementById('inventory-list').innerHTML = stockHtml || '<p style="color: #999; font-size: 12px;">No inventory</p>';
         }
         
         function calcPurchase() {
@@ -381,34 +309,18 @@
             const day = getDay(today);
             const totalRev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
             
-            document.getElementById('sales-content').innerHTML = `
-                <h3>Add Sale</h3>
-                <div class="form-group">
-                    <label>Product</label>
-                    <select id="sale-prod"><option>Chapati</option><option>Eggs</option><option>Rolex</option></select>
-                </div>
-                <div class="form-group">
-                    <label>Quantity</label>
-                    <input type="number" id="sale-qty">
-                </div>
-                <div class="form-group">
-                    <label>Price Each</label>
-                    <input type="number" id="sale-price">
-                </div>
-                <button class="btn btn-primary" onclick="addSale()">✓ Add Sale</button>
-                
-                <h3 style="margin-top: 24px;">Sales Summary</h3>
-                <div id="sales-list"></div>
-                
-                <div class="summary-section">
-                    <div class="summary-row total">
-                        <span>TOTAL REVENUE</span>
-                        <span style="color: #0066cc;">UGX ${fmt(totalRev)}</span>
-                    </div>
-                </div>
-            `;
+            let html = '<h3>Add Sale</h3>';
+            html += '<div class="form-group"><label>Product</label><select id="sale-prod"><option>Chapati</option><option>Eggs</option><option>Rolex</option></select></div>';
+            html += '<div class="form-group"><label>Quantity</label><input type="number" id="sale-qty"></div>';
+            html += '<div class="form-group"><label>Price Each</label><input type="number" id="sale-price"></div>';
+            html += '<button class="btn btn-primary" onclick="addSale()">✓ Add Sale</button>';
+            html += '<h3 style="margin-top: 24px;">Sales Summary</h3>';
+            html += '<div id="sales-list"></div>';
+            html += '<div class="summary-section"><div class="summary-row total"><span>TOTAL REVENUE</span><span style="color: #0066cc;">UGX ' + fmt(totalRev) + '</span></div></div>';
             
-            let html = '';
+            document.getElementById('sales-content').innerHTML = html;
+            
+            let salesHtml = '';
             let byProduct = {};
             day.sales.forEach(s => {
                 if (!byProduct[s.product]) byProduct[s.product] = { qty: 0, total: 0 };
@@ -416,17 +328,9 @@
                 byProduct[s.product].total += s.qty * s.price;
             });
             for (const [prod, data] of Object.entries(byProduct)) {
-                html += `
-                    <div class="item-card">
-                        <div class="item-header">
-                            <div class="item-name">${prod}</div>
-                            <div class="item-amount">UGX ${fmt(data.total)}</div>
-                        </div>
-                        <div class="item-meta">${data.qty} units sold</div>
-                    </div>
-                `;
+                salesHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + prod + '</div><div class="item-amount">UGX ' + fmt(data.total) + '</div></div><div class="item-meta">' + data.qty + ' units sold</div></div>';
             }
-            document.getElementById('sales-list').innerHTML = html || '<p style="color: #999; font-size: 12px;">No sales</p>';
+            document.getElementById('sales-list').innerHTML = salesHtml || '<p style="color: #999; font-size: 12px;">No sales</p>';
         }
         
         function addSale() {
@@ -449,45 +353,21 @@
             const day = getDay(today);
             const totalExp = day.expenses.reduce((s, e) => s + e.amount, 0);
             
-            document.getElementById('expenses-content').innerHTML = `
-                <div class="form-group">
-                    <label>Description</label>
-                    <input type="text" id="exp-desc" placeholder="e.g., Worker meals">
-                </div>
-                <div class="form-group">
-                    <label>Category</label>
-                    <select id="exp-cat"><option>Meals</option><option>Transport</option><option>Packaging</option><option>Other</option></select>
-                </div>
-                <div class="form-group">
-                    <label>Amount (UGX)</label>
-                    <input type="number" id="exp-amt">
-                </div>
-                <button class="btn btn-primary" onclick="addExpense()">✓ Add Expense</button>
-                
-                <h3 style="margin-top: 24px;">Today's Expenses</h3>
-                <div id="exp-list"></div>
-                
-                <div class="summary-section">
-                    <div class="summary-row total">
-                        <span>TOTAL EXPENSES</span>
-                        <span style="color: #ff6b35;">UGX ${fmt(totalExp)}</span>
-                    </div>
-                </div>
-            `;
+            let html = '<div class="form-group"><label>Description</label><input type="text" id="exp-desc" placeholder="e.g., Worker meals"></div>';
+            html += '<div class="form-group"><label>Category</label><select id="exp-cat"><option>Meals</option><option>Transport</option><option>Packaging</option><option>Other</option></select></div>';
+            html += '<div class="form-group"><label>Amount (UGX)</label><input type="number" id="exp-amt"></div>';
+            html += '<button class="btn btn-primary" onclick="addExpense()">✓ Add Expense</button>';
+            html += '<h3 style="margin-top: 24px;">Today\'s Expenses</h3>';
+            html += '<div id="exp-list"></div>';
+            html += '<div class="summary-section"><div class="summary-row total"><span>TOTAL EXPENSES</span><span style="color: #ff6b35;">UGX ' + fmt(totalExp) + '</span></div></div>';
             
-            let html = '';
+            document.getElementById('expenses-content').innerHTML = html;
+            
+            let expHtml = '';
             day.expenses.forEach(e => {
-                html += `
-                    <div class="item-card">
-                        <div class="item-header">
-                            <div class="item-name">${e.desc}</div>
-                            <div class="item-amount">UGX ${fmt(e.amount)}</div>
-                        </div>
-                        <div class="item-meta">${e.category}</div>
-                    </div>
-                `;
+                expHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + e.desc + '</div><div class="item-amount">UGX ' + fmt(e.amount) + '</div></div><div class="item-meta">' + e.category + '</div></div>';
             });
-            document.getElementById('exp-list').innerHTML = html || '<p style="color: #999; font-size: 12px;">No expenses</p>';
+            document.getElementById('exp-list').innerHTML = expHtml || '<p style="color: #999; font-size: 12px;">No expenses</p>';
         }
         
         function addExpense() {
@@ -527,7 +407,7 @@
                 const year = date.getFullYear();
                 const month = date.getMonth();
                 for (let i = 1; i <= new Date(year, month + 1, 0).getDate(); i++) {
-                    d.push(`${year}-${String(month + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`);
+                    d.push(year + '-' + String(month + 1).padStart(2, '0') + '-' + String(i).padStart(2, '0'));
                 }
                 return d;
             };
@@ -535,7 +415,6 @@
             const week = getWeek();
             const month = getMonth();
             
-            // TODAY
             const todayDay = data.days[today2] || {};
             const tRev = todayDay.sales ? todayDay.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0) : 0;
             const tCogs = todayDay.usage ? todayDay.usage.reduce((s, u) => s + u.cost, 0) : 0;
@@ -544,7 +423,6 @@
             const tOwner = tProfit > 0 ? tProfit / 2 : 0;
             const tWorker = tProfit > 0 ? tProfit / 2 : 0;
             
-            // WEEK
             let wRev = 0, wCogs = 0, wExp = 0;
             days.forEach(d => {
                 if (week.includes(d.date)) {
@@ -557,7 +435,6 @@
             const wWorker = wProfit > 0 ? wProfit / 2 : 0;
             const wOwner = wProfit > 0 ? wProfit / 2 : 0;
             
-            // MONTH
             let mRev = 0, mCogs = 0, mExp = 0;
             days.forEach(d => {
                 if (month.includes(d.date)) {
@@ -570,91 +447,34 @@
             const mWorker = mProfit > 0 ? mProfit / 2 : 0;
             const mOwner = mProfit > 0 ? mProfit / 2 : 0;
             
-            document.getElementById('analytics-content').innerHTML = `
-                <div class="analytics-card">
-                    <div class="analytics-period">📊 TODAY</div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">Revenue</span>
-                        <span class="analytics-value">UGX ${fmt(tRev)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">COGS</span>
-                        <span class="analytics-value">UGX ${fmt(tCogs)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">Expenses</span>
-                        <span class="analytics-value">UGX ${fmt(tExp)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label" style="font-weight: 700; color: #8B4513;">Profit</span>
-                        <span class="analytics-value" style="color: ${tProfit > 0 ? '#27a745' : '#dc3545'}; font-weight: 800;">UGX ${fmt(Math.abs(tProfit))}</span>
-                    </div>
-                    <div class="analytics-metric" style="border-top: 2px solid #ddd; padding-top: 10px; margin-top: 8px;">
-                        <span class="analytics-label">👤 Owner (50%)</span>
-                        <span class="analytics-value" style="color: #0066cc;">UGX ${fmt(tOwner)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">👷 Worker (50%)</span>
-                        <span class="analytics-value" style="color: #0066cc;">UGX ${fmt(tWorker)}</span>
-                    </div>
-                </div>
-                
-                <div class="analytics-card">
-                    <div class="analytics-period">📈 THIS WEEK</div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">Revenue</span>
-                        <span class="analytics-value">UGX ${fmt(wRev)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">COGS</span>
-                        <span class="analytics-value">UGX ${fmt(wCogs)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">Expenses</span>
-                        <span class="analytics-value">UGX ${fmt(wExp)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label" style="font-weight: 700; color: #8B4513;">Profit</span>
-                        <span class="analytics-value" style="color: ${wProfit > 0 ? '#27a745' : '#dc3545'}; font-weight: 800;">UGX ${fmt(Math.abs(wProfit))}</span>
-                    </div>
-                    <div class="analytics-metric" style="border-top: 2px solid #ddd; padding-top: 10px; margin-top: 8px;">
-                        <span class="analytics-label">👤 Owner (50%)</span>
-                        <span class="analytics-value" style="color: #0066cc;">UGX ${fmt(wOwner)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">👷 Worker (50%)</span>
-                        <span class="analytics-value" style="color: #0066cc;">UGX ${fmt(wWorker)}</span>
-                    </div>
-                </div>
-                
-                <div class="analytics-card">
-                    <div class="analytics-period">📅 THIS MONTH</div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">Revenue</span>
-                        <span class="analytics-value">UGX ${fmt(mRev)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">COGS</span>
-                        <span class="analytics-value">UGX ${fmt(mCogs)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">Expenses</span>
-                        <span class="analytics-value">UGX ${fmt(mExp)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label" style="font-weight: 700; color: #8B4513;">Profit</span>
-                        <span class="analytics-value" style="color: ${mProfit > 0 ? '#27a745' : '#dc3545'}; font-weight: 800;">UGX ${fmt(Math.abs(mProfit))}</span>
-                    </div>
-                    <div class="analytics-metric" style="border-top: 2px solid #ddd; padding-top: 10px; margin-top: 8px;">
-                        <span class="analytics-label">👤 Owner (50%)</span>
-                        <span class="analytics-value" style="color: #0066cc;">UGX ${fmt(mOwner)}</span>
-                    </div>
-                    <div class="analytics-metric">
-                        <span class="analytics-label">👷 Worker (50%)</span>
-                        <span class="analytics-value" style="color: #0066cc;">UGX ${fmt(mWorker)}</span>
-                    </div>
-                </div>
-            `;
+            let html = '<div class="analytics-card"><div class="analytics-period">📊 TODAY</div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">Revenue</span><span class="analytics-value">UGX ' + fmt(tRev) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">COGS</span><span class="analytics-value">UGX ' + fmt(tCogs) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">Expenses</span><span class="analytics-value">UGX ' + fmt(tExp) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label" style="font-weight: 700; color: #8B4513;">Profit</span><span class="analytics-value" style="color: ' + (tProfit > 0 ? '#27a745' : '#dc3545') + '; font-weight: 800;">UGX ' + fmt(Math.abs(tProfit)) + '</span></div>';
+            html += '<div class="analytics-metric" style="border-top: 2px solid #ddd; padding-top: 10px; margin-top: 8px;"><span class="analytics-label">👤 Owner (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(tOwner) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">👷 Worker (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(tWorker) + '</span></div>';
+            html += '</div>';
+            
+            html += '<div class="analytics-card"><div class="analytics-period">📈 THIS WEEK</div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">Revenue</span><span class="analytics-value">UGX ' + fmt(wRev) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">COGS</span><span class="analytics-value">UGX ' + fmt(wCogs) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">Expenses</span><span class="analytics-value">UGX ' + fmt(wExp) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label" style="font-weight: 700; color: #8B4513;">Profit</span><span class="analytics-value" style="color: ' + (wProfit > 0 ? '#27a745' : '#dc3545') + '; font-weight: 800;">UGX ' + fmt(Math.abs(wProfit)) + '</span></div>';
+            html += '<div class="analytics-metric" style="border-top: 2px solid #ddd; padding-top: 10px; margin-top: 8px;"><span class="analytics-label">👤 Owner (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(wOwner) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">👷 Worker (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(wWorker) + '</span></div>';
+            html += '</div>';
+            
+            html += '<div class="analytics-card"><div class="analytics-period">📅 THIS MONTH</div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">Revenue</span><span class="analytics-value">UGX ' + fmt(mRev) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">COGS</span><span class="analytics-value">UGX ' + fmt(mCogs) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">Expenses</span><span class="analytics-value">UGX ' + fmt(mExp) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label" style="font-weight: 700; color: #8B4513;">Profit</span><span class="analytics-value" style="color: ' + (mProfit > 0 ? '#27a745' : '#dc3545') + '; font-weight: 800;">UGX ' + fmt(Math.abs(mProfit)) + '</span></div>';
+            html += '<div class="analytics-metric" style="border-top: 2px solid #ddd; padding-top: 10px; margin-top: 8px;"><span class="analytics-label">👤 Owner (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(mOwner) + '</span></div>';
+            html += '<div class="analytics-metric"><span class="analytics-label">👷 Worker (50%)</span><span class="analytics-value" style="color: #0066cc;">UGX ' + fmt(mWorker) + '</span></div>';
+            html += '</div>';
+            
+            document.getElementById('analytics-content').innerHTML = html;
         }
         
         // HISTORY
@@ -668,15 +488,7 @@
                 const cogs = d.usage ? d.usage.reduce((s, u) => s + u.cost, 0) : 0;
                 const expenses = d.expenses ? d.expenses.reduce((s, e) => s + e.amount, 0) : 0;
                 const profit = revenue - cogs - expenses;
-                html += `
-                    <div class="item-card" onclick="viewHistoryDay('${d.date}')" style="cursor: pointer;">
-                        <div class="item-header">
-                            <div class="item-name">${d.date}</div>
-                            <div class="item-amount" style="color: ${profit > 0 ? '#27a745' : '#dc3545'};">UGX ${fmt(Math.abs(profit))}</div>
-                        </div>
-                        <div class="item-meta">Revenue: UGX ${fmt(revenue)} | ${d.status}</div>
-                    </div>
-                `;
+                html += '<div class="item-card" onclick="viewHistoryDay(\'' + d.date + '\')" style="cursor: pointer;"><div class="item-header"><div class="item-name">' + d.date + '</div><div class="item-amount" style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</div></div><div class="item-meta">Revenue: UGX ' + fmt(revenue) + ' | ' + d.status + '</div></div>';
             });
             
             document.getElementById('history-content').innerHTML = html || '<p style="color: #999; font-size: 12px;">No history</p>';
@@ -691,61 +503,35 @@
             const owner = profit > 0 ? profit / 2 : 0;
             const worker = profit > 0 ? profit / 2 : 0;
             
-            let html = `
-                <div class="back-btn" onclick="backToToday()">← Return to Today</div>
-                
-                <div class="card">
-                    <h2>📅 ${date}</h2>
-                    <div class="status ${day.status}">${day.status}</div>
-                    
-                    <h3>Production</h3>
-                    <div class="summary-section">
-                        <div class="summary-row"><span>Carried</span><span>${day.chapatiCarried || 0}</span></div>
-                        <div class="summary-row"><span>Made</span><span>${day.chapatiMade || 0}</span></div>
-                        <div class="summary-row"><span>Total</span><span>${(day.chapatiCarried || 0) + (day.chapatiMade || 0)}</span></div>
-                        <div class="summary-row"><span>Sold</span><span>${(day.chapatiCarried || 0) + (day.chapatiMade || 0) - (day.chapatiRemaining || 0)}</span></div>
-                        <div class="summary-row total"><span>Remaining</span><span>${day.chapatiRemaining || 0}</span></div>
-                    </div>
-                    
-                    <h3>Financial</h3>
-                    <div class="summary-section">
-                        <div class="summary-row"><span>Revenue</span><span>UGX ${fmt(revenue)}</span></div>
-                        <div class="summary-row"><span>COGS</span><span>UGX ${fmt(cogs)}</span></div>
-                        <div class="summary-row"><span>Expenses</span><span>UGX ${fmt(expenses)}</span></div>
-                        <div class="summary-row total"><span>Profit</span><span style="color: ${profit > 0 ? '#27a745' : '#dc3545'};">UGX ${fmt(Math.abs(profit))}</span></div>
-                        <div class="summary-row share"><span>👤 Owner Share</span><span style="color: #0066cc;">UGX ${fmt(owner)}</span></div>
-                        <div class="summary-row share"><span>👷 Worker Share</span><span style="color: #0066cc;">UGX ${fmt(worker)}</span></div>
-                    </div>
-                    
-                    <h3>Sales</h3>
-            `;
-            
+            let html = '<div class="back-btn" onclick="backToToday()">← Return to Today</div>';
+            html += '<div class="card"><h2>📅 ' + date + '</h2>';
+            html += '<div class="status ' + day.status + '">' + day.status + '</div>';
+            html += '<h3>Production</h3>';
+            html += '<div class="summary-section">';
+            html += '<div class="summary-row"><span>Carried</span><span>' + (day.chapatiCarried || 0) + '</span></div>';
+            html += '<div class="summary-row"><span>Made</span><span>' + (day.chapatiMade || 0) + '</span></div>';
+            html += '<div class="summary-row"><span>Total</span><span>' + ((day.chapatiCarried || 0) + (day.chapatiMade || 0)) + '</span></div>';
+            html += '<div class="summary-row"><span>Sold</span><span>' + ((day.chapatiCarried || 0) + (day.chapatiMade || 0) - (day.chapatiRemaining || 0)) + '</span></div>';
+            html += '<div class="summary-row total"><span>Remaining</span><span>' + (day.chapatiRemaining || 0) + '</span></div>';
+            html += '</div>';
+            html += '<h3>Financial</h3>';
+            html += '<div class="summary-section">';
+            html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
+            html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
+            html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
+            html += '<div class="summary-row total"><span>Profit</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
+            html += '<div class="summary-row share"><span>👤 Owner Share</span><span style="color: #0066cc;">UGX ' + fmt(owner) + '</span></div>';
+            html += '<div class="summary-row share"><span>👷 Worker Share</span><span style="color: #0066cc;">UGX ' + fmt(worker) + '</span></div>';
+            html += '</div>';
+            html += '<h3>Sales</h3>';
             day.sales.forEach(s => {
-                html += `
-                    <div class="item-card">
-                        <div class="item-header">
-                            <div class="item-name">${s.product}</div>
-                            <div class="item-amount">UGX ${fmt(s.qty * s.price)}</div>
-                        </div>
-                        <div class="item-meta">${s.qty} @ UGX ${fmt(s.price)}</div>
-                    </div>
-                `;
+                html += '<div class="item-card"><div class="item-header"><div class="item-name">' + s.product + '</div><div class="item-amount">UGX ' + fmt(s.qty * s.price) + '</div></div><div class="item-meta">' + s.qty + ' @ UGX ' + fmt(s.price) + '</div></div>';
             });
-            
-            html += `<h3>Expenses</h3>`;
+            html += '<h3>Expenses</h3>';
             day.expenses.forEach(e => {
-                html += `
-                    <div class="item-card">
-                        <div class="item-header">
-                            <div class="item-name">${e.desc}</div>
-                            <div class="item-amount">UGX ${fmt(e.amount)}</div>
-                        </div>
-                        <div class="item-meta">${e.category}</div>
-                    </div>
-                `;
+                html += '<div class="item-card"><div class="item-header"><div class="item-name">' + e.desc + '</div><div class="item-amount">UGX ' + fmt(e.amount) + '</div></div><div class="item-meta">' + e.category + '</div></div>';
             });
-            
-            html += `</div>`;
+            html += '</div>';
             
             document.getElementById('container').innerHTML = html;
         }
@@ -765,47 +551,36 @@
             const owner = profit > 0 ? profit / 2 : 0;
             const worker = profit > 0 ? profit / 2 : 0;
             
-            document.getElementById('close-content').innerHTML = `
-                <h3>Daily Summary</h3>
-                <div class="summary-section">
-                    <div class="summary-row"><span>Revenue</span><span>UGX ${fmt(revenue)}</span></div>
-                    <div class="summary-row"><span>COGS</span><span>UGX ${fmt(cogs)}</span></div>
-                    <div class="summary-row"><span>Expenses</span><span>UGX ${fmt(expenses)}</span></div>
-                    <div class="summary-row total"><span>Net Profit</span><span style="color: ${profit > 0 ? '#27a745' : '#dc3545'};">UGX ${fmt(Math.abs(profit))}</span></div>
-                    <div class="summary-row share"><span>👤 Owner Share (50%)</span><span style="color: #0066cc;">UGX ${fmt(owner)}</span></div>
-                    <div class="summary-row share"><span>👷 Worker Share (50%)</span><span style="color: #0066cc;">UGX ${fmt(worker)}</span></div>
-                </div>
-                
-                <h3>Closing Inventory</h3>
-                <p style="font-size: 12px; color: #666; margin-bottom: 12px;">This becomes tomorrow's opening inventory</p>
-                <div id="closing-inventory"></div>
-                
-                <button class="btn btn-primary" onclick="closeDay()" style="margin-top: 20px;">✓ Close Day & Move to Tomorrow</button>
-            `;
+            let html = '<h3>Daily Summary</h3>';
+            html += '<div class="summary-section">';
+            html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
+            html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
+            html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
+            html += '<div class="summary-row total"><span>Net Profit</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
+            html += '<div class="summary-row share"><span>👤 Owner Share (50%)</span><span style="color: #0066cc;">UGX ' + fmt(owner) + '</span></div>';
+            html += '<div class="summary-row share"><span>👷 Worker Share (50%)</span><span style="color: #0066cc;">UGX ' + fmt(worker) + '</span></div>';
+            html += '</div>';
+            html += '<h3>Closing Inventory</h3>';
+            html += '<p style="font-size: 12px; color: #666; margin-bottom: 12px;">This becomes tomorrow\'s opening inventory</p>';
+            html += '<div id="closing-inventory"></div>';
+            html += '<button class="btn btn-primary" onclick="closeDay()" style="margin-top: 20px;">✓ Close Day &amp; Move to Tomorrow</button>';
             
-            // Show closing inventory
-            let html = '';
+            document.getElementById('close-content').innerHTML = html;
+            
+            let closingHtml = '';
             day.purchases.forEach(p => {
                 const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
                 const remain = p.qty - used;
                 if (remain > 0) {
-                    html += `
-                        <div class="item-card">
-                            <div class="item-header">
-                                <div class="item-name">${p.item}</div>
-                                <div class="item-meta">${remain} items @ UGX ${fmt(p.unitCost)}</div>
-                            </div>
-                        </div>
-                    `;
+                    closingHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + p.item + '</div><div class="item-meta">' + remain + ' items @ UGX ' + fmt(p.unitCost) + '</div></div></div>';
                 }
             });
-            document.getElementById('closing-inventory').innerHTML = html || '<p style="color: #999; font-size: 12px;">No inventory to carry over</p>';
+            document.getElementById('closing-inventory').innerHTML = closingHtml || '<p style="color: #999; font-size: 12px;">No inventory to carry over</p>';
         }
         
         function closeDay() {
             const day = getDay(today);
             
-            // Save closing inventory with remaining stock
             const closingItems = [];
             day.purchases.forEach(p => {
                 const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
@@ -824,7 +599,6 @@
             save({...load(), days: {...load().days, [today]: day}});
             msg('✓ Day closed! Starting new day...');
             
-            // Move to next day
             today = new Date(new Date(today).getTime() + 86400000).toISOString().split('T')[0];
             renderDashboard();
             showView('dashboard');
@@ -837,7 +611,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `chapati-backup-${today}.json`;
+            a.download = 'chapati-backup-' + today + '.json';
             a.click();
             URL.revokeObjectURL(url);
             msg('✓ Backup downloaded');
@@ -861,7 +635,7 @@
         }
         
         function clearData() {
-            if (confirm('🚨 DELETE ALL DATA?')) {
+            if (confirm('DELETE ALL DATA?')) {
                 if (confirm('Really?')) {
                     localStorage.removeItem(KEY);
                     location.reload();
