@@ -191,6 +191,10 @@
             const ownerShare = profit > 0 ? profit / 2 : 0;
             const workerShare = profit > 0 ? profit / 2 : 0;
             
+            // Capital Position calculation
+            const inventory = day.purchases.reduce((s, p) => s + p.totalCost, 0) - day.usage.reduce((s, u) => s + u.cost, 0);
+            const capital = revenue + inventory;
+            
             document.getElementById('dashboard-content').innerHTML = `
                 <div class="status ${day.status}">${day.status}</div>
                 <div style="color: #8B4513; font-size: 16px; font-weight: 700; margin-bottom: 18px;">${today}</div>
@@ -227,6 +231,22 @@
                     <div class="summary-row share">
                         <span>👷 Worker Share (50%)</span>
                         <span style="color: #0066cc; font-weight: 700;">UGX ${fmt(workerShare)}</span>
+                    </div>
+                </div>
+                
+                <h3>Capital Position</h3>
+                <div class="summary-section">
+                    <div class="summary-row">
+                        <span>💵 Cash from Sales</span>
+                        <span>UGX ${fmt(revenue)}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>📦 Stock Value</span>
+                        <span>UGX ${fmt(inventory)}</span>
+                    </div>
+                    <div class="summary-row total">
+                        <span>TOTAL CAPITAL</span>
+                        <span style="color: ${capital > 0 ? '#27a745' : '#dc3545'};">UGX ${fmt(Math.abs(capital))}</span>
                     </div>
                 </div>
             `;
