@@ -206,28 +206,61 @@
             html += '<div class="form-group"><label>Total</label><div class="calc-display" id="purch-total">0</div></div>';
             html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add Purchase</button>';
             
-            html += '<h3>Record Usage (What was used)</h3>';
-            html += '<div class="form-group"><label>Item</label><input type="text" id="usage-item" placeholder="Flour, Eggs"></div>';
-            html += '<div class="form-group"><label>Qty Used</label><input type="number" id="usage-qty" onchange="calcUsage()"></div>';
-            html += '<div class="form-group"><label>Cost Per Unit</label><input type="number" id="usage-cost" onchange="calcUsage()"></div>';
-            html += '<div class="form-group"><label>Total</label><div class="calc-display" id="usage-total">0</div></div>';
+            html += '<h3>Purchases</h3>';
+            html += '<div id="purchases-list"></div>';
+            
+            html += '<h3>Record Usage</h3>';
+            html += '<div class="form-group"><label>Item (select from purchases)</label><select id="usage-item" onchange="updateUsagePrice()"><option value="">-- Select Item --</option></select></div>';
+            html += '<div class="form-group"><label>Qty Used</label><input type="number" id="usage-qty" onchange="calcUsageAuto()"></div>';
+            html += '<div class="form-group"><label>Unit Cost</label><input type="number" id="usage-unit" readonly style="background: #f0f0f0;"></div>';
+            html += '<div class="form-group"><label>Total Cost</label><div class="calc-display" id="usage-total">0</div></div>';
             html += '<button class="btn btn-primary" onclick="addUsage()">✓ Record Usage</button>';
+            
+            html += '<h3>Usage Recorded</h3>';
             html += '<div id="usage-list"></div>';
             
-            html += '<h3>Current Stock</h3>';
+            html += '<h3>Current Stock (After Usage)</h3>';
             html += '<div id="inventory-list"></div>';
             
             document.getElementById('inventory-content').innerHTML = html;
             
+            // Populate usage dropdown with purchased items
+            const usageSelect = document.getElementById('usage-item');
+            const usedItems = new Set();
+            day.purchases.forEach(p => {
+                if (!usedItems.has(p.item)) {
+                    const opt = document.createElement('option');
+                    opt.value = p.item;
+                    opt.textContent = p.item + ' (UGX ' + fmt(p.unitCost) + '/unit)';
+                    usageSelect.appendChild(opt);
+                    usedItems.add(p.item);
+                }
+            });
+            
+            // Show purchases list
+            let purchasesHtml = '';
+            day.purchases.forEach((p, i) => {
+                purchasesHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + p.item + '</div><div class="item-amount">UGX ' + fmt(p.totalCost) + '</div></div>';
+                purchasesHtml += '<div class="item-meta">' + p.qty + ' @ UGX ' + fmt(p.unitCost) + '/unit</div>';
+                purchasesHtml += '<button class="btn btn-danger" style="width: 100%; padding: 6px; font-size: 12px; margin-top: 8px;" onclick="deletePurchase(' + i + ')">❌ Delete</button>';
+                purchasesHtml += '</div>';
+            });
+            document.getElementById('purchases-list').innerHTML = purchasesHtml || '<p style="color: #999; font-size: 12px;">No purchases</p>';
+            
+            // Show usage list
             let usageHtml = '';
             let usageTotal = 0;
-            day.usage.forEach(u => {
+            day.usage.forEach((u, i) => {
                 usageTotal += u.cost;
-                usageHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + u.item + '</div><div class="item-amount">UGX ' + fmt(u.cost) + '</div></div><div class="item-meta">' + u.qty + ' used</div></div>';
+                usageHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + u.item + '</div><div class="item-amount">UGX ' + fmt(u.cost) + '</div></div>';
+                usageHtml += '<div class="item-meta">' + u.qty + ' @ UGX ' + fmt(u.unitCost) + '/unit</div>';
+                usageHtml += '<button class="btn btn-danger" style="width: 100%; padding: 6px; font-size: 12px; margin-top: 8px;" onclick="deleteUsage(' + i + ')">❌ Delete</button>';
+                usageHtml += '</div>';
             });
             if (usageHtml) usageHtml = '<div class="summary-section" style="font-weight: 700; color: #ff6b35; margin-bottom: 12px;">Total Used: UGX ' + fmt(usageTotal) + '</div>' + usageHtml;
-            document.getElementById('usage-list').innerHTML = usageHtml || '';
+            document.getElementById('usage-list').innerHTML = usageHtml || '<p style="color: #999; font-size: 12px;">No usage recorded</p>';
             
+            // Show remaining inventory
             let stockHtml = '';
             let stockValue = 0;
             day.purchases.forEach(p => {
@@ -236,11 +269,13 @@
                 const value = remain * p.unitCost;
                 stockValue += value;
                 if (remain > 0) {
-                    stockHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + p.item + '</div><div class="item-amount">UGX ' + fmt(value) + '</div></div><div class="item-meta">' + remain + '/' + p.qty + ' @ UGX ' + fmt(p.unitCost) + '</div></div>';
+                    stockHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + p.item + '</div><div class="item-amount" style="color: #27a745;">UGX ' + fmt(value) + '</div></div>';
+                    stockHtml += '<div class="item-meta">Remaining: ' + remain + ' / ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + '/unit</div>';
+                    stockHtml += '</div>';
                 }
             });
-            if (stockHtml) stockHtml = '<div class="summary-section" style="font-weight: 700; margin-bottom: 16px;">Stock Value: UGX ' + fmt(stockValue) + '</div>' + stockHtml;
-            document.getElementById('inventory-list').innerHTML = stockHtml || '<p style="color: #999; font-size: 12px;">No stock</p>';
+            if (stockHtml) stockHtml = '<div class="summary-section" style="font-weight: 700; margin-bottom: 16px;">Total Stock Value: UGX ' + fmt(stockValue) + '</div>' + stockHtml;
+            document.getElementById('inventory-list').innerHTML = stockHtml || '<p style="color: #999; font-size: 12px;">No stock remaining</p>';
         }
         
         function calcPurchase() {
@@ -248,11 +283,23 @@
             const unit = parseFloat(document.getElementById('purch-unit').value) || 0;
             document.getElementById('purch-total').textContent = fmt(qty * unit);
         }
-        function calcUsage() {
-            const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
-            const cost = parseFloat(document.getElementById('usage-cost').value) || 0;
-            document.getElementById('usage-total').textContent = fmt(qty * cost);
+        
+        function updateUsagePrice() {
+            const day = getDay(today);
+            const itemName = document.getElementById('usage-item').value;
+            const purchase = day.purchases.find(p => p.item === itemName);
+            if (purchase) {
+                document.getElementById('usage-unit').value = purchase.unitCost;
+                calcUsageAuto();
+            }
         }
+        
+        function calcUsageAuto() {
+            const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
+            const unit = parseFloat(document.getElementById('usage-unit').value) || 0;
+            document.getElementById('usage-total').textContent = fmt(qty * unit);
+        }
+        
         function addPurchase() {
             const day = getDay(today);
             const item = document.getElementById('purch-item').value;
@@ -267,22 +314,52 @@
             document.getElementById('purch-unit').value = '';
             renderInventory();
             renderDashboard();
+            renderCapital();
         }
+        
+        function deletePurchase(index) {
+            const day = getDay(today);
+            day.purchases.splice(index, 1);
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('✓ Purchase deleted');
+            renderInventory();
+            renderDashboard();
+            renderCapital();
+        }
+        
         function addUsage() {
             const day = getDay(today);
             const item = document.getElementById('usage-item').value;
             const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
-            const costPerUnit = parseFloat(document.getElementById('usage-cost').value) || 0;
-            if (!item || qty <= 0 || costPerUnit <= 0) { msg('Fill all fields', 'error'); return; }
-            day.usage.push({ item, qty, cost: qty * costPerUnit });
+            const unitCost = parseFloat(document.getElementById('usage-unit').value) || 0;
+            if (!item || qty <= 0 || unitCost <= 0) { msg('Select item and enter qty', 'error'); return; }
+            
+            // Check if usage exceeds purchase
+            const purchase = day.purchases.find(p => p.item === item);
+            const alreadyUsed = day.usage.filter(u => u.item === item).reduce((s, u) => s + u.qty, 0);
+            if (alreadyUsed + qty > purchase.qty) { msg('Usage exceeds purchase amount', 'error'); return; }
+            
+            day.usage.push({ item, qty, unitCost, cost: qty * unitCost });
             save({...load(), days: {...load().days, [today]: day}});
             msg('✓ Usage recorded');
             document.getElementById('usage-item').value = '';
             document.getElementById('usage-qty').value = '';
-            document.getElementById('usage-cost').value = '';
+            document.getElementById('usage-unit').value = '';
             renderInventory();
             renderDashboard();
+            renderCapital();
         }
+        
+        function deleteUsage(index) {
+            const day = getDay(today);
+            day.usage.splice(index, 1);
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('✓ Usage deleted');
+            renderInventory();
+            renderDashboard();
+            renderCapital();
+        }
+        
         function updateChapati() {
             const day = getDay(today);
             day.chapatiCarried = parseFloat(document.getElementById('inv-carried').value) || 0;
@@ -344,7 +421,7 @@
             html += '<div class="form-group"><label>Amount Owed</label><input type="number" id="debt-amount"></div>';
             html += '<button class="btn btn-primary" onclick="addDebtor()">✓ Give Credit</button>';
             
-            html += '<h3>Record Payment Received</h3>';
+            html += '<h3>Debtors List</h3>';
             html += '<div id="debtors-list"></div>';
             
             html += '<div class="summary-section"><div class="summary-row total"><span>TOTAL OUTSTANDING</span><span style="color: #ff6b35;">UGX ' + fmt(totalOwing) + '</span></div></div>';
@@ -356,7 +433,7 @@
                 debtorsHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + d.name + '</div><div class="item-amount" style="color: ' + (balance > 0 ? '#ff6b35' : '#27a745') + ';">UGX ' + fmt(balance) + '</div></div>';
                 debtorsHtml += '<div class="item-meta">Owed: UGX ' + fmt(d.amount) + ' | Paid: UGX ' + fmt(d.paid || 0) + '</div>';
                 if (balance > 0) {
-                    debtorsHtml += '<input type="number" id="payment-' + i + '" placeholder="Payment amount" style="width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px;">';
+                    debtorsHtml += '<input type="number" id="payment-' + i + '" placeholder="Payment amount" style="width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">';
                     debtorsHtml += '<button class="btn btn-primary" style="width: 100%; padding: 8px; font-size: 12px; margin: 0;" onclick="recordPayment(' + i + ')">Record Payment</button>';
                 }
                 debtorsHtml += '</div>';
@@ -401,7 +478,7 @@
             html += '<div class="form-group"><label>Amount Owed</label><input type="number" id="cred-amount"></div>';
             html += '<button class="btn btn-primary" onclick="addCreditor()">✓ Buy on Credit</button>';
             
-            html += '<h3>Record Payment Made</h3>';
+            html += '<h3>Creditors List</h3>';
             html += '<div id="creditors-list"></div>';
             
             html += '<div class="summary-section"><div class="summary-row total"><span>TOTAL OWED</span><span style="color: #0066cc;">UGX ' + fmt(totalOwing) + '</span></div></div>';
@@ -413,7 +490,7 @@
                 creditorsHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + c.name + '</div><div class="item-amount" style="color: ' + (balance > 0 ? '#0066cc' : '#27a745') + ';">UGX ' + fmt(balance) + '</div></div>';
                 creditorsHtml += '<div class="item-meta">Owed: UGX ' + fmt(c.amount) + ' | Paid: UGX ' + fmt(c.paid || 0) + '</div>';
                 if (balance > 0) {
-                    creditorsHtml += '<input type="number" id="cred-payment-' + i + '" placeholder="Payment amount" style="width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px;">';
+                    creditorsHtml += '<input type="number" id="cred-payment-' + i + '" placeholder="Payment amount" style="width: 100%; padding: 8px; margin: 8px 0; border: 1px solid #ddd; border-radius: 4px; font-size: 16px;">';
                     creditorsHtml += '<button class="btn btn-primary" style="width: 100%; padding: 8px; font-size: 12px; margin: 0;" onclick="recordCreditorPayment(' + i + ')">Record Payment</button>';
                 }
                 creditorsHtml += '</div>';
@@ -483,7 +560,6 @@
         // ANALYTICS
         function renderAnalytics() {
             const data = load();
-            const days = Object.values(data.days || {}).sort((a, b) => new Date(a.date) - new Date(b.date));
             const today2 = new Date().toISOString().split('T')[0];
             
             const getWeek = () => {
@@ -503,6 +579,7 @@
             const tExp = todayDay.expenses ? todayDay.expenses.reduce((s, e) => s + e.amount, 0) : 0;
             const tProfit = tRev - tCogs - tExp;
             
+            const days = Object.values(data.days || {});
             let wRev = 0, wCogs = 0, wExp = 0;
             days.forEach(d => {
                 if (week.includes(d.date)) {
@@ -532,18 +609,14 @@
             document.getElementById('analytics-content').innerHTML = html;
         }
         
-        // CAPITAL POSITION
+        // CAPITAL
         function renderCapital() {
             const data = load();
-            const days = Object.values(data.days || {}).sort((a, b) => new Date(a.date) - new Date(b.date));
-            
-            // Calculate TODAY's capital
             const day = getDay(today);
             const revenue = day.sales ? day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0) : 0;
             const cogs = day.usage ? day.usage.reduce((s, u) => s + u.cost, 0) : 0;
             const expenses = day.expenses ? day.expenses.reduce((s, e) => s + e.amount, 0) : 0;
             
-            // Stock value = purchases - usage
             let stockValue = 0;
             day.purchases.forEach(p => {
                 const used = day.usage ? day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0) : 0;
@@ -551,19 +624,16 @@
                 stockValue += remain * p.unitCost;
             });
             
-            // Debtors = money owed TO us (reduces capital)
             let outstandingDebtors = 0;
             day.debtors.forEach(d => { outstandingDebtors += d.amount - (d.paid || 0); });
             
-            // Creditors = money we OWE (increases capital)
             let outstandingCreditors = 0;
             day.creditors.forEach(c => { outstandingCreditors += c.amount - (c.paid || 0); });
             
-            // Net Capital Today = Revenue + Stock - COGS - Expenses - Debtors + Creditors
             const netCapitalToday = revenue + stockValue - cogs - expenses - outstandingDebtors + outstandingCreditors;
             
-            // Calculate YESTERDAY's capital to compare
             let netCapitalYesterday = 0;
+            const days = Object.values(data.days || {}).sort((a, b) => new Date(a.date) - new Date(b.date));
             if (days.length > 0) {
                 const yesterday = new Date(new Date(today) - 86400000).toISOString().split('T')[0];
                 const yesterdayDay = data.days[yesterday];
@@ -727,4 +797,3 @@
     </script>
 </body>
 </html>
-// v6.0 deployed Mon Aug 24 13:35:35 UTC 2026
