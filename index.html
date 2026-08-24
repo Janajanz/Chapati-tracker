@@ -235,12 +235,22 @@
             html += '<div class="form-group"><label style="color: #8B4513; font-weight: 700;">Total Available</label><div class="calc-display">' + total + ' chapatis</div></div>';
             html += '<div class="form-group"><label style="color: #8B4513; font-weight: 700;">Sold Today</label><div class="calc-display">' + sold + ' chapatis</div></div>';
             html += '<div class="form-group"><label>Remaining (Count Physically)</label><input type="number" id="inv-remaining" value="' + (day.chapatiRemaining || 0) + '" onchange="updateChapati()"></div>';
+            
             html += '<h3 style="margin-top: 24px;">Record Purchase</h3>';
             html += '<div class="form-group"><label>Item Name</label><input type="text" id="purch-item" placeholder="e.g., Flour, Eggs"></div>';
             html += '<div class="form-group"><label>Quantity</label><input type="number" id="purch-qty" onchange="calcPurchase()"></div>';
             html += '<div class="form-group"><label>Unit Cost</label><input type="number" id="purch-unit" onchange="calcPurchase()"></div>';
             html += '<div class="form-group"><label style="color: #8B4513; font-weight: 700;">Total Cost</label><div class="calc-display" id="purch-total">0</div></div>';
             html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add Purchase</button>';
+            
+            html += '<h3 style="margin-top: 24px;">Record Usage (What was used today)</h3>';
+            html += '<div class="form-group"><label>Item Name</label><input type="text" id="usage-item" placeholder="e.g., Flour, Eggs"></div>';
+            html += '<div class="form-group"><label>Quantity Used</label><input type="number" id="usage-qty"></div>';
+            html += '<div class="form-group"><label>Cost Per Unit</label><input type="number" id="usage-cost" onchange="calcUsage()"></div>';
+            html += '<div class="form-group"><label style="color: #8B4513; font-weight: 700;">Total Cost</label><div class="calc-display" id="usage-total">0</div></div>';
+            html += '<button class="btn btn-primary" onclick="addUsage()">✓ Record Usage</button>';
+            html += '<div id="usage-list" style="margin-top: 16px;"></div>';
+            
             html += '<h3 style="margin-top: 24px;">Current Stock</h3>';
             html += '<div id="inventory-list"></div>';
             
@@ -255,6 +265,16 @@
                 openingHtml = '<p style="color: #999; font-size: 12px;">No opening inventory</p>';
             }
             document.getElementById('opening-inventory').innerHTML = openingHtml;
+            
+            // Show usage
+            let usageHtml = '';
+            let totalUsageCost = 0;
+            day.usage.forEach(u => {
+                totalUsageCost += u.cost;
+                usageHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + u.item + '</div><div class="item-amount">UGX ' + fmt(u.cost) + '</div></div><div class="item-meta">' + u.qty + ' used @ UGX ' + fmt(u.cost / u.qty) + '</div></div>';
+            });
+            usageHtml = '<div class="summary-section" style="font-weight: 700; margin-bottom: 12px; color: #ff6b35;">Total Used Cost: UGX ' + fmt(totalUsageCost) + '</div>' + usageHtml;
+            document.getElementById('usage-list').innerHTML = usageHtml || '<p style="color: #999; font-size: 12px;">No usage recorded</p>';
             
             let stockHtml = '';
             let totalValue = 0;
@@ -276,6 +296,13 @@
             const unit = parseFloat(document.getElementById('purch-unit').value) || 0;
             const total = qty * unit;
             document.getElementById('purch-total').textContent = fmt(total);
+        }
+        
+        function calcUsage() {
+            const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
+            const cost = parseFloat(document.getElementById('usage-cost').value) || 0;
+            const total = qty * cost;
+            document.getElementById('usage-total').textContent = fmt(total);
         }
         
         function updateChapati() {
@@ -300,6 +327,23 @@
             document.getElementById('purch-item').value = '';
             document.getElementById('purch-qty').value = '';
             document.getElementById('purch-unit').value = '';
+            renderInventory();
+            renderDashboard();
+        }
+        
+        function addUsage() {
+            const day = getDay(today);
+            const item = document.getElementById('usage-item').value;
+            const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
+            const costPerUnit = parseFloat(document.getElementById('usage-cost').value) || 0;
+            const totalCost = qty * costPerUnit;
+            if (!item || qty <= 0 || costPerUnit <= 0) { msg('Fill all fields', 'error'); return; }
+            day.usage.push({ item, qty, cost: totalCost });
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('✓ Usage recorded');
+            document.getElementById('usage-item').value = '';
+            document.getElementById('usage-qty').value = '';
+            document.getElementById('usage-cost').value = '';
             renderInventory();
             renderDashboard();
         }
