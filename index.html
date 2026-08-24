@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-    <title>Chapati Tracker - v7.0 - Full Working Tabs</title>
+    <title>Chapati Tracker - v8.0 - Editable Sales + Complete Debtors/Creditors</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-user-select: none; }
         html, body { width: 100%; height: 100%; position: fixed; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; }
@@ -379,20 +379,17 @@
             html += '<div class="form-group"><label>Qty</label><input type="number" id="sale-qty"></div>';
             html += '<div class="form-group"><label>Price</label><input type="number" id="sale-price"></div>';
             html += '<button class="btn btn-primary" onclick="addSale()">✓ Add</button>';
-            html += '<h3>Summary</h3><div id="sales-list"></div>';
+            html += '<h3>Sales List</h3><div id="sales-list"></div>';
             html += '<div class="summary-section"><div class="summary-row total"><span>TOTAL REVENUE</span><span style="color: #0066cc;">UGX ' + fmt(totalRev) + '</span></div></div>';
             document.getElementById('sales-content').innerHTML = html;
             
             let salesHtml = '';
-            let byProduct = {};
-            day.sales.forEach(s => {
-                if (!byProduct[s.product]) byProduct[s.product] = { qty: 0, total: 0 };
-                byProduct[s.product].qty += s.qty;
-                byProduct[s.product].total += s.qty * s.price;
+            day.sales.forEach((s, i) => {
+                salesHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + s.product + '</div><div class="item-amount">UGX ' + fmt(s.qty * s.price) + '</div></div>';
+                salesHtml += '<div class="item-meta">' + s.qty + ' @ UGX ' + fmt(s.price) + '/unit</div>';
+                salesHtml += '<button class="btn btn-danger" style="width: 100%; padding: 6px; font-size: 12px; margin-top: 8px;" onclick="deleteSale(' + i + ')">❌ Delete</button>';
+                salesHtml += '</div>';
             });
-            for (const [prod, data] of Object.entries(byProduct)) {
-                salesHtml += '<div class="item-card"><div class="item-header"><div class="item-name">' + prod + '</div><div class="item-amount">UGX ' + fmt(data.total) + '</div></div><div class="item-meta">' + data.qty + ' units</div></div>';
-            }
             document.getElementById('sales-list').innerHTML = salesHtml || '<p style="color: #999; font-size: 12px;">No sales</p>';
         }
         function addSale() {
@@ -408,6 +405,16 @@
             document.getElementById('sale-price').value = '';
             renderSales();
             renderDashboard();
+            renderCapital();
+        }
+        function deleteSale(index) {
+            const day = getDay(today);
+            day.sales.splice(index, 1);
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('✓ Sale deleted');
+            renderSales();
+            renderDashboard();
+            renderCapital();
         }
         
         // DEBTORS
