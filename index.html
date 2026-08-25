@@ -170,7 +170,10 @@
             day.chapatiCarried = parseInt(document.getElementById('carried').value) || 0;
             day.chapatiMade = parseInt(document.getElementById('made').value) || 0;
             day.chapatiRemaining = parseInt(document.getElementById('remaining').value) || 0;
-            save({...load(), days: {...load().days, [today]: day}});
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            renderDashboard();
         }
 
         function renderInventory() {
@@ -232,11 +235,87 @@
             document.getElementById('stock-list').innerHTML = sList || '<p>None</p>';
         }
 
-        function addPurchase() { const day = getDay(today); const item = document.getElementById('purch-item').value; const qty = parseInt(document.getElementById('purch-qty').value) || 0; const unitCost = parseInt(document.getElementById('purch-cost').value) || 0; if (!item || qty <= 0 || unitCost <= 0) return; day.purchases.push({item, qty, unitCost}); save({...load(), days: {...load().days, [today]: day}}); msg('Purchase added'); renderInventory(); }
-        function autoFillUsageCost() { const day = getDay(today); const item = document.getElementById('usage-item').value; const p = day.purchases.find(x => x.item === item); document.getElementById('usage-cost').value = p ? p.unitCost : ''; }
-        function addUsage() { const day = getDay(today); const item = document.getElementById('usage-item').value; const qty = parseInt(document.getElementById('usage-qty').value) || 0; const unitCost = parseInt(document.getElementById('usage-cost').value) || 0; if (!item || qty <= 0 || unitCost <= 0) return; day.usage.push({item, qty, unitCost, cost: qty * unitCost}); save({...load(), days: {...load().days, [today]: day}}); msg('Usage added'); renderInventory(); renderDashboard(); renderCapital(); }
-        function delPurchase(i) { const day = getDay(today); day.purchases.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderInventory(); }
-        function delUsage(i) { const day = getDay(today); day.usage.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderInventory(); renderDashboard(); renderCapital(); }
+        function addPurchase() { 
+            const day = getDay(today); 
+            const item = document.getElementById('purch-item').value; 
+            const qty = parseInt(document.getElementById('purch-qty').value) || 0; 
+            const unitCost = parseInt(document.getElementById('purch-cost').value) || 0; 
+            if (!item || qty <= 0 || unitCost <= 0) { alert('Fill all fields'); return; } 
+            day.purchases.push({item, qty, unitCost}); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Purchase added');
+            document.getElementById('purch-item').value = '';
+            document.getElementById('purch-qty').value = '';
+            document.getElementById('purch-cost').value = '';
+            renderInventory(); 
+        }
+        function autoFillUsageCost() { 
+            const day = getDay(today); 
+            const item = document.getElementById('usage-item').value;
+            if (!item || item === '-- Select --') {
+                document.getElementById('usage-cost').value = '';
+                return;
+            }
+            const p = day.purchases.find(x => x.item === item); 
+            if (p) {
+                document.getElementById('usage-cost').value = p.unitCost;
+            } else {
+                document.getElementById('usage-cost').value = '';
+                alert('Item not found in purchases');
+            }
+        }
+        function addUsage() { 
+            const day = getDay(today); 
+            const item = document.getElementById('usage-item').value; 
+            const qty = parseInt(document.getElementById('usage-qty').value) || 0; 
+            const unitCost = parseInt(document.getElementById('usage-cost').value) || 0; 
+            
+            if (!item || item === '-- Select --') { alert('Select an item'); return; }
+            if (qty <= 0) { alert('Qty must be > 0'); return; }
+            if (unitCost <= 0) { alert('Unit cost not filled'); return; }
+            
+            // Check if usage exceeds purchase quantity
+            const totalPurchased = day.purchases.filter(p => p.item === item).reduce((s, p) => s + p.qty, 0);
+            const totalUsed = day.usage.filter(u => u.item === item).reduce((s, u) => s + u.qty, 0);
+            if ((totalUsed + qty) > totalPurchased) { 
+                alert('Cannot use more than purchased (' + totalPurchased + ')'); 
+                return; 
+            }
+            
+            day.usage.push({item, qty, unitCost, cost: qty * unitCost}); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Usage added - COGS recorded');
+            document.getElementById('usage-item').value = '-- Select --';
+            document.getElementById('usage-qty').value = '';
+            document.getElementById('usage-cost').value = '';
+            renderInventory(); 
+            renderDashboard(); 
+            renderCapital(); 
+        }
+        function delPurchase(i) { 
+            const day = getDay(today); 
+            day.purchases.splice(i, 1); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Purchase deleted');
+            renderInventory(); 
+        }
+        function delUsage(i) { 
+            const day = getDay(today); 
+            day.usage.splice(i, 1); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Usage deleted');
+            renderInventory(); 
+            renderDashboard(); 
+            renderCapital(); 
+        }
 
         function renderSales() {
             const day = getDay(today);
@@ -257,9 +336,48 @@
             document.getElementById('sales-list').innerHTML = sList || '<p>None</p>';
         }
 
-        function addSale() { const day = getDay(today); const product = document.getElementById('sale-prod').value; const qty = parseInt(document.getElementById('sale-qty').value) || 0; const price = parseInt(document.getElementById('sale-price').value) || 0; if (qty <= 0 || price <= 0) return; day.sales.push({product, qty, price}); save({...load(), days: {...load().days, [today]: day}}); msg('Sale added'); renderSales(); renderDashboard(); renderCapital(); }
-        function updateSale(i) { const day = getDay(today); const product = document.getElementById('sprod' + i).value; const qty = parseInt(document.getElementById('sqty' + i).value) || 0; const price = parseInt(document.getElementById('sprice' + i).value) || 0; if (qty <= 0 || price <= 0) return; day.sales[i] = {product, qty, price}; save({...load(), days: {...load().days, [today]: day}}); renderSales(); renderDashboard(); renderCapital(); }
-        function delSale(i) { const day = getDay(today); day.sales.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderSales(); renderDashboard(); renderCapital(); }
+        function addSale() { 
+            const day = getDay(today); 
+            const product = document.getElementById('sale-prod').value; 
+            const qty = parseInt(document.getElementById('sale-qty').value) || 0; 
+            const price = parseInt(document.getElementById('sale-price').value) || 0; 
+            if (qty <= 0 || price <= 0) { alert('Qty and Price must be > 0'); return; } 
+            day.sales.push({product, qty, price}); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Sale added');
+            document.getElementById('sale-qty').value = '';
+            document.getElementById('sale-price').value = '';
+            renderSales(); 
+            renderDashboard(); 
+            renderCapital(); 
+        }
+        function updateSale(i) { 
+            const day = getDay(today); 
+            const product = document.getElementById('sprod' + i).value; 
+            const qty = parseInt(document.getElementById('sqty' + i).value) || 0; 
+            const price = parseInt(document.getElementById('sprice' + i).value) || 0; 
+            if (qty <= 0 || price <= 0) { alert('Qty and Price must be > 0'); return; } 
+            day.sales[i] = {product, qty, price}; 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            renderSales(); 
+            renderDashboard(); 
+            renderCapital(); 
+        }
+        function delSale(i) { 
+            const day = getDay(today); 
+            day.sales.splice(i, 1); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Sale deleted');
+            renderSales(); 
+            renderDashboard(); 
+            renderCapital(); 
+        }
 
         function renderDebtors() {
             const day = getDay(today);
@@ -283,9 +401,43 @@
             document.getElementById('debtors-list').innerHTML = dList || '<p>None</p>';
         }
 
-        function addDebtor() { const day = getDay(today); const name = document.getElementById('debt-name').value; const amount = parseInt(document.getElementById('debt-amount').value) || 0; if (!name || amount <= 0) return; day.debtors.push({name, amount, paid: 0}); save({...load(), days: {...load().days, [today]: day}}); msg('Debtor added'); renderDebtors(); renderCapital(); }
-        function recDebtorPmt(i) { const day = getDay(today); const pmt = parseInt(document.getElementById('dpmt' + i).value) || 0; if (pmt <= 0) return; day.debtors[i].paid = (day.debtors[i].paid || 0) + pmt; save({...load(), days: {...load().days, [today]: day}}); msg('Payment recorded'); renderDebtors(); renderCapital(); }
-        function delDebtor(i) { const day = getDay(today); day.debtors.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderDebtors(); renderCapital(); }
+        function addDebtor() { 
+            const day = getDay(today); 
+            const name = document.getElementById('debt-name').value; 
+            const amount = parseInt(document.getElementById('debt-amount').value) || 0; 
+            if (!name || amount <= 0) { alert('Fill all'); return; } 
+            day.debtors.push({name, amount, paid: 0}); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Debtor added');
+            document.getElementById('debt-name').value = '';
+            document.getElementById('debt-amount').value = '';
+            renderDebtors(); 
+            renderCapital(); 
+        }
+        function recDebtorPmt(i) { 
+            const day = getDay(today); 
+            const pmt = parseInt(document.getElementById('dpmt' + i).value) || 0; 
+            if (pmt <= 0) { alert('Enter amount'); return; } 
+            day.debtors[i].paid = (day.debtors[i].paid || 0) + pmt; 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Payment recorded');
+            renderDebtors(); 
+            renderCapital(); 
+        }
+        function delDebtor(i) { 
+            const day = getDay(today); 
+            day.debtors.splice(i, 1); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Debtor deleted');
+            renderDebtors(); 
+            renderCapital(); 
+        }
 
         function renderCreditors() {
             const day = getDay(today);
@@ -309,9 +461,43 @@
             document.getElementById('creditors-list').innerHTML = cList || '<p>None</p>';
         }
 
-        function addCreditor() { const day = getDay(today); const name = document.getElementById('cred-name').value; const amount = parseInt(document.getElementById('cred-amount').value) || 0; if (!name || amount <= 0) return; day.creditors.push({name, amount, paid: 0}); save({...load(), days: {...load().days, [today]: day}}); msg('Creditor added'); renderCreditors(); renderCapital(); }
-        function recCreditorPmt(i) { const day = getDay(today); const pmt = parseInt(document.getElementById('cpmt' + i).value) || 0; if (pmt <= 0) return; day.creditors[i].paid = (day.creditors[i].paid || 0) + pmt; save({...load(), days: {...load().days, [today]: day}}); msg('Payment recorded'); renderCreditors(); renderCapital(); }
-        function delCreditor(i) { const day = getDay(today); day.creditors.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderCreditors(); renderCapital(); }
+        function addCreditor() { 
+            const day = getDay(today); 
+            const name = document.getElementById('cred-name').value; 
+            const amount = parseInt(document.getElementById('cred-amount').value) || 0; 
+            if (!name || amount <= 0) { alert('Fill all'); return; } 
+            day.creditors.push({name, amount, paid: 0}); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Creditor added');
+            document.getElementById('cred-name').value = '';
+            document.getElementById('cred-amount').value = '';
+            renderCreditors(); 
+            renderCapital(); 
+        }
+        function recCreditorPmt(i) { 
+            const day = getDay(today); 
+            const pmt = parseInt(document.getElementById('cpmt' + i).value) || 0; 
+            if (pmt <= 0) { alert('Enter amount'); return; } 
+            day.creditors[i].paid = (day.creditors[i].paid || 0) + pmt; 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Payment recorded');
+            renderCreditors(); 
+            renderCapital(); 
+        }
+        function delCreditor(i) { 
+            const day = getDay(today); 
+            day.creditors.splice(i, 1); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Creditor deleted');
+            renderCreditors(); 
+            renderCapital(); 
+        }
 
         function renderExpenses() {
             const day = getDay(today);
@@ -332,8 +518,34 @@
             document.getElementById('expenses-list').innerHTML = eList || '<p>None</p>';
         }
 
-        function addExpense() { const day = getDay(today); const desc = document.getElementById('exp-desc').value; const cat = document.getElementById('exp-cat').value; const amount = parseInt(document.getElementById('exp-amt').value) || 0; if (!desc || amount <= 0) return; day.expenses.push({desc, category: cat, amount}); save({...load(), days: {...load().days, [today]: day}}); msg('Expense added'); renderExpenses(); renderDashboard(); renderCapital(); }
-        function delExpense(i) { const day = getDay(today); day.expenses.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderExpenses(); renderDashboard(); renderCapital(); }
+        function addExpense() { 
+            const day = getDay(today); 
+            const desc = document.getElementById('exp-desc').value; 
+            const cat = document.getElementById('exp-cat').value; 
+            const amount = parseInt(document.getElementById('exp-amt').value) || 0; 
+            if (!desc || amount <= 0) { alert('Fill all'); return; } 
+            day.expenses.push({desc, category: cat, amount}); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Expense added');
+            document.getElementById('exp-desc').value = '';
+            document.getElementById('exp-amt').value = '';
+            renderExpenses(); 
+            renderDashboard(); 
+            renderCapital(); 
+        }
+        function delExpense(i) { 
+            const day = getDay(today); 
+            day.expenses.splice(i, 1); 
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            msg('Expense deleted');
+            renderExpenses(); 
+            renderDashboard(); 
+            renderCapital(); 
+        }
 
         function renderCapital() {
             const day = getDay(today);
