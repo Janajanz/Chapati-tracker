@@ -591,13 +591,39 @@
             renderCapital(); 
         }
 
+        function calculateStockValue(day) {
+            // Consolidate purchases by item name (same method as Inventory)
+            const itemMap = {};
+            if (day.purchases) {
+                day.purchases.forEach(p => {
+                    if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[p.item].totalQty += p.qty;
+                    itemMap[p.item].totalCost += p.qty * p.unitCost;
+                });
+            }
+            
+            let totalStockValue = 0;
+            Object.keys(itemMap).forEach(itemName => {
+                const totalQty = itemMap[itemName].totalQty;
+                const totalCost = itemMap[itemName].totalCost;
+                const used = (day.usage || []).filter(u => u.item === itemName).reduce((s, u) => s + u.qty, 0);
+                const remain = totalQty - used;
+                if (remain > 0) {
+                    const avgCost = totalCost / totalQty;
+                    totalStockValue += remain * avgCost;
+                }
+            });
+            
+            return totalStockValue;
+        }
+
         function renderCapital() {
             const day = getDay(today);
             const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
-            let stock = 0;
-            day.purchases.forEach(p => { const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0); stock += (p.qty - used) * p.unitCost; });
+            const stock = calculateStockValue(day);
+            
             let debtors = 0;
             day.debtors.forEach(d => { debtors += d.amount - (d.paid || 0); });
             let creditors = 0;
@@ -612,8 +638,7 @@
                 const yrev = yday.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
                 const ycogs = yday.usage.reduce((s, u) => s + u.cost, 0);
                 const yexp = yday.expenses.reduce((s, e) => s + e.amount, 0);
-                let ystock = 0;
-                yday.purchases.forEach(p => { const used = yday.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0); ystock += (p.qty - used) * p.unitCost; });
+                const ystock = calculateStockValue(yday);
                 let ydebtors = 0;
                 yday.debtors.forEach(d => { ydebtors += d.amount - (d.paid || 0); });
                 let ycreditors = 0;
