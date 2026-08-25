@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Chapati Tracker v9.0</title>
+    <title>Chapati Tracker v10.0</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; font-family: 'Segoe UI', sans-serif; background: #fafafa; }
@@ -12,21 +12,20 @@
         .sidebar { position: fixed; right: -280px; top: 0; width: 280px; height: 100%; background: white; z-index: 200; transition: right 0.3s; overflow-y: auto; padding-top: 60px; }
         .sidebar.open { right: 0; }
         .sidebar-item { padding: 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 14px; font-weight: 500; }
-        .sidebar-item:hover { background: #f5f5f5; }
         .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 150; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .overlay.open { opacity: 1; pointer-events: all; }
-        .container { position: fixed; top: 60px; left: 0; right: 0; bottom: 0; overflow-y: auto; padding: 16px; }
+        .container { position: fixed; top: 60px; left: 0; right: 0; bottom: 0; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
         .view { display: none; }
         .view.active { display: block; }
         .card { background: white; border-radius: 12px; padding: 18px; margin-bottom: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
         .card h2 { font-size: 18px; margin-bottom: 16px; }
-        .card h3 { font-size: 13px; margin: 16px 0 12px; color: #666; font-weight: 700; }
+        .card h3 { font-size: 13px; margin: 16px 0 12px; color: #666; font-weight: 700; text-transform: uppercase; }
         .form-group { margin-bottom: 14px; }
         .form-group label { font-size: 12px; font-weight: 600; color: #666; display: block; margin-bottom: 6px; }
         .form-group input, .form-group select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
         .btn { width: 100%; padding: 12px; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 10px; }
         .btn-primary { background: linear-gradient(135deg, #8B4513, #a0522d); color: white; }
-        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger { background: #dc3545; color: white; font-size: 12px; padding: 6px; }
         .item-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
         .summary { background: #f9f7f4; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
         .summary-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid rgba(0,0,0,0.05); font-size: 13px; }
@@ -47,8 +46,6 @@
         <div class="sidebar-item" onclick="showTab('creditors')">🏪 Creditors</div>
         <div class="sidebar-item" onclick="showTab('expenses')">💸 Expenses</div>
         <div class="sidebar-item" onclick="showTab('capital')">💰 Capital</div>
-        <div class="sidebar-item" onclick="showTab('analytics')">📈 Analytics</div>
-        <div class="sidebar-item" onclick="showTab('history')">📅 History</div>
         <div class="sidebar-item" onclick="showTab('close')">🔒 Close Day</div>
         <div class="sidebar-item" onclick="showTab('backup')">💾 Backup</div>
     </div>
@@ -60,10 +57,8 @@
         <div id="creditors" class="view"><div class="card"><h2>🏪 Creditors</h2><div id="creditors-content"></div></div></div>
         <div id="expenses" class="view"><div class="card"><h2>💸 Expenses</h2><div id="expenses-content"></div></div></div>
         <div id="capital" class="view"><div class="card"><h2>💰 Capital</h2><div id="capital-content"></div></div></div>
-        <div id="analytics" class="view"><div class="card"><h2>📈 Analytics</h2><div id="analytics-content"></div></div></div>
-        <div id="history" class="view"><div class="card"><h2>📅 History</h2><div id="history-content"></div></div></div>
-        <div id="close" class="view"><div class="card"><h2>🔒 Close</h2><div id="close-content"></div></div></div>
-        <div id="backup" class="view"><div class="card"><h2>💾 Backup</h2><button class="btn btn-primary" onclick="downloadBackup()">Download</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0; padding: 8px; width: 100%; border: 1px solid #ddd; border-radius: 4px;"><button class="btn btn-primary" onclick="restoreBackup()">Restore</button><button class="btn btn-danger" onclick="if(confirm('Delete all?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">Clear All</button></div></div>
+        <div id="close" class="view"><div class="card"><h2>🔒 Close Day</h2><div id="close-content"></div></div></div>
+        <div id="backup" class="view"><div class="card"><h2>💾 Backup</h2><button class="btn btn-primary" onclick="downloadBackup()">📥 Download Backup</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0; padding: 8px; width: 100%; border: 1px solid #ddd; border-radius: 4px;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore Backup</button><button class="btn btn-danger" style="width: 100%;" onclick="if(confirm('DELETE ALL DATA?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All Data</button></div></div>
     </div>
 
     <script>
@@ -73,13 +68,13 @@
         function load() { return JSON.parse(localStorage.getItem(KEY) || '{"days":{}}'); }
         function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
         function fmt(n) { return parseInt(n || 0).toLocaleString(); }
-        function msg(text) { alert(text); }
+        function msg(text, type = 'success') { alert((type === 'error' ? '❌ ' : '✓ ') + text); }
         
         function getDay(date) {
             const data = load();
             if (!data.days[date]) {
                 data.days[date] = {
-                    date, status: 'open', 
+                    date, status: 'open',
                     chapatiCarried: 0, chapatiMade: 0, chapatiRemaining: 0,
                     purchases: [], usage: [], sales: [], expenses: [],
                     debtors: [], creditors: [],
@@ -107,9 +102,217 @@
             else if (name === 'creditors') renderCreditors();
             else if (name === 'expenses') renderExpenses();
             else if (name === 'capital') renderCapital();
-            else if (name === 'analytics') renderAnalytics();
-            else if (name === 'history') renderHistory();
             else if (name === 'close') renderClose();
+        }
+
+        // ===== DASHBOARD =====
+        function renderDashboard() {
+            const day = getDay(today);
+            const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+            const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
+            const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
+            const profit = revenue - cogs - expenses;
+            const owner = profit > 0 ? profit / 2 : 0;
+            const worker = profit > 0 ? profit / 2 : 0;
+            
+            let html = '<p style="color: #8B4513; font-weight: 700; margin-bottom: 16px;">' + today + '</p>';
+            html += '<h3>Chapati</h3>';
+            html += '<p>Carried: ' + (day.chapatiCarried || 0) + ' | Made: ' + (day.chapatiMade || 0) + ' | Remaining: ' + (day.chapatiRemaining || 0) + '</p>';
+            html += '<h3>Financial</h3>';
+            html += '<div class="summary">';
+            html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
+            html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
+            html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
+            html += '<div class="summary-row total"><span>PROFIT</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
+            html += '<div class="summary-row" style="margin-top: 12px;"><span>👤 Owner (50%)</span><span>UGX ' + fmt(owner) + '</span></div>';
+            html += '<div class="summary-row"><span>👷 Worker (50%)</span><span>UGX ' + fmt(worker) + '</span></div>';
+            html += '</div>';
+            document.getElementById('dashboard-content').innerHTML = html;
+        }
+
+        // ===== INVENTORY =====
+        function renderInventory() {
+            const day = getDay(today);
+            
+            let html = '<h3>Add Purchase</h3>';
+            html += '<div class="form-group"><input type="text" id="purch-item" placeholder="Item name"></div>';
+            html += '<div class="form-group"><input type="number" id="purch-qty" placeholder="Qty"></div>';
+            html += '<div class="form-group"><input type="number" id="purch-cost" placeholder="Unit cost"></div>';
+            html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add Purchase</button>';
+            
+            html += '<h3>Add Usage</h3>';
+            html += '<div class="form-group"><select id="usage-item"><option value="">-- Select Item --</option>';
+            const items = new Set();
+            day.purchases.forEach(p => {
+                if (!items.has(p.item)) {
+                    html += '<option value="' + p.item + '">' + p.item + '</option>';
+                    items.add(p.item);
+                }
+            });
+            html += '</select></div>';
+            html += '<div class="form-group"><input type="number" id="usage-qty" placeholder="Qty used"></div>';
+            html += '<div class="form-group"><input type="number" id="usage-cost" placeholder="Cost per unit" readonly id="usage-readonly"></div>';
+            html += '<button class="btn btn-primary" onclick="addUsage()">✓ Add Usage</button>';
+            
+            html += '<h3>Purchases (' + day.purchases.length + ')</h3>';
+            html += '<div id="purchases-list"></div>';
+            
+            html += '<h3>Usage (' + day.usage.length + ')</h3>';
+            html += '<div id="usage-list"></div>';
+            
+            html += '<h3>Current Stock</h3>';
+            html += '<div id="stock-list"></div>';
+            
+            document.getElementById('inventory-content').innerHTML = html;
+            
+            // Purchases
+            let pList = '';
+            day.purchases.forEach((p, i) => {
+                pList += '<div class="item-card">';
+                pList += '<p><strong>' + p.item + '</strong> - ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + ' = UGX ' + fmt(p.qty * p.unitCost) + '</p>';
+                pList += '<button class="btn btn-danger" onclick="deletePurchase(' + i + ')">Delete</button>';
+                pList += '</div>';
+            });
+            document.getElementById('purchases-list').innerHTML = pList || '<p>No purchases</p>';
+            
+            // Usage
+            let uList = '';
+            let totalCogs = 0;
+            day.usage.forEach((u, i) => {
+                totalCogs += u.cost;
+                uList += '<div class="item-card">';
+                uList += '<p><strong>' + u.item + '</strong> - ' + u.qty + ' @ UGX ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + '</p>';
+                uList += '<button class="btn btn-danger" onclick="deleteUsage(' + i + ')">Delete</button>';
+                uList += '</div>';
+            });
+            if (uList) uList = '<p style="font-weight: 700; color: #ff6b35;">Total COGS: UGX ' + fmt(totalCogs) + '</p>' + uList;
+            document.getElementById('usage-list').innerHTML = uList || '<p>No usage</p>';
+            
+            // Stock Remaining
+            let sList = '';
+            let stockValue = 0;
+            day.purchases.forEach(p => {
+                const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
+                const remain = p.qty - used;
+                const value = remain * p.unitCost;
+                stockValue += value;
+                if (remain > 0) {
+                    sList += '<div class="item-card">';
+                    sList += '<p><strong>' + p.item + '</strong> - ' + remain + ' remaining (was ' + p.qty + ')</p>';
+                    sList += '<p style="font-size: 12px; color: #999;">Value: UGX ' + fmt(value) + '</p>';
+                    sList += '</div>';
+                }
+            });
+            if (sList) sList = '<p style="font-weight: 700;">Stock Value: UGX ' + fmt(stockValue) + '</p>' + sList;
+            document.getElementById('stock-list').innerHTML = sList || '<p>No stock</p>';
+        }
+
+        function addPurchase() {
+            const day = getDay(today);
+            const item = document.getElementById('purch-item').value;
+            const qty = parseFloat(document.getElementById('purch-qty').value) || 0;
+            const unitCost = parseFloat(document.getElementById('purch-cost').value) || 0;
+            if (!item || qty <= 0 || unitCost <= 0) { msg('Fill all fields', 'error'); return; }
+            day.purchases.push({ item, qty, unitCost });
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Purchase added');
+            document.getElementById('purch-item').value = '';
+            document.getElementById('purch-qty').value = '';
+            document.getElementById('purch-cost').value = '';
+            renderInventory();
+            renderDashboard();
+            renderCapital();
+        }
+
+        function deletePurchase(i) {
+            const day = getDay(today);
+            day.purchases.splice(i, 1);
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Purchase deleted');
+            renderInventory();
+            renderDashboard();
+            renderCapital();
+        }
+
+        function addUsage() {
+            const day = getDay(today);
+            const item = document.getElementById('usage-item').value;
+            const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
+            const unitCost = parseFloat(document.getElementById('usage-cost').value) || 0;
+            if (!item || qty <= 0 || unitCost <= 0) { msg('Fill all fields', 'error'); return; }
+            day.usage.push({ item, qty, unitCost, cost: qty * unitCost });
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Usage added');
+            document.getElementById('usage-item').value = '';
+            document.getElementById('usage-qty').value = '';
+            document.getElementById('usage-cost').value = '';
+            renderInventory();
+            renderDashboard();
+            renderCapital();
+        }
+
+        function deleteUsage(i) {
+            const day = getDay(today);
+            day.usage.splice(i, 1);
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Usage deleted');
+            renderInventory();
+            renderDashboard();
+            renderCapital();
+        }
+
+        // ===== SALES =====
+        function renderSales() {
+            const day = getDay(today);
+            const totalRev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+            
+            let html = '<h3>Add Sale</h3>';
+            html += '<div class="form-group"><select id="sale-prod"><option>Chapati</option><option>Eggs</option><option>Rolex</option></select></div>';
+            html += '<div class="form-group"><input type="number" id="sale-qty" placeholder="Qty"></div>';
+            html += '<div class="form-group"><input type="number" id="sale-price" placeholder="Price"></div>';
+            html += '<button class="btn btn-primary" onclick="addSale()">✓ Add Sale</button>';
+            
+            html += '<h3>Sales (' + day.sales.length + ')</h3>';
+            html += '<div id="sales-list"></div>';
+            
+            html += '<div class="summary"><div class="summary-row total"><span>TOTAL REVENUE</span><span>UGX ' + fmt(totalRev) + '</span></div></div>';
+            
+            document.getElementById('sales-content').innerHTML = html;
+            
+            let sList = '';
+            day.sales.forEach((s, i) => {
+                sList += '<div class="item-card">';
+                sList += '<p><strong>' + s.product + '</strong> - ' + s.qty + ' @ UGX ' + fmt(s.price) + ' = UGX ' + fmt(s.qty * s.price) + '</p>';
+                sList += '<button class="btn btn-danger" onclick="deleteSale(' + i + ')">Delete</button>';
+                sList += '</div>';
+            });
+            document.getElementById('sales-list').innerHTML = sList || '<p>No sales</p>';
+        }
+
+        function addSale() {
+            const day = getDay(today);
+            const product = document.getElementById('sale-prod').value;
+            const qty = parseFloat(document.getElementById('sale-qty').value) || 0;
+            const price = parseFloat(document.getElementById('sale-price').value) || 0;
+            if (qty <= 0 || price <= 0) { msg('Fill all', 'error'); return; }
+            day.sales.push({ product, qty, price });
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Sale added');
+            document.getElementById('sale-qty').value = '';
+            document.getElementById('sale-price').value = '';
+            renderSales();
+            renderDashboard();
+            renderCapital();
+        }
+
+        function deleteSale(i) {
+            const day = getDay(today);
+            day.sales.splice(i, 1);
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Sale deleted');
+            renderSales();
+            renderDashboard();
+            renderCapital();
         }
 
         // ===== DEBTORS =====
@@ -122,47 +325,60 @@
             html += '<div class="form-group"><input type="text" id="debt-name" placeholder="Customer Name"></div>';
             html += '<div class="form-group"><input type="number" id="debt-amount" placeholder="Amount"></div>';
             html += '<button class="btn btn-primary" onclick="addDebtor()">✓ Add</button>';
+            
             html += '<h3>Debtors (' + day.debtors.length + ')</h3>';
             html += '<div id="debtors-list"></div>';
+            
             html += '<div class="summary"><div class="summary-row total"><span>Total Owing</span><span>UGX ' + fmt(totalOwing) + '</span></div></div>';
             
             document.getElementById('debtors-content').innerHTML = html;
             
-            let list = '';
+            let dList = '';
             day.debtors.forEach((d, i) => {
                 const balance = d.amount - (d.paid || 0);
-                list += '<div class="item-card">';
-                list += '<p><strong>' + d.name + '</strong> - UGX ' + fmt(balance) + ' left</p>';
-                list += '<p style="font-size: 12px; color: #999;">Owed: ' + fmt(d.amount) + ' | Paid: ' + fmt(d.paid || 0) + '</p>';
+                dList += '<div class="item-card">';
+                dList += '<p><strong>' + d.name + '</strong></p>';
+                dList += '<p style="font-size: 12px;">Owed: UGX ' + fmt(d.amount) + ' | Paid: UGX ' + fmt(d.paid || 0) + ' | Balance: UGX ' + fmt(balance) + '</p>';
                 if (balance > 0) {
-                    list += '<input type="number" id="pmt' + i + '" placeholder="Payment" style="margin-top: 8px;">';
-                    list += '<button class="btn btn-primary" onclick="recordPayment(' + i + ')" style="font-size: 12px; padding: 8px;">Record</button>';
+                    dList += '<input type="number" id="dpmt' + i + '" placeholder="Payment" style="margin-top: 8px;">';
+                    dList += '<button class="btn btn-primary" onclick="recordDebtorPayment(' + i + ')" style="font-size: 12px; padding: 8px;">Record Payment</button>';
                 }
-                list += '</div>';
+                dList += '<button class="btn btn-danger" onclick="deleteDebtor(' + i + ')">Delete</button>';
+                dList += '</div>';
             });
-            
-            document.getElementById('debtors-list').innerHTML = list || '<p>No debtors</p>';
+            document.getElementById('debtors-list').innerHTML = dList || '<p>No debtors</p>';
         }
 
         function addDebtor() {
             const day = getDay(today);
             const name = document.getElementById('debt-name').value;
             const amount = parseFloat(document.getElementById('debt-amount').value) || 0;
-            if (!name || amount <= 0) { msg('Fill all'); return; }
+            if (!name || amount <= 0) { msg('Fill all', 'error'); return; }
             day.debtors.push({ name, amount, paid: 0 });
             save({...load(), days: {...load().days, [today]: day}});
-            msg('✓ Added');
+            msg('Debtor added');
+            document.getElementById('debt-name').value = '';
+            document.getElementById('debt-amount').value = '';
             renderDebtors();
             renderCapital();
         }
 
-        function recordPayment(i) {
+        function recordDebtorPayment(i) {
             const day = getDay(today);
-            const pmt = parseFloat(document.getElementById('pmt' + i).value) || 0;
-            if (pmt <= 0) { msg('Enter amount'); return; }
+            const pmt = parseFloat(document.getElementById('dpmt' + i).value) || 0;
+            if (pmt <= 0) { msg('Enter amount', 'error'); return; }
             day.debtors[i].paid = (day.debtors[i].paid || 0) + pmt;
             save({...load(), days: {...load().days, [today]: day}});
-            msg('✓ Recorded');
+            msg('Payment recorded');
+            renderDebtors();
+            renderCapital();
+        }
+
+        function deleteDebtor(i) {
+            const day = getDay(today);
+            day.debtors.splice(i, 1);
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Debtor deleted');
             renderDebtors();
             renderCapital();
         }
@@ -177,36 +393,40 @@
             html += '<div class="form-group"><input type="text" id="cred-name" placeholder="Supplier Name"></div>';
             html += '<div class="form-group"><input type="number" id="cred-amount" placeholder="Amount"></div>';
             html += '<button class="btn btn-primary" onclick="addCreditor()">✓ Add</button>';
+            
             html += '<h3>Creditors (' + day.creditors.length + ')</h3>';
             html += '<div id="creditors-list"></div>';
+            
             html += '<div class="summary"><div class="summary-row total"><span>Total Owed</span><span>UGX ' + fmt(totalOwed) + '</span></div></div>';
             
             document.getElementById('creditors-content').innerHTML = html;
             
-            let list = '';
+            let cList = '';
             day.creditors.forEach((c, i) => {
                 const balance = c.amount - (c.paid || 0);
-                list += '<div class="item-card">';
-                list += '<p><strong>' + c.name + '</strong> - UGX ' + fmt(balance) + ' left</p>';
-                list += '<p style="font-size: 12px; color: #999;">Owed: ' + fmt(c.amount) + ' | Paid: ' + fmt(c.paid || 0) + '</p>';
+                cList += '<div class="item-card">';
+                cList += '<p><strong>' + c.name + '</strong></p>';
+                cList += '<p style="font-size: 12px;">Owed: UGX ' + fmt(c.amount) + ' | Paid: UGX ' + fmt(c.paid || 0) + ' | Balance: UGX ' + fmt(balance) + '</p>';
                 if (balance > 0) {
-                    list += '<input type="number" id="cpmt' + i + '" placeholder="Payment" style="margin-top: 8px;">';
-                    list += '<button class="btn btn-primary" onclick="recordCreditorPayment(' + i + ')" style="font-size: 12px; padding: 8px;">Record</button>';
+                    cList += '<input type="number" id="cpmt' + i + '" placeholder="Payment" style="margin-top: 8px;">';
+                    cList += '<button class="btn btn-primary" onclick="recordCreditorPayment(' + i + ')" style="font-size: 12px; padding: 8px;">Record Payment</button>';
                 }
-                list += '</div>';
+                cList += '<button class="btn btn-danger" onclick="deleteCreditor(' + i + ')">Delete</button>';
+                cList += '</div>';
             });
-            
-            document.getElementById('creditors-list').innerHTML = list || '<p>No creditors</p>';
+            document.getElementById('creditors-list').innerHTML = cList || '<p>No creditors</p>';
         }
 
         function addCreditor() {
             const day = getDay(today);
             const name = document.getElementById('cred-name').value;
             const amount = parseFloat(document.getElementById('cred-amount').value) || 0;
-            if (!name || amount <= 0) { msg('Fill all'); return; }
+            if (!name || amount <= 0) { msg('Fill all', 'error'); return; }
             day.creditors.push({ name, amount, paid: 0 });
             save({...load(), days: {...load().days, [today]: day}});
-            msg('✓ Added');
+            msg('Creditor added');
+            document.getElementById('cred-name').value = '';
+            document.getElementById('cred-amount').value = '';
             renderCreditors();
             renderCapital();
         }
@@ -214,11 +434,74 @@
         function recordCreditorPayment(i) {
             const day = getDay(today);
             const pmt = parseFloat(document.getElementById('cpmt' + i).value) || 0;
-            if (pmt <= 0) { msg('Enter amount'); return; }
+            if (pmt <= 0) { msg('Enter amount', 'error'); return; }
             day.creditors[i].paid = (day.creditors[i].paid || 0) + pmt;
             save({...load(), days: {...load().days, [today]: day}});
-            msg('✓ Recorded');
+            msg('Payment recorded');
             renderCreditors();
+            renderCapital();
+        }
+
+        function deleteCreditor(i) {
+            const day = getDay(today);
+            day.creditors.splice(i, 1);
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Creditor deleted');
+            renderCreditors();
+            renderCapital();
+        }
+
+        // ===== EXPENSES =====
+        function renderExpenses() {
+            const day = getDay(today);
+            const totalExp = day.expenses.reduce((s, e) => s + e.amount, 0);
+            
+            let html = '<h3>Add Expense</h3>';
+            html += '<div class="form-group"><input type="text" id="exp-desc" placeholder="Description"></div>';
+            html += '<div class="form-group"><select id="exp-cat"><option>Meals</option><option>Transport</option><option>Packaging</option><option>Other</option></select></div>';
+            html += '<div class="form-group"><input type="number" id="exp-amt" placeholder="Amount"></div>';
+            html += '<button class="btn btn-primary" onclick="addExpense()">✓ Add Expense</button>';
+            
+            html += '<h3>Expenses (' + day.expenses.length + ')</h3>';
+            html += '<div id="expenses-list"></div>';
+            
+            html += '<div class="summary"><div class="summary-row total"><span>TOTAL EXPENSES</span><span>UGX ' + fmt(totalExp) + '</span></div></div>';
+            
+            document.getElementById('expenses-content').innerHTML = html;
+            
+            let eList = '';
+            day.expenses.forEach((e, i) => {
+                eList += '<div class="item-card">';
+                eList += '<p><strong>' + e.desc + '</strong> - UGX ' + fmt(e.amount) + ' (' + e.category + ')</p>';
+                eList += '<button class="btn btn-danger" onclick="deleteExpense(' + i + ')">Delete</button>';
+                eList += '</div>';
+            });
+            document.getElementById('expenses-list').innerHTML = eList || '<p>No expenses</p>';
+        }
+
+        function addExpense() {
+            const day = getDay(today);
+            const desc = document.getElementById('exp-desc').value;
+            const cat = document.getElementById('exp-cat').value;
+            const amount = parseFloat(document.getElementById('exp-amt').value) || 0;
+            if (!desc || amount <= 0) { msg('Fill all', 'error'); return; }
+            day.expenses.push({ desc, category: cat, amount });
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Expense added');
+            document.getElementById('exp-desc').value = '';
+            document.getElementById('exp-amt').value = '';
+            renderExpenses();
+            renderDashboard();
+            renderCapital();
+        }
+
+        function deleteExpense(i) {
+            const day = getDay(today);
+            day.expenses.splice(i, 1);
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Expense deleted');
+            renderExpenses();
+            renderDashboard();
             renderCapital();
         }
 
@@ -243,11 +526,11 @@
             
             const capital = revenue + stock - cogs - expenses - debtors + creditors;
             
-            let html = '<h3>Today\'s Capital</h3>';
+            let html = '<h3>Capital Calculation</h3>';
             html += '<div class="summary">';
             html += '<div class="summary-row"><span>💵 Cash (Sales)</span><span>UGX ' + fmt(revenue) + '</span></div>';
-            html += '<div class="summary-row"><span>📦 Stock</span><span>UGX ' + fmt(stock) + '</span></div>';
-            html += '<div class="summary-row"><span>❌ COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
+            html += '<div class="summary-row"><span>📦 Stock Value</span><span>UGX ' + fmt(stock) + '</span></div>';
+            html += '<div class="summary-row"><span>❌ COGS (Used)</span><span>UGX ' + fmt(cogs) + '</span></div>';
             html += '<div class="summary-row"><span>❌ Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
             html += '<div class="summary-row"><span>👥 Debtors Owed</span><span>UGX ' + fmt(debtors) + '</span></div>';
             html += '<div class="summary-row"><span>🏪 Creditors Owed</span><span>UGX ' + fmt(creditors) + '</span></div>';
@@ -257,17 +540,68 @@
             document.getElementById('capital-content').innerHTML = html;
         }
 
-        // ===== OTHERS (STUB) =====
-        function renderDashboard() { document.getElementById('dashboard-content').innerHTML = '<p>Dashboard - Coming soon</p>'; }
-        function renderInventory() { document.getElementById('inventory-content').innerHTML = '<p>Inventory - Coming soon</p>'; }
-        function renderSales() { document.getElementById('sales-content').innerHTML = '<p>Sales - Coming soon</p>'; }
-        function renderExpenses() { document.getElementById('expenses-content').innerHTML = '<p>Expenses - Coming soon</p>'; }
-        function renderAnalytics() { document.getElementById('analytics-content').innerHTML = '<p>Analytics - Coming soon</p>'; }
-        function renderHistory() { document.getElementById('history-content').innerHTML = '<p>History - Coming soon</p>'; }
-        function renderClose() { document.getElementById('close-content').innerHTML = '<p>Close - Coming soon</p>'; }
-        
-        function downloadBackup() { const blob = new Blob([JSON.stringify(load(), null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'backup.json'; a.click(); }
-        function restoreBackup() { const file = document.getElementById('restore-file').files[0]; if (!file) return; const reader = new FileReader(); reader.onload = e => { save(JSON.parse(e.target.result)); location.reload(); }; reader.readAsText(file); }
+        // ===== CLOSE DAY =====
+        function renderClose() {
+            const day = getDay(today);
+            const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+            const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
+            const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
+            const profit = revenue - cogs - expenses;
+            
+            let html = '<h3>Day Summary</h3>';
+            html += '<div class="summary">';
+            html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
+            html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
+            html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
+            html += '<div class="summary-row total"><span>PROFIT</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
+            html += '</div>';
+            html += '<button class="btn btn-primary" onclick="closeDay()">✓ Close Day & Move to Tomorrow</button>';
+            
+            document.getElementById('close-content').innerHTML = html;
+        }
+
+        function closeDay() {
+            const day = getDay(today);
+            const closingItems = [];
+            day.purchases.forEach(p => {
+                const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
+                const remain = p.qty - used;
+                if (remain > 0) closingItems.push({ name: p.item, qty: remain, unitCost: p.unitCost });
+            });
+            day.closingInventory = { chapati: day.chapatiRemaining || 0, items: closingItems };
+            day.status = 'closed';
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Day closed');
+            today = new Date(new Date(today).getTime() + 86400000).toISOString().split('T')[0];
+            renderDashboard();
+            showTab('dashboard');
+        }
+
+        // ===== BACKUP =====
+        function downloadBackup() {
+            const blob = new Blob([JSON.stringify(load(), null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'chapati-backup-' + today + '.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            msg('Downloaded');
+        }
+
+        function restoreBackup() {
+            const file = document.getElementById('restore-file').files[0];
+            if (!file) { msg('Select file', 'error'); return; }
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    save(JSON.parse(e.target.result));
+                    msg('Restored');
+                    location.reload();
+                } catch (err) { msg('Invalid file', 'error'); }
+            };
+            reader.readAsText(file);
+        }
 
         window.addEventListener('load', () => renderDashboard());
     </script>
