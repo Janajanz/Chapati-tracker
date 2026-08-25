@@ -178,6 +178,11 @@
 
         function renderInventory() {
             const day = getDay(today);
+            
+            // Ensure arrays exist
+            if (!day.purchases) day.purchases = [];
+            if (!day.usage) day.usage = [];
+            
             let html = '<h3>Add Purchase</h3>';
             html += '<div class="form-group"><input type="text" id="purch-item" placeholder="Item"></div>';
             html += '<div class="form-group"><input type="number" id="purch-qty" placeholder="Qty"></div>';
@@ -185,13 +190,29 @@
             html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add</button>';
             
             html += '<h3>Add Usage</h3>';
-            html += '<div class="form-group"><select id="usage-item" onchange="autoFillUsageCost()"><option>-- Select --</option>';
-            const items = new Set();
-            day.purchases.forEach(p => { if (!items.has(p.item)) { html += '<option>' + p.item + '</option>'; items.add(p.item); }});
+            html += '<div class="form-group"><label>Select Item from Purchases</label><select id="usage-item" onchange="autoFillUsageCost()"><option value="">-- Choose Item --</option>';
+            
+            // Build unique list of purchases with their unit costs
+            const purchaseMap = {};
+            day.purchases.forEach(p => {
+                if (p.item && !purchaseMap[p.item]) {
+                    purchaseMap[p.item] = p.unitCost;
+                }
+            });
+            
+            // Populate dropdown with purchase items
+            Object.keys(purchaseMap).forEach(itemName => {
+                html += '<option value="' + itemName + '|' + purchaseMap[itemName] + '">' + itemName + ' (UGX ' + fmt(purchaseMap[itemName]) + ')</option>';
+            });
+            
+            if (Object.keys(purchaseMap).length === 0) {
+                html += '<option disabled style="color: #999;">No purchases yet</option>';
+            }
+            
             html += '</select></div>';
             html += '<div class="form-group"><input type="number" id="usage-qty" placeholder="Qty"></div>';
-            html += '<div class="form-group"><input type="number" id="usage-cost" placeholder="Unit Cost" readonly></div>';
-            html += '<button class="btn btn-primary" onclick="addUsage()">✓ Add</button>';
+            html += '<div class="form-group"><label>Unit Cost (auto)</label><input type="number" id="usage-cost" placeholder="Unit Cost" readonly></div>';
+            html += '<button class="btn btn-primary" onclick="addUsage()">✓ Add Usage</button>';
             
             html += '<h3>Purchases (' + day.purchases.length + ')</h3><div id="purchases-list"></div>';
             html += '<h3>Usage (' + day.usage.length + ')</h3><div id="usage-list"></div>';
@@ -199,40 +220,61 @@
             
             document.getElementById('inventory-content').innerHTML = html;
             
+            // Display all purchases
             let pList = '';
-            day.purchases.forEach((p, i) => {
-                pList += '<div class="item-card"><p><strong>' + p.item + '</strong> - ' + p.qty + ' @ ' + fmt(p.unitCost) + ' = UGX ' + fmt(p.qty * p.unitCost) + '</p><button class="btn btn-danger" onclick="delPurchase(' + i + ')">Delete</button></div>';
-            });
-            document.getElementById('purchases-list').innerHTML = pList || '<p>None</p>';
+            if (day.purchases.length > 0) {
+                day.purchases.forEach((p, i) => {
+                    pList += '<div class="item-card"><p><strong>' + p.item + '</strong> - ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + ' = UGX ' + fmt(p.qty * p.unitCost) + '</p><button class="btn btn-danger" onclick="delPurchase(' + i + ')">Delete</button></div>';
+                });
+            } else {
+                pList = '<p style="color: #999;">No purchases recorded</p>';
+            }
+            document.getElementById('purchases-list').innerHTML = pList;
             
+            // Display usage
             let uList = '';
             let totalCogs = 0;
-            day.usage.forEach((u, i) => { totalCogs += u.cost; uList += '<div class="item-card"><p><strong>' + u.item + '</strong> - ' + u.qty + ' @ ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + '</p><button class="btn btn-danger" onclick="delUsage(' + i + ')">Delete</button></div>'; });
-            if (uList) uList = '<p style="font-weight: 700;">COGS: UGX ' + fmt(totalCogs) + '</p>' + uList;
-            document.getElementById('usage-list').innerHTML = uList || '<p>None</p>';
+            if (day.usage.length > 0) {
+                day.usage.forEach((u, i) => { 
+                    totalCogs += u.cost; 
+                    uList += '<div class="item-card"><p><strong>' + u.item + '</strong> - ' + u.qty + ' @ UGX ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + '</p><button class="btn btn-danger" onclick="delUsage(' + i + ')">Delete</button></div>'; 
+                });
+                uList = '<p style="font-weight: 700; color: #ff6b35;">Total COGS: UGX ' + fmt(totalCogs) + '</p>' + uList;
+            } else {
+                uList = '<p style="color: #999;">No usage recorded</p>';
+            }
+            document.getElementById('usage-list').innerHTML = uList;
             
+            // Calculate and display consolidated stock
             let sList = '';
             let stockValue = 0;
             const itemMap = {};
+            
             day.purchases.forEach(p => {
                 if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
                 itemMap[p.item].totalQty += p.qty;
                 itemMap[p.item].totalCost += p.qty * p.unitCost;
             });
+            
             Object.keys(itemMap).forEach(itemName => {
                 const totalQty = itemMap[itemName].totalQty;
                 const totalCost = itemMap[itemName].totalCost;
                 const used = day.usage.filter(u => u.item === itemName).reduce((s, u) => s + u.qty, 0);
                 const remain = totalQty - used;
+                const avgCost = totalCost / totalQty;
+                const value = remain * avgCost;
+                
                 if (remain > 0) {
-                    const avgCost = totalCost / totalQty;
-                    const value = remain * avgCost;
                     stockValue += value;
-                    sList += '<div class="item-card"><p><strong>' + itemName + '</strong></p><p style="font-size: 12px;">Purchased: ' + totalQty + ' | Used: ' + used + ' | Remaining: <strong>' + remain + '</strong></p><p style="font-size: 12px; font-weight: 700;">Value: UGX ' + fmt(value) + '</p></div>';
+                    sList += '<div class="item-card"><p><strong>' + itemName + '</strong></p><p style="font-size: 12px;">Purchased: ' + totalQty + ' | Used: ' + used + ' | <strong>Remaining: ' + remain + '</strong></p><p style="font-size: 12px; font-weight: 700;">Value: UGX ' + fmt(value) + '</p></div>';
+                } else if (remain === 0) {
+                    sList += '<div class="item-card"><p><strong>' + itemName + '</strong> - ✓ FINISHED</p><p style="font-size: 12px;">Purchased: ' + totalQty + ' | Used: ' + used + '</p></div>';
                 }
             });
-            if (sList) sList = '<p style="font-weight: 700;">Total: UGX ' + fmt(stockValue) + '</p>' + sList;
-            document.getElementById('stock-list').innerHTML = sList || '<p>None</p>';
+            
+            if (sList) sList = '<p style="font-weight: 700; font-size: 14px; color: #8B4513;">Total Stock Value: UGX ' + fmt(stockValue) + '</p>' + sList;
+            else sList = '<p style="color: #999;">No stock or all used</p>';
+            document.getElementById('stock-list').innerHTML = sList;
         }
 
         function addPurchase() { 
@@ -252,35 +294,37 @@
             renderInventory(); 
         }
         function autoFillUsageCost() { 
-            const day = getDay(today); 
-            const item = document.getElementById('usage-item').value;
-            if (!item || item === '-- Select --') {
+            const selectedValue = document.getElementById('usage-item').value;
+            if (!selectedValue) {
                 document.getElementById('usage-cost').value = '';
                 return;
             }
-            const p = day.purchases.find(x => x.item === item); 
-            if (p) {
-                document.getElementById('usage-cost').value = p.unitCost;
+            // Value format: "itemName|unitCost"
+            const parts = selectedValue.split('|');
+            if (parts.length === 2) {
+                document.getElementById('usage-cost').value = parts[1];
             } else {
                 document.getElementById('usage-cost').value = '';
-                alert('Item not found in purchases');
             }
         }
         function addUsage() { 
             const day = getDay(today); 
-            const item = document.getElementById('usage-item').value; 
+            const selectedValue = document.getElementById('usage-item').value;
             const qty = parseInt(document.getElementById('usage-qty').value) || 0; 
-            const unitCost = parseInt(document.getElementById('usage-cost').value) || 0; 
+            const unitCost = parseInt(document.getElementById('usage-cost').value) || 0;
             
-            if (!item || item === '-- Select --') { alert('Select an item'); return; }
+            // Extract item name from "itemName|unitCost" format
+            const item = selectedValue.split('|')[0];
+            
+            if (!item || item === '') { alert('Select an item from the list'); return; }
             if (qty <= 0) { alert('Qty must be > 0'); return; }
-            if (unitCost <= 0) { alert('Unit cost not filled'); return; }
+            if (unitCost <= 0) { alert('Unit cost not filled - select item again'); return; }
             
             // Check if usage exceeds purchase quantity
             const totalPurchased = day.purchases.filter(p => p.item === item).reduce((s, p) => s + p.qty, 0);
             const totalUsed = day.usage.filter(u => u.item === item).reduce((s, u) => s + u.qty, 0);
             if ((totalUsed + qty) > totalPurchased) { 
-                alert('Cannot use more than purchased (' + totalPurchased + ')'); 
+                alert('Cannot use ' + qty + ' - only ' + (totalPurchased - totalUsed) + ' available'); 
                 return; 
             }
             
@@ -288,8 +332,8 @@
             const data = load();
             data.days[today] = day;
             save(data);
-            msg('Usage added - COGS recorded');
-            document.getElementById('usage-item').value = '-- Select --';
+            msg('Usage added - ' + item + ' (' + qty + ') COGS recorded');
+            document.getElementById('usage-item').value = '';
             document.getElementById('usage-qty').value = '';
             document.getElementById('usage-cost').value = '';
             renderInventory(); 
