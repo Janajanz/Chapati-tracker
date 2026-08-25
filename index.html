@@ -81,14 +81,25 @@
                 // Check if previous day exists and has closing inventory
                 const prevDate = new Date(new Date(date).getTime() - 86400000).toISOString().split('T')[0];
                 let chapatiCarried = 0;
+                let carryoverItems = [];
+                
                 if (data.days[prevDate] && data.days[prevDate].closingInventory) {
                     chapatiCarried = data.days[prevDate].closingInventory.chapati || 0;
+                    // Carry over all remaining items as opening inventory
+                    if (data.days[prevDate].closingInventory.items && data.days[prevDate].closingInventory.items.length > 0) {
+                        carryoverItems = data.days[prevDate].closingInventory.items.map(item => ({
+                            item: item.name,
+                            qty: item.qty,
+                            unitCost: item.unitCost
+                        }));
+                    }
                 }
                 
                 data.days[date] = {
                     date, status: 'open',
                     chapatiCarried: chapatiCarried, chapatiMade: 0, chapatiRemaining: 0,
-                    purchases: [], usage: [], sales: [], expenses: [],
+                    purchases: carryoverItems, // Start with previous day's remaining items
+                    usage: [], sales: [], expenses: [],
                     debtors: [], creditors: [],
                     closingInventory: { chapati: 0, items: [] }
                 };
