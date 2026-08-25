@@ -628,7 +628,12 @@
             day.debtors.forEach(d => { debtors += d.amount - (d.paid || 0); });
             let creditors = 0;
             day.creditors.forEach(c => { creditors += c.amount - (c.paid || 0); });
-            const capital = revenue + stock - cogs - expenses - debtors + creditors;
+            
+            // Calculate Cash at Hand first
+            const cashAtHand = revenue - cogs - expenses;
+            
+            // Then Total Capital
+            const capital = cashAtHand + stock + debtors - creditors;
             
             const yesterday = new Date(new Date(today).getTime() - 86400000).toISOString().split('T')[0];
             const data = load();
@@ -643,27 +648,44 @@
                 yday.debtors.forEach(d => { ydebtors += d.amount - (d.paid || 0); });
                 let ycreditors = 0;
                 yday.creditors.forEach(c => { ycreditors += c.amount - (c.paid || 0); });
-                yesterdayCapital = yrev + ystock - ycogs - yexp - ydebtors + ycreditors;
+                const ycash = yrev - ycogs - yexp;
+                yesterdayCapital = ycash + ystock + ydebtors - ycreditors;
             }
             
             const position = capital - yesterdayCapital;
             let posIcon = position > 0 ? '📈 INCREASING' : (position < 0 ? '📉 DECREASING' : '➡️ STABLE');
             let posColor = position > 0 ? '#27a745' : (position < 0 ? '#dc3545' : '#666');
             
-            let html = '<h3>Today\'s Capital</h3>';
+            let html = '<h3>💵 CASH AT HAND</h3>';
             html += '<div class="summary">';
-            html += '<div class="summary-row"><span>💵 Cash</span><span>UGX ' + fmt(revenue) + '</span></div>';
-            html += '<div class="summary-row"><span>📦 Stock</span><span>UGX ' + fmt(stock) + '</span></div>';
-            html += '<div class="summary-row"><span>❌ COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
-            html += '<div class="summary-row"><span>❌ Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
-            html += '<div class="summary-row"><span>👥 Debtors</span><span>UGX ' + fmt(debtors) + '</span></div>';
-            html += '<div class="summary-row"><span>🏪 Creditors</span><span>UGX ' + fmt(creditors) + '</span></div>';
-            html += '<div class="summary-row total"><span>TOTAL CAPITAL</span><span style="color: ' + (capital > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(capital)) + '</span></div>';
+            html += '<div class="summary-row"><span>Revenue (cash sold)</span><span>UGX ' + fmt(revenue) + '</span></div>';
+            html += '<div class="summary-row"><span style="color: #dc3545;">- COGS (cost of goods)</span><span style="color: #dc3545;">UGX ' + fmt(cogs) + '</span></div>';
+            html += '<div class="summary-row"><span style="color: #dc3545;">- Expenses (maintenance)</span><span style="color: #dc3545;">UGX ' + fmt(expenses) + '</span></div>';
+            html += '<div class="summary-row total" style="background: #f9f9f9;"><span>= Cash at Hand</span><span style="color: ' + (cashAtHand >= 0 ? '#27a745' : '#dc3545') + '; font-weight: 700;">UGX ' + fmt(Math.abs(cashAtHand)) + '</span></div>';
             html += '</div>';
-            html += '<h3>Net Position</h3>';
+            
+            html += '<h3>📦 PLUS STOCK</h3>';
             html += '<div class="summary">';
-            html += '<div class="summary-row"><span>Yesterday</span><span>UGX ' + fmt(yesterdayCapital) + '</span></div>';
-            html += '<div class="summary-row"><span>Today</span><span>UGX ' + fmt(capital) + '</span></div>';
+            html += '<div class="summary-row"><span>Remaining Inventory Value</span><span style="color: #8B4513; font-weight: 700;">UGX ' + fmt(stock) + '</span></div>';
+            html += '</div>';
+            
+            if (debtors > 0 || creditors > 0) {
+                html += '<h3>💳 ADJUSTMENTS</h3>';
+                html += '<div class="summary">';
+                if (debtors > 0) html += '<div class="summary-row"><span>👥 Debtors (money owed to you)</span><span style="color: #27a745;">+ UGX ' + fmt(debtors) + '</span></div>';
+                if (creditors > 0) html += '<div class="summary-row"><span>🏪 Creditors (money you owe)</span><span style="color: #dc3545;">- UGX ' + fmt(creditors) + '</span></div>';
+                html += '</div>';
+            }
+            
+            html += '<h3>🎯 TOTAL CAPITAL TODAY</h3>';
+            html += '<div class="summary">';
+            html += '<div class="summary-row total"><span style="font-size: 16px;">NET CAPITAL</span><span style="color: ' + (capital > 0 ? '#27a745' : '#dc3545') + '; font-weight: 700; font-size: 18px;">UGX ' + fmt(Math.abs(capital)) + '</span></div>';
+            html += '</div>';
+            
+            html += '<h3>📊 NET POSITION</h3>';
+            html += '<div class="summary">';
+            html += '<div class="summary-row"><span>Yesterday\'s Capital</span><span>UGX ' + fmt(yesterdayCapital) + '</span></div>';
+            html += '<div class="summary-row"><span>Today\'s Capital</span><span>UGX ' + fmt(capital) + '</span></div>';
             html += '<div class="summary-row total"><span>Change</span><span style="color: ' + posColor + ';">' + posIcon + ' UGX ' + fmt(Math.abs(position)) + '</span></div>';
             html += '</div>';
             document.getElementById('capital-content').innerHTML = html;
