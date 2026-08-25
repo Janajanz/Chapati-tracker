@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>Chapati Tracker v11.2 Analytics History</title>
+    <title>Chapati Tracker v12.0 Complete</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; font-family: 'Segoe UI', sans-serif; background: #fafafa; }
@@ -12,6 +12,7 @@
         .sidebar { position: fixed; right: -280px; top: 0; width: 280px; height: 100%; background: white; z-index: 200; transition: right 0.3s; overflow-y: auto; padding-top: 60px; }
         .sidebar.open { right: 0; }
         .sidebar-item { padding: 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 14px; font-weight: 500; }
+        .sidebar-item:hover { background: #f5f5f5; }
         .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 150; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
         .overlay.open { opacity: 1; pointer-events: all; }
         .container { position: fixed; top: 60px; left: 0; right: 0; bottom: 0; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
@@ -62,7 +63,7 @@
         <div id="analytics" class="view"><div class="card"><h2>📈 Analytics</h2><div id="analytics-content"></div></div></div>
         <div id="history" class="view"><div class="card"><h2>📅 History</h2><div id="history-content"></div></div></div>
         <div id="close" class="view"><div class="card"><h2>🔒 Close Day</h2><div id="close-content"></div></div></div>
-        <div id="backup" class="view"><div class="card"><h2>💾 Backup</h2><button class="btn btn-primary" onclick="downloadBackup()">📥 Download Backup</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0; padding: 8px; width: 100%; border: 1px solid #ddd; border-radius: 4px;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore Backup</button><button class="btn btn-danger" style="width: 100%;" onclick="if(confirm('DELETE ALL DATA?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All Data</button></div></div>
+        <div id="backup" class="view"><div class="card"><h2>💾 Backup</h2><button class="btn btn-primary" onclick="downloadBackup()">📥 Download</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0; padding: 8px; width: 100%; border: 1px solid #ddd; border-radius: 4px;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore</button><button class="btn btn-danger" style="width: 100%;" onclick="if(confirm('DELETE ALL?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All</button></div></div>
     </div>
 
     <script>
@@ -72,14 +73,21 @@
         function load() { return JSON.parse(localStorage.getItem(KEY) || '{"days":{}}'); }
         function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
         function fmt(n) { return parseInt(n || 0).toLocaleString(); }
-        function msg(text, type = 'success') { alert((type === 'error' ? '❌ ' : '✓ ') + text); }
+        function msg(text) { alert('✓ ' + text); }
         
         function getDay(date) {
             const data = load();
             if (!data.days[date]) {
+                // Check if previous day exists and has closing inventory
+                const prevDate = new Date(new Date(date).getTime() - 86400000).toISOString().split('T')[0];
+                let chapatiCarried = 0;
+                if (data.days[prevDate] && data.days[prevDate].closingInventory) {
+                    chapatiCarried = data.days[prevDate].closingInventory.chapati || 0;
+                }
+                
                 data.days[date] = {
                     date, status: 'open',
-                    chapatiCarried: 0, chapatiMade: 0, chapatiRemaining: 0,
+                    chapatiCarried: chapatiCarried, chapatiMade: 0, chapatiRemaining: 0,
                     purchases: [], usage: [], sales: [], expenses: [],
                     debtors: [], creditors: [],
                     closingInventory: { chapati: 0, items: [] }
@@ -111,29 +119,37 @@
             else if (name === 'close') renderClose();
         }
 
-        // ===== DASHBOARD =====
         function renderDashboard() {
             const day = getDay(today);
             const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
             const profit = revenue - cogs - expenses;
-            const owner = profit > 0 ? profit / 2 : 0;
-            const worker = profit > 0 ? profit / 2 : 0;
+            
+            // CALCULATE SOLD
+            const carried = day.chapatiCarried || 0;
+            const made = day.chapatiMade || 0;
+            const remaining = day.chapatiRemaining || 0;
+            const sold = (carried + made) - remaining;
             
             let html = '<p style="color: #8B4513; font-weight: 700; margin-bottom: 16px;">' + today + '</p>';
             html += '<h3>Production</h3>';
-            html += '<div class="form-group"><label>Chapati Carried</label><input type="number" id="carried" value="' + (day.chapatiCarried || 0) + '" onchange="updateProduction()"></div>';
-            html += '<div class="form-group"><label>Chapati Made</label><input type="number" id="made" value="' + (day.chapatiMade || 0) + '" onchange="updateProduction()"></div>';
-            html += '<div class="form-group"><label>Chapati Remaining</label><input type="number" id="remaining" value="' + (day.chapatiRemaining || 0) + '" onchange="updateProduction()"></div>';
+            html += '<div class="form-group"><label>Carried</label><input type="number" id="carried" value="' + carried + '" onchange="updateProduction()"></div>';
+            html += '<div class="form-group"><label>Made</label><input type="number" id="made" value="' + made + '" onchange="updateProduction()"></div>';
+            html += '<div class="form-group"><label>Remaining</label><input type="number" id="remaining" value="' + remaining + '" onchange="updateProduction()"></div>';
+            html += '<div class="summary">';
+            html += '<div class="summary-row"><span>Total Available</span><span>' + (carried + made) + '</span></div>';
+            html += '<div class="summary-row total"><span>SOLD</span><span style="font-weight: 700; color: #8B4513;">' + sold + '</span></div>';
+            html += '</div>';
+            
             html += '<h3>Financial</h3>';
             html += '<div class="summary">';
             html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
             html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
             html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
             html += '<div class="summary-row total"><span>PROFIT</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
-            html += '<div class="summary-row" style="margin-top: 12px;"><span>👤 Owner (50%)</span><span>UGX ' + fmt(owner) + '</span></div>';
-            html += '<div class="summary-row"><span>👷 Worker (50%)</span><span>UGX ' + fmt(worker) + '</span></div>';
+            html += '<div class="summary-row" style="margin-top: 12px;"><span>👤 Owner (50%)</span><span>UGX ' + fmt(profit > 0 ? profit / 2 : 0) + '</span></div>';
+            html += '<div class="summary-row"><span>👷 Worker (50%)</span><span>UGX ' + fmt(profit > 0 ? profit / 2 : 0) + '</span></div>';
             html += '</div>';
             document.getElementById('dashboard-content').innerHTML = html;
         }
@@ -144,459 +160,183 @@
             day.chapatiMade = parseInt(document.getElementById('made').value) || 0;
             day.chapatiRemaining = parseInt(document.getElementById('remaining').value) || 0;
             save({...load(), days: {...load().days, [today]: day}});
-            msg('Production updated');
         }
 
-        // ===== INVENTORY =====
         function renderInventory() {
             const day = getDay(today);
-            
             let html = '<h3>Add Purchase</h3>';
-            html += '<div class="form-group"><input type="text" id="purch-item" placeholder="Item name"></div>';
+            html += '<div class="form-group"><input type="text" id="purch-item" placeholder="Item"></div>';
             html += '<div class="form-group"><input type="number" id="purch-qty" placeholder="Qty"></div>';
-            html += '<div class="form-group"><input type="number" id="purch-cost" placeholder="Unit cost"></div>';
-            html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add Purchase</button>';
+            html += '<div class="form-group"><input type="number" id="purch-cost" placeholder="Unit Cost"></div>';
+            html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add</button>';
             
             html += '<h3>Add Usage</h3>';
-            html += '<div class="form-group"><select id="usage-item" onchange="autoFillUsageCost()"><option value="">-- Select Item --</option>';
+            html += '<div class="form-group"><select id="usage-item" onchange="autoFillUsageCost()"><option>-- Select --</option>';
             const items = new Set();
-            day.purchases.forEach(p => {
-                if (!items.has(p.item)) {
-                    html += '<option value="' + p.item + '">' + p.item + '</option>';
-                    items.add(p.item);
-                }
-            });
+            day.purchases.forEach(p => { if (!items.has(p.item)) { html += '<option>' + p.item + '</option>'; items.add(p.item); }});
             html += '</select></div>';
-            html += '<div class="form-group"><input type="number" id="usage-qty" placeholder="Qty used"></div>';
-            html += '<div class="form-group"><label>Unit Cost (auto-filled)</label><input type="number" id="usage-cost" placeholder="Cost per unit" readonly></div>';
-            html += '<button class="btn btn-primary" onclick="addUsage()">✓ Add Usage</button>';
+            html += '<div class="form-group"><input type="number" id="usage-qty" placeholder="Qty"></div>';
+            html += '<div class="form-group"><input type="number" id="usage-cost" placeholder="Unit Cost" readonly></div>';
+            html += '<button class="btn btn-primary" onclick="addUsage()">✓ Add</button>';
             
-            html += '<h3>Purchases (' + day.purchases.length + ')</h3>';
-            html += '<div id="purchases-list"></div>';
-            
-            html += '<h3>Usage (' + day.usage.length + ')</h3>';
-            html += '<div id="usage-list"></div>';
-            
-            html += '<h3>Current Stock</h3>';
-            html += '<div id="stock-list"></div>';
+            html += '<h3>Purchases (' + day.purchases.length + ')</h3><div id="purchases-list"></div>';
+            html += '<h3>Usage (' + day.usage.length + ')</h3><div id="usage-list"></div>';
+            html += '<h3>Current Stock</h3><div id="stock-list"></div>';
             
             document.getElementById('inventory-content').innerHTML = html;
             
-            // Purchases
             let pList = '';
             day.purchases.forEach((p, i) => {
-                pList += '<div class="item-card">';
-                pList += '<p><strong>' + p.item + '</strong> - ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + ' = UGX ' + fmt(p.qty * p.unitCost) + '</p>';
-                pList += '<button class="btn btn-danger" onclick="deletePurchase(' + i + ')">Delete</button>';
-                pList += '</div>';
+                pList += '<div class="item-card"><p><strong>' + p.item + '</strong> - ' + p.qty + ' @ ' + fmt(p.unitCost) + ' = UGX ' + fmt(p.qty * p.unitCost) + '</p><button class="btn btn-danger" onclick="delPurchase(' + i + ')">Delete</button></div>';
             });
-            document.getElementById('purchases-list').innerHTML = pList || '<p>No purchases</p>';
+            document.getElementById('purchases-list').innerHTML = pList || '<p>None</p>';
             
-            // Usage
             let uList = '';
             let totalCogs = 0;
-            day.usage.forEach((u, i) => {
-                totalCogs += u.cost;
-                uList += '<div class="item-card">';
-                uList += '<p><strong>' + u.item + '</strong> - ' + u.qty + ' @ UGX ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + '</p>';
-                uList += '<button class="btn btn-danger" onclick="deleteUsage(' + i + ')">Delete</button>';
-                uList += '</div>';
-            });
-            if (uList) uList = '<p style="font-weight: 700; color: #ff6b35;">Total COGS: UGX ' + fmt(totalCogs) + '</p>' + uList;
-            document.getElementById('usage-list').innerHTML = uList || '<p>No usage</p>';
+            day.usage.forEach((u, i) => { totalCogs += u.cost; uList += '<div class="item-card"><p><strong>' + u.item + '</strong> - ' + u.qty + ' @ ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + '</p><button class="btn btn-danger" onclick="delUsage(' + i + ')">Delete</button></div>'; });
+            if (uList) uList = '<p style="font-weight: 700;">COGS: UGX ' + fmt(totalCogs) + '</p>' + uList;
+            document.getElementById('usage-list').innerHTML = uList || '<p>None</p>';
             
-            // Stock Remaining - CONSOLIDATED BY ITEM NAME
             let sList = '';
             let stockValue = 0;
             const itemMap = {};
-            
-            // Group all purchases by item name
             day.purchases.forEach(p => {
-                if (!itemMap[p.item]) {
-                    itemMap[p.item] = { totalQty: 0, totalCost: 0, purchases: [] };
-                }
+                if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
                 itemMap[p.item].totalQty += p.qty;
                 itemMap[p.item].totalCost += p.qty * p.unitCost;
-                itemMap[p.item].purchases.push(p);
             });
-            
-            // Calculate remaining for each unique item
             Object.keys(itemMap).forEach(itemName => {
-                const totalQtyPurchased = itemMap[itemName].totalQty;
-                const totalCostPurchased = itemMap[itemName].totalCost;
+                const totalQty = itemMap[itemName].totalQty;
+                const totalCost = itemMap[itemName].totalCost;
                 const used = day.usage.filter(u => u.item === itemName).reduce((s, u) => s + u.qty, 0);
-                const remain = totalQtyPurchased - used;
-                
+                const remain = totalQty - used;
                 if (remain > 0) {
-                    const avgUnitCost = totalCostPurchased / totalQtyPurchased;
-                    const value = remain * avgUnitCost;
+                    const avgCost = totalCost / totalQty;
+                    const value = remain * avgCost;
                     stockValue += value;
-                    
-                    sList += '<div class="item-card">';
-                    sList += '<p><strong>' + itemName + '</strong></p>';
-                    sList += '<p style="font-size: 12px; color: #666;">Purchased: ' + totalQtyPurchased + ' | Used: ' + used + ' | Remaining: <strong>' + remain + '</strong></p>';
-                    sList += '<p style="font-size: 12px; font-weight: 700; color: #8B4513;">Value: UGX ' + fmt(value) + '</p>';
-                    sList += '</div>';
+                    sList += '<div class="item-card"><p><strong>' + itemName + '</strong></p><p style="font-size: 12px;">Purchased: ' + totalQty + ' | Used: ' + used + ' | Remaining: <strong>' + remain + '</strong></p><p style="font-size: 12px; font-weight: 700;">Value: UGX ' + fmt(value) + '</p></div>';
                 }
             });
-            
-            if (sList) sList = '<p style="font-weight: 700; font-size: 14px; color: #8B4513;">Total Stock Value: UGX ' + fmt(stockValue) + '</p>' + sList;
-            document.getElementById('stock-list').innerHTML = sList || '<p>No stock</p>';
+            if (sList) sList = '<p style="font-weight: 700;">Total: UGX ' + fmt(stockValue) + '</p>' + sList;
+            document.getElementById('stock-list').innerHTML = sList || '<p>None</p>';
         }
 
-        function autoFillUsageCost() {
-            const day = getDay(today);
-            const itemName = document.getElementById('usage-item').value;
-            const purchase = day.purchases.find(p => p.item === itemName);
-            if (purchase) {
-                document.getElementById('usage-cost').value = purchase.unitCost;
-            } else {
-                document.getElementById('usage-cost').value = '';
-            }
-        }
+        function addPurchase() { const day = getDay(today); const item = document.getElementById('purch-item').value; const qty = parseInt(document.getElementById('purch-qty').value) || 0; const unitCost = parseInt(document.getElementById('purch-cost').value) || 0; if (!item || qty <= 0 || unitCost <= 0) return; day.purchases.push({item, qty, unitCost}); save({...load(), days: {...load().days, [today]: day}}); msg('Purchase added'); renderInventory(); }
+        function autoFillUsageCost() { const day = getDay(today); const item = document.getElementById('usage-item').value; const p = day.purchases.find(x => x.item === item); document.getElementById('usage-cost').value = p ? p.unitCost : ''; }
+        function addUsage() { const day = getDay(today); const item = document.getElementById('usage-item').value; const qty = parseInt(document.getElementById('usage-qty').value) || 0; const unitCost = parseInt(document.getElementById('usage-cost').value) || 0; if (!item || qty <= 0 || unitCost <= 0) return; day.usage.push({item, qty, unitCost, cost: qty * unitCost}); save({...load(), days: {...load().days, [today]: day}}); msg('Usage added'); renderInventory(); renderDashboard(); renderCapital(); }
+        function delPurchase(i) { const day = getDay(today); day.purchases.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderInventory(); }
+        function delUsage(i) { const day = getDay(today); day.usage.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderInventory(); renderDashboard(); renderCapital(); }
 
-        function addPurchase() {
-            const day = getDay(today);
-            const item = document.getElementById('purch-item').value;
-            const qty = parseFloat(document.getElementById('purch-qty').value) || 0;
-            const unitCost = parseFloat(document.getElementById('purch-cost').value) || 0;
-            if (!item || qty <= 0 || unitCost <= 0) { msg('Fill all fields', 'error'); return; }
-            day.purchases.push({ item, qty, unitCost });
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Purchase added');
-            document.getElementById('purch-item').value = '';
-            document.getElementById('purch-qty').value = '';
-            document.getElementById('purch-cost').value = '';
-            renderInventory();
-            renderDashboard();
-            renderCapital();
-        }
-
-        function deletePurchase(i) {
-            const day = getDay(today);
-            day.purchases.splice(i, 1);
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Purchase deleted');
-            renderInventory();
-            renderDashboard();
-            renderCapital();
-        }
-
-        function addUsage() {
-            const day = getDay(today);
-            const item = document.getElementById('usage-item').value;
-            const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
-            const unitCost = parseFloat(document.getElementById('usage-cost').value) || 0;
-            if (!item || qty <= 0 || unitCost <= 0) { msg('Fill all fields', 'error'); return; }
-            day.usage.push({ item, qty, unitCost, cost: qty * unitCost });
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Usage added');
-            document.getElementById('usage-item').value = '';
-            document.getElementById('usage-qty').value = '';
-            document.getElementById('usage-cost').value = '';
-            renderInventory();
-            renderDashboard();
-            renderCapital();
-        }
-
-        function deleteUsage(i) {
-            const day = getDay(today);
-            day.usage.splice(i, 1);
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Usage deleted');
-            renderInventory();
-            renderDashboard();
-            renderCapital();
-        }
-
-        // ===== SALES =====
         function renderSales() {
             const day = getDay(today);
             const totalRev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
-            
             let html = '<h3>Add Sale</h3>';
             html += '<div class="form-group"><select id="sale-prod"><option>Chapati</option><option>Eggs</option><option>Rolex</option></select></div>';
             html += '<div class="form-group"><input type="number" id="sale-qty" placeholder="Qty"></div>';
             html += '<div class="form-group"><input type="number" id="sale-price" placeholder="Price"></div>';
-            html += '<button class="btn btn-primary" onclick="addSale()">✓ Add Sale</button>';
-            
-            html += '<h3>Sales (' + day.sales.length + ')</h3>';
-            html += '<div id="sales-list"></div>';
-            
-            html += '<div class="summary"><div class="summary-row total"><span>TOTAL REVENUE</span><span>UGX ' + fmt(totalRev) + '</span></div></div>';
-            
+            html += '<button class="btn btn-primary" onclick="addSale()">✓ Add</button>';
+            html += '<h3>Sales (' + day.sales.length + ')</h3><div id="sales-list"></div>';
+            html += '<div class="summary"><div class="summary-row total"><span>REVENUE</span><span>UGX ' + fmt(totalRev) + '</span></div></div>';
             document.getElementById('sales-content').innerHTML = html;
             
             let sList = '';
             day.sales.forEach((s, i) => {
-                sList += '<div class="item-card">';
-                sList += '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px;">';
-                sList += '<div><label style="font-size: 10px;">Product</label><select id="sprod' + i + '" onchange="updateSale(' + i + ')">';
-                sList += '<option value="Chapati" ' + (s.product === 'Chapati' ? 'selected' : '') + '>Chapati</option>';
-                sList += '<option value="Eggs" ' + (s.product === 'Eggs' ? 'selected' : '') + '>Eggs</option>';
-                sList += '<option value="Rolex" ' + (s.product === 'Rolex' ? 'selected' : '') + '>Rolex</option>';
-                sList += '</select></div>';
-                sList += '<div><label style="font-size: 10px;">Qty</label><input type="number" id="sqty' + i + '" value="' + s.qty + '" onchange="updateSale(' + i + ')" style="width: 100%;"></div>';
-                sList += '<div><label style="font-size: 10px;">Price</label><input type="number" id="sprice' + i + '" value="' + s.price + '" onchange="updateSale(' + i + ')" style="width: 100%;"></div>';
-                sList += '</div>';
-                sList += '<p style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">Total: UGX ' + fmt(s.qty * s.price) + '</p>';
-                sList += '<button class="btn btn-danger" onclick="deleteSale(' + i + ')">Delete</button>';
-                sList += '</div>';
+                sList += '<div class="item-card"><div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px;"><select id="sprod' + i + '" onchange="updateSale(' + i + ')"><option ' + (s.product === 'Chapati' ? 'selected' : '') + '>Chapati</option><option ' + (s.product === 'Eggs' ? 'selected' : '') + '>Eggs</option><option ' + (s.product === 'Rolex' ? 'selected' : '') + '>Rolex</option></select><input type="number" id="sqty' + i + '" value="' + s.qty + '" onchange="updateSale(' + i + ')" style="width: 100%;"><input type="number" id="sprice' + i + '" value="' + s.price + '" onchange="updateSale(' + i + ')" style="width: 100%;"></div><p style="font-size: 12px; font-weight: 700;">Total: UGX ' + fmt(s.qty * s.price) + '</p><button class="btn btn-danger" onclick="delSale(' + i + ')">Delete</button></div>';
             });
-            document.getElementById('sales-list').innerHTML = sList || '<p>No sales</p>';
+            document.getElementById('sales-list').innerHTML = sList || '<p>None</p>';
         }
 
-        function updateSale(i) {
-            const day = getDay(today);
-            const product = document.getElementById('sprod' + i).value;
-            const qty = parseFloat(document.getElementById('sqty' + i).value) || 0;
-            const price = parseFloat(document.getElementById('sprice' + i).value) || 0;
-            if (qty <= 0 || price <= 0) { msg('Qty and Price must be > 0', 'error'); return; }
-            day.sales[i] = { product, qty, price };
-            save({...load(), days: {...load().days, [today]: day}});
-            renderSales();
-            renderDashboard();
-            renderCapital();
-        }
+        function addSale() { const day = getDay(today); const product = document.getElementById('sale-prod').value; const qty = parseInt(document.getElementById('sale-qty').value) || 0; const price = parseInt(document.getElementById('sale-price').value) || 0; if (qty <= 0 || price <= 0) return; day.sales.push({product, qty, price}); save({...load(), days: {...load().days, [today]: day}}); msg('Sale added'); renderSales(); renderDashboard(); renderCapital(); }
+        function updateSale(i) { const day = getDay(today); const product = document.getElementById('sprod' + i).value; const qty = parseInt(document.getElementById('sqty' + i).value) || 0; const price = parseInt(document.getElementById('sprice' + i).value) || 0; if (qty <= 0 || price <= 0) return; day.sales[i] = {product, qty, price}; save({...load(), days: {...load().days, [today]: day}}); renderSales(); renderDashboard(); renderCapital(); }
+        function delSale(i) { const day = getDay(today); day.sales.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderSales(); renderDashboard(); renderCapital(); }
 
-        function addSale() {
-            const day = getDay(today);
-            const product = document.getElementById('sale-prod').value;
-            const qty = parseFloat(document.getElementById('sale-qty').value) || 0;
-            const price = parseFloat(document.getElementById('sale-price').value) || 0;
-            if (qty <= 0 || price <= 0) { msg('Fill all', 'error'); return; }
-            day.sales.push({ product, qty, price });
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Sale added');
-            document.getElementById('sale-qty').value = '';
-            document.getElementById('sale-price').value = '';
-            renderSales();
-            renderDashboard();
-            renderCapital();
-        }
-
-        function deleteSale(i) {
-            const day = getDay(today);
-            day.sales.splice(i, 1);
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Sale deleted');
-            renderSales();
-            renderDashboard();
-            renderCapital();
-        }
-
-        // ===== DEBTORS =====
         function renderDebtors() {
             const day = getDay(today);
             let totalOwing = 0;
             day.debtors.forEach(d => { totalOwing += d.amount - (d.paid || 0); });
-            
             let html = '<h3>Give Credit</h3>';
-            html += '<div class="form-group"><input type="text" id="debt-name" placeholder="Customer Name"></div>';
+            html += '<div class="form-group"><input type="text" id="debt-name" placeholder="Name"></div>';
             html += '<div class="form-group"><input type="number" id="debt-amount" placeholder="Amount"></div>';
             html += '<button class="btn btn-primary" onclick="addDebtor()">✓ Add</button>';
-            
-            html += '<h3>Debtors (' + day.debtors.length + ')</h3>';
-            html += '<div id="debtors-list"></div>';
-            
-            html += '<div class="summary"><div class="summary-row total"><span>Total Owing</span><span>UGX ' + fmt(totalOwing) + '</span></div></div>';
-            
+            html += '<h3>Debtors (' + day.debtors.length + ')</h3><div id="debtors-list"></div>';
+            html += '<div class="summary"><div class="summary-row total"><span>Owing</span><span>UGX ' + fmt(totalOwing) + '</span></div></div>';
             document.getElementById('debtors-content').innerHTML = html;
             
             let dList = '';
             day.debtors.forEach((d, i) => {
                 const balance = d.amount - (d.paid || 0);
-                dList += '<div class="item-card">';
-                dList += '<p><strong>' + d.name + '</strong></p>';
-                dList += '<p style="font-size: 12px;">Owed: UGX ' + fmt(d.amount) + ' | Paid: UGX ' + fmt(d.paid || 0) + ' | Balance: UGX ' + fmt(balance) + '</p>';
-                if (balance > 0) {
-                    dList += '<input type="number" id="dpmt' + i + '" placeholder="Payment" style="margin-top: 8px;">';
-                    dList += '<button class="btn btn-primary" onclick="recordDebtorPayment(' + i + ')" style="font-size: 12px; padding: 8px;">Record Payment</button>';
-                }
-                dList += '<button class="btn btn-danger" onclick="deleteDebtor(' + i + ')">Delete</button>';
-                dList += '</div>';
+                dList += '<div class="item-card"><p><strong>' + d.name + '</strong></p><p style="font-size: 12px;">Owed: ' + fmt(d.amount) + ' | Paid: ' + fmt(d.paid || 0) + ' | Balance: ' + fmt(balance) + '</p>';
+                if (balance > 0) { dList += '<input type="number" id="dpmt' + i + '" placeholder="Payment"><button class="btn btn-primary" onclick="recDebtorPmt(' + i + ')" style="font-size: 12px; padding: 8px;">Record</button>'; }
+                dList += '<button class="btn btn-danger" onclick="delDebtor(' + i + ')">Delete</button></div>';
             });
-            document.getElementById('debtors-list').innerHTML = dList || '<p>No debtors</p>';
+            document.getElementById('debtors-list').innerHTML = dList || '<p>None</p>';
         }
 
-        function addDebtor() {
-            const day = getDay(today);
-            const name = document.getElementById('debt-name').value;
-            const amount = parseFloat(document.getElementById('debt-amount').value) || 0;
-            if (!name || amount <= 0) { msg('Fill all', 'error'); return; }
-            day.debtors.push({ name, amount, paid: 0 });
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Debtor added');
-            document.getElementById('debt-name').value = '';
-            document.getElementById('debt-amount').value = '';
-            renderDebtors();
-            renderCapital();
-        }
+        function addDebtor() { const day = getDay(today); const name = document.getElementById('debt-name').value; const amount = parseInt(document.getElementById('debt-amount').value) || 0; if (!name || amount <= 0) return; day.debtors.push({name, amount, paid: 0}); save({...load(), days: {...load().days, [today]: day}}); msg('Debtor added'); renderDebtors(); renderCapital(); }
+        function recDebtorPmt(i) { const day = getDay(today); const pmt = parseInt(document.getElementById('dpmt' + i).value) || 0; if (pmt <= 0) return; day.debtors[i].paid = (day.debtors[i].paid || 0) + pmt; save({...load(), days: {...load().days, [today]: day}}); msg('Payment recorded'); renderDebtors(); renderCapital(); }
+        function delDebtor(i) { const day = getDay(today); day.debtors.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderDebtors(); renderCapital(); }
 
-        function recordDebtorPayment(i) {
-            const day = getDay(today);
-            const pmt = parseFloat(document.getElementById('dpmt' + i).value) || 0;
-            if (pmt <= 0) { msg('Enter amount', 'error'); return; }
-            day.debtors[i].paid = (day.debtors[i].paid || 0) + pmt;
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Payment recorded');
-            renderDebtors();
-            renderCapital();
-        }
-
-        function deleteDebtor(i) {
-            const day = getDay(today);
-            day.debtors.splice(i, 1);
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Debtor deleted');
-            renderDebtors();
-            renderCapital();
-        }
-
-        // ===== CREDITORS =====
         function renderCreditors() {
             const day = getDay(today);
             let totalOwed = 0;
             day.creditors.forEach(c => { totalOwed += c.amount - (c.paid || 0); });
-            
             let html = '<h3>Buy on Credit</h3>';
-            html += '<div class="form-group"><input type="text" id="cred-name" placeholder="Supplier Name"></div>';
+            html += '<div class="form-group"><input type="text" id="cred-name" placeholder="Name"></div>';
             html += '<div class="form-group"><input type="number" id="cred-amount" placeholder="Amount"></div>';
             html += '<button class="btn btn-primary" onclick="addCreditor()">✓ Add</button>';
-            
-            html += '<h3>Creditors (' + day.creditors.length + ')</h3>';
-            html += '<div id="creditors-list"></div>';
-            
-            html += '<div class="summary"><div class="summary-row total"><span>Total Owed</span><span>UGX ' + fmt(totalOwed) + '</span></div></div>';
-            
+            html += '<h3>Creditors (' + day.creditors.length + ')</h3><div id="creditors-list"></div>';
+            html += '<div class="summary"><div class="summary-row total"><span>Owed</span><span>UGX ' + fmt(totalOwed) + '</span></div></div>';
             document.getElementById('creditors-content').innerHTML = html;
             
             let cList = '';
             day.creditors.forEach((c, i) => {
                 const balance = c.amount - (c.paid || 0);
-                cList += '<div class="item-card">';
-                cList += '<p><strong>' + c.name + '</strong></p>';
-                cList += '<p style="font-size: 12px;">Owed: UGX ' + fmt(c.amount) + ' | Paid: UGX ' + fmt(c.paid || 0) + ' | Balance: UGX ' + fmt(balance) + '</p>';
-                if (balance > 0) {
-                    cList += '<input type="number" id="cpmt' + i + '" placeholder="Payment" style="margin-top: 8px;">';
-                    cList += '<button class="btn btn-primary" onclick="recordCreditorPayment(' + i + ')" style="font-size: 12px; padding: 8px;">Record Payment</button>';
-                }
-                cList += '<button class="btn btn-danger" onclick="deleteCreditor(' + i + ')">Delete</button>';
-                cList += '</div>';
+                cList += '<div class="item-card"><p><strong>' + c.name + '</strong></p><p style="font-size: 12px;">Owed: ' + fmt(c.amount) + ' | Paid: ' + fmt(c.paid || 0) + ' | Balance: ' + fmt(balance) + '</p>';
+                if (balance > 0) { cList += '<input type="number" id="cpmt' + i + '" placeholder="Payment"><button class="btn btn-primary" onclick="recCreditorPmt(' + i + ')" style="font-size: 12px; padding: 8px;">Record</button>'; }
+                cList += '<button class="btn btn-danger" onclick="delCreditor(' + i + ')">Delete</button></div>';
             });
-            document.getElementById('creditors-list').innerHTML = cList || '<p>No creditors</p>';
+            document.getElementById('creditors-list').innerHTML = cList || '<p>None</p>';
         }
 
-        function addCreditor() {
-            const day = getDay(today);
-            const name = document.getElementById('cred-name').value;
-            const amount = parseFloat(document.getElementById('cred-amount').value) || 0;
-            if (!name || amount <= 0) { msg('Fill all', 'error'); return; }
-            day.creditors.push({ name, amount, paid: 0 });
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Creditor added');
-            document.getElementById('cred-name').value = '';
-            document.getElementById('cred-amount').value = '';
-            renderCreditors();
-            renderCapital();
-        }
+        function addCreditor() { const day = getDay(today); const name = document.getElementById('cred-name').value; const amount = parseInt(document.getElementById('cred-amount').value) || 0; if (!name || amount <= 0) return; day.creditors.push({name, amount, paid: 0}); save({...load(), days: {...load().days, [today]: day}}); msg('Creditor added'); renderCreditors(); renderCapital(); }
+        function recCreditorPmt(i) { const day = getDay(today); const pmt = parseInt(document.getElementById('cpmt' + i).value) || 0; if (pmt <= 0) return; day.creditors[i].paid = (day.creditors[i].paid || 0) + pmt; save({...load(), days: {...load().days, [today]: day}}); msg('Payment recorded'); renderCreditors(); renderCapital(); }
+        function delCreditor(i) { const day = getDay(today); day.creditors.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderCreditors(); renderCapital(); }
 
-        function recordCreditorPayment(i) {
-            const day = getDay(today);
-            const pmt = parseFloat(document.getElementById('cpmt' + i).value) || 0;
-            if (pmt <= 0) { msg('Enter amount', 'error'); return; }
-            day.creditors[i].paid = (day.creditors[i].paid || 0) + pmt;
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Payment recorded');
-            renderCreditors();
-            renderCapital();
-        }
-
-        function deleteCreditor(i) {
-            const day = getDay(today);
-            day.creditors.splice(i, 1);
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Creditor deleted');
-            renderCreditors();
-            renderCapital();
-        }
-
-        // ===== EXPENSES =====
         function renderExpenses() {
             const day = getDay(today);
             const totalExp = day.expenses.reduce((s, e) => s + e.amount, 0);
-            
             let html = '<h3>Add Expense</h3>';
             html += '<div class="form-group"><input type="text" id="exp-desc" placeholder="Description"></div>';
             html += '<div class="form-group"><select id="exp-cat"><option>Meals</option><option>Transport</option><option>Packaging</option><option>Other</option></select></div>';
             html += '<div class="form-group"><input type="number" id="exp-amt" placeholder="Amount"></div>';
-            html += '<button class="btn btn-primary" onclick="addExpense()">✓ Add Expense</button>';
-            
-            html += '<h3>Expenses (' + day.expenses.length + ')</h3>';
-            html += '<div id="expenses-list"></div>';
-            
-            html += '<div class="summary"><div class="summary-row total"><span>TOTAL EXPENSES</span><span>UGX ' + fmt(totalExp) + '</span></div></div>';
-            
+            html += '<button class="btn btn-primary" onclick="addExpense()">✓ Add</button>';
+            html += '<h3>Expenses (' + day.expenses.length + ')</h3><div id="expenses-list"></div>';
+            html += '<div class="summary"><div class="summary-row total"><span>TOTAL</span><span>UGX ' + fmt(totalExp) + '</span></div></div>';
             document.getElementById('expenses-content').innerHTML = html;
             
             let eList = '';
             day.expenses.forEach((e, i) => {
-                eList += '<div class="item-card">';
-                eList += '<p><strong>' + e.desc + '</strong> - UGX ' + fmt(e.amount) + ' (' + e.category + ')</p>';
-                eList += '<button class="btn btn-danger" onclick="deleteExpense(' + i + ')">Delete</button>';
-                eList += '</div>';
+                eList += '<div class="item-card"><p><strong>' + e.desc + '</strong> - UGX ' + fmt(e.amount) + ' (' + e.category + ')</p><button class="btn btn-danger" onclick="delExpense(' + i + ')">Delete</button></div>';
             });
-            document.getElementById('expenses-list').innerHTML = eList || '<p>No expenses</p>';
+            document.getElementById('expenses-list').innerHTML = eList || '<p>None</p>';
         }
 
-        function addExpense() {
-            const day = getDay(today);
-            const desc = document.getElementById('exp-desc').value;
-            const cat = document.getElementById('exp-cat').value;
-            const amount = parseFloat(document.getElementById('exp-amt').value) || 0;
-            if (!desc || amount <= 0) { msg('Fill all', 'error'); return; }
-            day.expenses.push({ desc, category: cat, amount });
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Expense added');
-            document.getElementById('exp-desc').value = '';
-            document.getElementById('exp-amt').value = '';
-            renderExpenses();
-            renderDashboard();
-            renderCapital();
-        }
+        function addExpense() { const day = getDay(today); const desc = document.getElementById('exp-desc').value; const cat = document.getElementById('exp-cat').value; const amount = parseInt(document.getElementById('exp-amt').value) || 0; if (!desc || amount <= 0) return; day.expenses.push({desc, category: cat, amount}); save({...load(), days: {...load().days, [today]: day}}); msg('Expense added'); renderExpenses(); renderDashboard(); renderCapital(); }
+        function delExpense(i) { const day = getDay(today); day.expenses.splice(i, 1); save({...load(), days: {...load().days, [today]: day}}); renderExpenses(); renderDashboard(); renderCapital(); }
 
-        function deleteExpense(i) {
-            const day = getDay(today);
-            day.expenses.splice(i, 1);
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Expense deleted');
-            renderExpenses();
-            renderDashboard();
-            renderCapital();
-        }
-
-        // ===== CAPITAL =====
         function renderCapital() {
             const day = getDay(today);
             const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
-            
             let stock = 0;
-            day.purchases.forEach(p => {
-                const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
-                stock += (p.qty - used) * p.unitCost;
-            });
-            
+            day.purchases.forEach(p => { const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0); stock += (p.qty - used) * p.unitCost; });
             let debtors = 0;
             day.debtors.forEach(d => { debtors += d.amount - (d.paid || 0); });
-            
             let creditors = 0;
             day.creditors.forEach(c => { creditors += c.amount - (c.paid || 0); });
-            
             const capital = revenue + stock - cogs - expenses - debtors + creditors;
             
-            // Calculate yesterday's capital
             const yesterday = new Date(new Date(today).getTime() - 86400000).toISOString().split('T')[0];
             const data = load();
             let yesterdayCapital = 0;
@@ -606,10 +346,7 @@
                 const ycogs = yday.usage.reduce((s, u) => s + u.cost, 0);
                 const yexp = yday.expenses.reduce((s, e) => s + e.amount, 0);
                 let ystock = 0;
-                yday.purchases.forEach(p => {
-                    const used = yday.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
-                    ystock += (p.qty - used) * p.unitCost;
-                });
+                yday.purchases.forEach(p => { const used = yday.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0); ystock += (p.qty - used) * p.unitCost; });
                 let ydebtors = 0;
                 yday.debtors.forEach(d => { ydebtors += d.amount - (d.paid || 0); });
                 let ycreditors = 0;
@@ -618,40 +355,34 @@
             }
             
             const position = capital - yesterdayCapital;
-            let positionIcon = position > 0 ? '📈 INCREASING' : (position < 0 ? '📉 DECREASING' : '➡️ STABLE');
-            let positionColor = position > 0 ? '#27a745' : (position < 0 ? '#dc3545' : '#666');
+            let posIcon = position > 0 ? '📈 INCREASING' : (position < 0 ? '📉 DECREASING' : '➡️ STABLE');
+            let posColor = position > 0 ? '#27a745' : (position < 0 ? '#dc3545' : '#666');
             
             let html = '<h3>Today\'s Capital</h3>';
             html += '<div class="summary">';
-            html += '<div class="summary-row"><span>💵 Cash (Sales)</span><span>UGX ' + fmt(revenue) + '</span></div>';
-            html += '<div class="summary-row"><span>📦 Stock Value</span><span>UGX ' + fmt(stock) + '</span></div>';
-            html += '<div class="summary-row"><span>❌ COGS (Used)</span><span>UGX ' + fmt(cogs) + '</span></div>';
+            html += '<div class="summary-row"><span>💵 Cash</span><span>UGX ' + fmt(revenue) + '</span></div>';
+            html += '<div class="summary-row"><span>📦 Stock</span><span>UGX ' + fmt(stock) + '</span></div>';
+            html += '<div class="summary-row"><span>❌ COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
             html += '<div class="summary-row"><span>❌ Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
-            html += '<div class="summary-row"><span>👥 Debtors Owed</span><span>UGX ' + fmt(debtors) + '</span></div>';
-            html += '<div class="summary-row"><span>🏪 Creditors Owed</span><span>UGX ' + fmt(creditors) + '</span></div>';
+            html += '<div class="summary-row"><span>👥 Debtors</span><span>UGX ' + fmt(debtors) + '</span></div>';
+            html += '<div class="summary-row"><span>🏪 Creditors</span><span>UGX ' + fmt(creditors) + '</span></div>';
             html += '<div class="summary-row total"><span>TOTAL CAPITAL</span><span style="color: ' + (capital > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(capital)) + '</span></div>';
             html += '</div>';
-            
             html += '<h3>Net Position</h3>';
             html += '<div class="summary">';
             html += '<div class="summary-row"><span>Yesterday</span><span>UGX ' + fmt(yesterdayCapital) + '</span></div>';
             html += '<div class="summary-row"><span>Today</span><span>UGX ' + fmt(capital) + '</span></div>';
-            html += '<div class="summary-row total"><span>Change</span><span style="color: ' + positionColor + ';">' + positionIcon + ' UGX ' + fmt(Math.abs(position)) + '</span></div>';
+            html += '<div class="summary-row total"><span>Change</span><span style="color: ' + posColor + ';">' + posIcon + ' UGX ' + fmt(Math.abs(position)) + '</span></div>';
             html += '</div>';
-            
             document.getElementById('capital-content').innerHTML = html;
         }
 
-        // ===== ANALYTICS =====
         function renderAnalytics() {
             const data = load();
             const days = Object.keys(data.days).sort();
-            const last7Days = days.slice(-7);
-            
-            let html = '<h3>Last 7 Days</h3>';
+            const last7 = days.slice(-7);
             let totalRev = 0, totalCogs = 0, totalExp = 0, totalProfit = 0;
-            
-            last7Days.forEach(date => {
+            last7.forEach(date => {
                 const day = data.days[date];
                 const rev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
                 const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
@@ -662,59 +393,45 @@
                 totalExp += exp;
                 totalProfit += profit;
             });
-            
+            let html = '<h3>Last 7 Days</h3>';
             html += '<div class="summary">';
-            html += '<div class="summary-row"><span>Total Revenue</span><span>UGX ' + fmt(totalRev) + '</span></div>';
-            html += '<div class="summary-row"><span>Total COGS</span><span>UGX ' + fmt(totalCogs) + '</span></div>';
-            html += '<div class="summary-row"><span>Total Expenses</span><span>UGX ' + fmt(totalExp) + '</span></div>';
-            html += '<div class="summary-row total"><span>Total Profit</span><span style="color: ' + (totalProfit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(totalProfit)) + '</span></div>';
-            html += '</div>';
-            
-            html += '<h3>Daily Breakdown</h3>';
-            last7Days.forEach(date => {
+            html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(totalRev) + '</span></div>';
+            html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(totalCogs) + '</span></div>';
+            html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(totalExp) + '</span></div>';
+            html += '<div class="summary-row total"><span>Profit</span><span style="color: ' + (totalProfit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(totalProfit)) + '</span></div>';
+            html += '</div><h3>Daily</h3>';
+            last7.forEach(date => {
                 const day = data.days[date];
                 const rev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
                 const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
                 const exp = day.expenses.reduce((s, e) => s + e.amount, 0);
                 const profit = rev - cogs - exp;
-                
-                html += '<div class="item-card">';
-                html += '<p><strong>' + date + '</strong></p>';
-                html += '<p style="font-size: 12px;">Rev: UGX ' + fmt(rev) + ' | COGS: UGX ' + fmt(cogs) + ' | Exp: UGX ' + fmt(exp) + '</p>';
-                html += '<p style="font-size: 12px; font-weight: 700; color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">Profit: UGX ' + fmt(Math.abs(profit)) + '</p>';
-                html += '</div>';
+                html += '<div class="item-card"><p><strong>' + date + '</strong></p><p style="font-size: 12px;">Rev: ' + fmt(rev) + ' | COGS: ' + fmt(cogs) + ' | Exp: ' + fmt(exp) + '</p><p style="font-size: 12px; font-weight: 700;">Profit: UGX ' + fmt(Math.abs(profit)) + '</p></div>';
             });
-            
             document.getElementById('analytics-content').innerHTML = html;
         }
 
-        // ===== HISTORY =====
         function renderHistory() {
             const data = load();
             const days = Object.keys(data.days).sort().reverse();
-            
             let html = '<h3>All Days (' + days.length + ')</h3>';
-            
             days.forEach(date => {
                 const day = data.days[date];
                 const rev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
                 const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
                 const exp = day.expenses.reduce((s, e) => s + e.amount, 0);
                 const profit = rev - cogs - exp;
-                
-                html += '<div class="item-card" onclick="showDayDetails(\'' + date + '\')" style="cursor: pointer;">';
-                html += '<p><strong>' + date + '</strong> <span style="font-size: 12px; color: #999;">(' + day.status + ')</span></p>';
+                html += '<div class="item-card" onclick="showHistoryDetail(\'' + date + '\')" style="cursor: pointer; user-select: none;">';
+                html += '<p><strong>' + date + '</strong> <span style="font-size: 11px; color: #999;">(' + day.status + ')</span></p>';
                 html += '<p style="font-size: 12px;">Rev: UGX ' + fmt(rev) + ' | Profit: UGX ' + fmt(profit) + '</p>';
-                html += '<p style="font-size: 11px; color: #999;">Click to view details</p>';
+                html += '<p style="font-size: 11px; color: #0066cc;">Tap to view details</p>';
                 html += '</div>';
             });
-            
             if (days.length === 0) html += '<p>No records</p>';
-            
             document.getElementById('history-content').innerHTML = html;
         }
 
-        function showDayDetails(date) {
+        function showHistoryDetail(date) {
             const data = load();
             const day = data.days[date];
             if (!day) return;
@@ -723,29 +440,68 @@
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
             const exp = day.expenses.reduce((s, e) => s + e.amount, 0);
             const profit = rev - cogs - exp;
+            const carried = day.chapatiCarried || 0;
+            const made = day.chapatiMade || 0;
+            const remaining = day.chapatiRemaining || 0;
+            const sold = (carried + made) - remaining;
             
-            let html = '<h3>Details for ' + date + '</h3>';
+            let html = '<h3>Details - ' + date + '</h3>';
+            html += '<h4 style="font-size: 12px; margin-top: 16px; color: #666; font-weight: 700;">PRODUCTION</h4>';
             html += '<div class="summary">';
-            html += '<div class="summary-row"><span>Chapati Carried</span><span>' + (day.chapatiCarried || 0) + '</span></div>';
-            html += '<div class="summary-row"><span>Chapati Made</span><span>' + (day.chapatiMade || 0) + '</span></div>';
-            html += '<div class="summary-row"><span>Chapati Remaining</span><span>' + (day.chapatiRemaining || 0) + '</span></div>';
+            html += '<div class="summary-row"><span>Carried</span><span>' + carried + '</span></div>';
+            html += '<div class="summary-row"><span>Made</span><span>' + made + '</span></div>';
+            html += '<div class="summary-row"><span>Total Available</span><span>' + (carried + made) + '</span></div>';
+            html += '<div class="summary-row"><span>Remaining</span><span>' + remaining + '</span></div>';
+            html += '<div class="summary-row total"><span>SOLD</span><span>' + sold + '</span></div>';
+            html += '</div>';
+            
+            html += '<h4 style="font-size: 12px; margin-top: 16px; color: #666; font-weight: 700;">FINANCIAL</h4>';
+            html += '<div class="summary">';
             html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(rev) + '</span></div>';
             html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
             html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(exp) + '</span></div>';
-            html += '<div class="summary-row total"><span>Profit</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
+            html += '<div class="summary-row total"><span>PROFIT</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
             html += '</div>';
-            html += '<button class="btn btn-primary" onclick="renderHistory()">← Back</button>';
             
+            if (day.sales.length > 0) {
+                html += '<h4 style="font-size: 12px; margin-top: 16px; color: #666; font-weight: 700;">SALES (' + day.sales.length + ')</h4>';
+                day.sales.forEach(s => {
+                    html += '<div class="item-card"><p style="font-size: 12px;"><strong>' + s.product + '</strong> - ' + s.qty + ' @ UGX ' + fmt(s.price) + ' = UGX ' + fmt(s.qty * s.price) + '</p></div>';
+                });
+            }
+            
+            if (day.debtors.length > 0) {
+                html += '<h4 style="font-size: 12px; margin-top: 16px; color: #666; font-weight: 700;">DEBTORS (' + day.debtors.length + ')</h4>';
+                day.debtors.forEach(d => {
+                    html += '<div class="item-card"><p style="font-size: 12px;"><strong>' + d.name + '</strong> - Owed: UGX ' + fmt(d.amount) + ' | Paid: UGX ' + fmt(d.paid || 0) + '</p></div>';
+                });
+            }
+            
+            if (day.creditors.length > 0) {
+                html += '<h4 style="font-size: 12px; margin-top: 16px; color: #666; font-weight: 700;">CREDITORS (' + day.creditors.length + ')</h4>';
+                day.creditors.forEach(c => {
+                    html += '<div class="item-card"><p style="font-size: 12px;"><strong>' + c.name + '</strong> - Owed: UGX ' + fmt(c.amount) + ' | Paid: UGX ' + fmt(c.paid || 0) + '</p></div>';
+                });
+            }
+            
+            html += '<button class="btn btn-primary" onclick="renderHistory()" style="margin-top: 16px;">← Back to History</button>';
             document.getElementById('history-content').innerHTML = html;
         }
 
-        // ===== CLOSE DAY =====
         function renderClose() {
             const day = getDay(today);
             const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
             const profit = revenue - cogs - expenses;
+            
+            // Calculate closing inventory items
+            let closingItems = [];
+            day.purchases.forEach(p => {
+                const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
+                const remain = p.qty - used;
+                if (remain > 0) closingItems.push({name: p.item, qty: remain, unitCost: p.unitCost});
+            });
             
             let html = '<h3>Day Summary</h3>';
             html += '<div class="summary">';
@@ -754,8 +510,20 @@
             html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
             html += '<div class="summary-row total"><span>PROFIT</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
             html += '</div>';
-            html += '<button class="btn btn-primary" onclick="closeDay()">✓ Close Day & Move to Tomorrow</button>';
             
+            html += '<h3>Closing Inventory (Carry to Next Day)</h3>';
+            if (day.chapatiRemaining > 0) {
+                html += '<p style="font-size: 12px;"><strong>Chapati:</strong> ' + day.chapatiRemaining + '</p>';
+            }
+            if (closingItems.length > 0) {
+                closingItems.forEach(item => {
+                    html += '<p style="font-size: 12px;"><strong>' + item.name + ':</strong> ' + item.qty + ' @ UGX ' + fmt(item.unitCost) + '</p>';
+                });
+            } else {
+                html += '<p style="font-size: 12px; color: #999;">No items to carry over</p>';
+            }
+            
+            html += '<button class="btn btn-primary" onclick="closeDay()" style="margin-top: 16px;">✓ Close Day & Move to Tomorrow</button>';
             document.getElementById('close-content').innerHTML = html;
         }
 
@@ -765,42 +533,21 @@
             day.purchases.forEach(p => {
                 const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
                 const remain = p.qty - used;
-                if (remain > 0) closingItems.push({ name: p.item, qty: remain, unitCost: p.unitCost });
+                if (remain > 0) closingItems.push({name: p.item, qty: remain, unitCost: p.unitCost});
             });
-            day.closingInventory = { chapati: day.chapatiRemaining || 0, items: closingItems };
+            day.closingInventory = {chapati: day.chapatiRemaining || 0, items: closingItems};
             day.status = 'closed';
-            save({...load(), days: {...load().days, [today]: day}});
-            msg('Day closed');
+            const data = load();
+            data.days[today] = day;
+            save(data);
             today = new Date(new Date(today).getTime() + 86400000).toISOString().split('T')[0];
+            msg('Day closed - inventory carried over');
             renderDashboard();
             showTab('dashboard');
         }
 
-        // ===== BACKUP =====
-        function downloadBackup() {
-            const blob = new Blob([JSON.stringify(load(), null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'chapati-backup-' + today + '.json';
-            a.click();
-            URL.revokeObjectURL(url);
-            msg('Downloaded');
-        }
-
-        function restoreBackup() {
-            const file = document.getElementById('restore-file').files[0];
-            if (!file) { msg('Select file', 'error'); return; }
-            const reader = new FileReader();
-            reader.onload = e => {
-                try {
-                    save(JSON.parse(e.target.result));
-                    msg('Restored');
-                    location.reload();
-                } catch (err) { msg('Invalid file', 'error'); }
-            };
-            reader.readAsText(file);
-        }
+        function downloadBackup() { const blob = new Blob([JSON.stringify(load(), null, 2)], {type: 'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'backup.json'; a.click(); URL.revokeObjectURL(url); }
+        function restoreBackup() { const file = document.getElementById('restore-file').files[0]; if (!file) return; const reader = new FileReader(); reader.onload = e => { try { save(JSON.parse(e.target.result)); location.reload(); } catch (err) { alert('Error'); } }; reader.readAsText(file); }
 
         window.addEventListener('load', () => renderDashboard());
     </script>
