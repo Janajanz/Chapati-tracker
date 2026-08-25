@@ -46,6 +46,8 @@
         <div class="sidebar-item" onclick="showTab('creditors')">🏪 Creditors</div>
         <div class="sidebar-item" onclick="showTab('expenses')">💸 Expenses</div>
         <div class="sidebar-item" onclick="showTab('capital')">💰 Capital</div>
+        <div class="sidebar-item" onclick="showTab('analytics')">📈 Analytics</div>
+        <div class="sidebar-item" onclick="showTab('history')">📅 History</div>
         <div class="sidebar-item" onclick="showTab('close')">🔒 Close Day</div>
         <div class="sidebar-item" onclick="showTab('backup')">💾 Backup</div>
     </div>
@@ -57,6 +59,8 @@
         <div id="creditors" class="view"><div class="card"><h2>🏪 Creditors</h2><div id="creditors-content"></div></div></div>
         <div id="expenses" class="view"><div class="card"><h2>💸 Expenses</h2><div id="expenses-content"></div></div></div>
         <div id="capital" class="view"><div class="card"><h2>💰 Capital</h2><div id="capital-content"></div></div></div>
+        <div id="analytics" class="view"><div class="card"><h2>📈 Analytics</h2><div id="analytics-content"></div></div></div>
+        <div id="history" class="view"><div class="card"><h2>📅 History</h2><div id="history-content"></div></div></div>
         <div id="close" class="view"><div class="card"><h2>🔒 Close Day</h2><div id="close-content"></div></div></div>
         <div id="backup" class="view"><div class="card"><h2>💾 Backup</h2><button class="btn btn-primary" onclick="downloadBackup()">📥 Download Backup</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0; padding: 8px; width: 100%; border: 1px solid #ddd; border-radius: 4px;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore Backup</button><button class="btn btn-danger" style="width: 100%;" onclick="if(confirm('DELETE ALL DATA?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All Data</button></div></div>
     </div>
@@ -102,6 +106,8 @@
             else if (name === 'creditors') renderCreditors();
             else if (name === 'expenses') renderExpenses();
             else if (name === 'capital') renderCapital();
+            else if (name === 'analytics') renderAnalytics();
+            else if (name === 'history') renderHistory();
             else if (name === 'close') renderClose();
         }
 
@@ -634,6 +640,103 @@
             html += '</div>';
             
             document.getElementById('capital-content').innerHTML = html;
+        }
+
+        // ===== ANALYTICS =====
+        function renderAnalytics() {
+            const data = load();
+            const days = Object.keys(data.days).sort();
+            const last7Days = days.slice(-7);
+            
+            let html = '<h3>Last 7 Days</h3>';
+            let totalRev = 0, totalCogs = 0, totalExp = 0, totalProfit = 0;
+            
+            last7Days.forEach(date => {
+                const day = data.days[date];
+                const rev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
+                const exp = day.expenses.reduce((s, e) => s + e.amount, 0);
+                const profit = rev - cogs - exp;
+                totalRev += rev;
+                totalCogs += cogs;
+                totalExp += exp;
+                totalProfit += profit;
+            });
+            
+            html += '<div class="summary">';
+            html += '<div class="summary-row"><span>Total Revenue</span><span>UGX ' + fmt(totalRev) + '</span></div>';
+            html += '<div class="summary-row"><span>Total COGS</span><span>UGX ' + fmt(totalCogs) + '</span></div>';
+            html += '<div class="summary-row"><span>Total Expenses</span><span>UGX ' + fmt(totalExp) + '</span></div>';
+            html += '<div class="summary-row total"><span>Total Profit</span><span style="color: ' + (totalProfit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(totalProfit)) + '</span></div>';
+            html += '</div>';
+            
+            html += '<h3>Daily Breakdown</h3>';
+            last7Days.forEach(date => {
+                const day = data.days[date];
+                const rev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
+                const exp = day.expenses.reduce((s, e) => s + e.amount, 0);
+                const profit = rev - cogs - exp;
+                
+                html += '<div class="item-card">';
+                html += '<p><strong>' + date + '</strong></p>';
+                html += '<p style="font-size: 12px;">Rev: UGX ' + fmt(rev) + ' | COGS: UGX ' + fmt(cogs) + ' | Exp: UGX ' + fmt(exp) + '</p>';
+                html += '<p style="font-size: 12px; font-weight: 700; color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">Profit: UGX ' + fmt(Math.abs(profit)) + '</p>';
+                html += '</div>';
+            });
+            
+            document.getElementById('analytics-content').innerHTML = html;
+        }
+
+        // ===== HISTORY =====
+        function renderHistory() {
+            const data = load();
+            const days = Object.keys(data.days).sort().reverse();
+            
+            let html = '<h3>All Days (' + days.length + ')</h3>';
+            
+            days.forEach(date => {
+                const day = data.days[date];
+                const rev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
+                const exp = day.expenses.reduce((s, e) => s + e.amount, 0);
+                const profit = rev - cogs - exp;
+                
+                html += '<div class="item-card" onclick="showDayDetails(\'' + date + '\')" style="cursor: pointer;">';
+                html += '<p><strong>' + date + '</strong> <span style="font-size: 12px; color: #999;">(' + day.status + ')</span></p>';
+                html += '<p style="font-size: 12px;">Rev: UGX ' + fmt(rev) + ' | Profit: UGX ' + fmt(profit) + '</p>';
+                html += '<p style="font-size: 11px; color: #999;">Click to view details</p>';
+                html += '</div>';
+            });
+            
+            if (days.length === 0) html += '<p>No records</p>';
+            
+            document.getElementById('history-content').innerHTML = html;
+        }
+
+        function showDayDetails(date) {
+            const data = load();
+            const day = data.days[date];
+            if (!day) return;
+            
+            const rev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+            const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
+            const exp = day.expenses.reduce((s, e) => s + e.amount, 0);
+            const profit = rev - cogs - exp;
+            
+            let html = '<h3>Details for ' + date + '</h3>';
+            html += '<div class="summary">';
+            html += '<div class="summary-row"><span>Chapati Carried</span><span>' + (day.chapatiCarried || 0) + '</span></div>';
+            html += '<div class="summary-row"><span>Chapati Made</span><span>' + (day.chapatiMade || 0) + '</span></div>';
+            html += '<div class="summary-row"><span>Chapati Remaining</span><span>' + (day.chapatiRemaining || 0) + '</span></div>';
+            html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(rev) + '</span></div>';
+            html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
+            html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(exp) + '</span></div>';
+            html += '<div class="summary-row total"><span>Profit</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
+            html += '</div>';
+            html += '<button class="btn btn-primary" onclick="renderHistory()">← Back</button>';
+            
+            document.getElementById('history-content').innerHTML = html;
         }
 
         // ===== CLOSE DAY =====
