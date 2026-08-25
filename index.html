@@ -116,8 +116,10 @@
             const worker = profit > 0 ? profit / 2 : 0;
             
             let html = '<p style="color: #8B4513; font-weight: 700; margin-bottom: 16px;">' + today + '</p>';
-            html += '<h3>Chapati</h3>';
-            html += '<p>Carried: ' + (day.chapatiCarried || 0) + ' | Made: ' + (day.chapatiMade || 0) + ' | Remaining: ' + (day.chapatiRemaining || 0) + '</p>';
+            html += '<h3>Production</h3>';
+            html += '<div class="form-group"><label>Chapati Carried</label><input type="number" id="carried" value="' + (day.chapatiCarried || 0) + '" onchange="updateProduction()"></div>';
+            html += '<div class="form-group"><label>Chapati Made</label><input type="number" id="made" value="' + (day.chapatiMade || 0) + '" onchange="updateProduction()"></div>';
+            html += '<div class="form-group"><label>Chapati Remaining</label><input type="number" id="remaining" value="' + (day.chapatiRemaining || 0) + '" onchange="updateProduction()"></div>';
             html += '<h3>Financial</h3>';
             html += '<div class="summary">';
             html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
@@ -128,6 +130,15 @@
             html += '<div class="summary-row"><span>👷 Worker (50%)</span><span>UGX ' + fmt(worker) + '</span></div>';
             html += '</div>';
             document.getElementById('dashboard-content').innerHTML = html;
+        }
+
+        function updateProduction() {
+            const day = getDay(today);
+            day.chapatiCarried = parseInt(document.getElementById('carried').value) || 0;
+            day.chapatiMade = parseInt(document.getElementById('made').value) || 0;
+            day.chapatiRemaining = parseInt(document.getElementById('remaining').value) || 0;
+            save({...load(), days: {...load().days, [today]: day}});
+            msg('Production updated');
         }
 
         // ===== INVENTORY =====
@@ -141,7 +152,7 @@
             html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add Purchase</button>';
             
             html += '<h3>Add Usage</h3>';
-            html += '<div class="form-group"><select id="usage-item"><option value="">-- Select Item --</option>';
+            html += '<div class="form-group"><select id="usage-item" onchange="autoFillUsageCost()"><option value="">-- Select Item --</option>';
             const items = new Set();
             day.purchases.forEach(p => {
                 if (!items.has(p.item)) {
@@ -151,7 +162,7 @@
             });
             html += '</select></div>';
             html += '<div class="form-group"><input type="number" id="usage-qty" placeholder="Qty used"></div>';
-            html += '<div class="form-group"><input type="number" id="usage-cost" placeholder="Cost per unit" readonly id="usage-readonly"></div>';
+            html += '<div class="form-group"><label>Unit Cost (auto-filled)</label><input type="number" id="usage-cost" placeholder="Cost per unit" readonly></div>';
             html += '<button class="btn btn-primary" onclick="addUsage()">✓ Add Usage</button>';
             
             html += '<h3>Purchases (' + day.purchases.length + ')</h3>';
@@ -205,6 +216,17 @@
             });
             if (sList) sList = '<p style="font-weight: 700;">Stock Value: UGX ' + fmt(stockValue) + '</p>' + sList;
             document.getElementById('stock-list').innerHTML = sList || '<p>No stock</p>';
+        }
+
+        function autoFillUsageCost() {
+            const day = getDay(today);
+            const itemName = document.getElementById('usage-item').value;
+            const purchase = day.purchases.find(p => p.item === itemName);
+            if (purchase) {
+                document.getElementById('usage-cost').value = purchase.unitCost;
+            } else {
+                document.getElementById('usage-cost').value = '';
+            }
         }
 
         function addPurchase() {
@@ -282,11 +304,33 @@
             let sList = '';
             day.sales.forEach((s, i) => {
                 sList += '<div class="item-card">';
-                sList += '<p><strong>' + s.product + '</strong> - ' + s.qty + ' @ UGX ' + fmt(s.price) + ' = UGX ' + fmt(s.qty * s.price) + '</p>';
+                sList += '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 10px;">';
+                sList += '<div><label style="font-size: 10px;">Product</label><select id="sprod' + i + '" onchange="updateSale(' + i + ')">';
+                sList += '<option value="Chapati" ' + (s.product === 'Chapati' ? 'selected' : '') + '>Chapati</option>';
+                sList += '<option value="Eggs" ' + (s.product === 'Eggs' ? 'selected' : '') + '>Eggs</option>';
+                sList += '<option value="Rolex" ' + (s.product === 'Rolex' ? 'selected' : '') + '>Rolex</option>';
+                sList += '</select></div>';
+                sList += '<div><label style="font-size: 10px;">Qty</label><input type="number" id="sqty' + i + '" value="' + s.qty + '" onchange="updateSale(' + i + ')" style="width: 100%;"></div>';
+                sList += '<div><label style="font-size: 10px;">Price</label><input type="number" id="sprice' + i + '" value="' + s.price + '" onchange="updateSale(' + i + ')" style="width: 100%;"></div>';
+                sList += '</div>';
+                sList += '<p style="font-size: 12px; font-weight: 700; margin-bottom: 8px;">Total: UGX ' + fmt(s.qty * s.price) + '</p>';
                 sList += '<button class="btn btn-danger" onclick="deleteSale(' + i + ')">Delete</button>';
                 sList += '</div>';
             });
             document.getElementById('sales-list').innerHTML = sList || '<p>No sales</p>';
+        }
+
+        function updateSale(i) {
+            const day = getDay(today);
+            const product = document.getElementById('sprod' + i).value;
+            const qty = parseFloat(document.getElementById('sqty' + i).value) || 0;
+            const price = parseFloat(document.getElementById('sprice' + i).value) || 0;
+            if (qty <= 0 || price <= 0) { msg('Qty and Price must be > 0', 'error'); return; }
+            day.sales[i] = { product, qty, price };
+            save({...load(), days: {...load().days, [today]: day}});
+            renderSales();
+            renderDashboard();
+            renderCapital();
         }
 
         function addSale() {
@@ -526,7 +570,32 @@
             
             const capital = revenue + stock - cogs - expenses - debtors + creditors;
             
-            let html = '<h3>Capital Calculation</h3>';
+            // Calculate yesterday's capital
+            const yesterday = new Date(new Date(today).getTime() - 86400000).toISOString().split('T')[0];
+            const data = load();
+            let yesterdayCapital = 0;
+            if (data.days[yesterday]) {
+                const yday = data.days[yesterday];
+                const yrev = yday.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                const ycogs = yday.usage.reduce((s, u) => s + u.cost, 0);
+                const yexp = yday.expenses.reduce((s, e) => s + e.amount, 0);
+                let ystock = 0;
+                yday.purchases.forEach(p => {
+                    const used = yday.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
+                    ystock += (p.qty - used) * p.unitCost;
+                });
+                let ydebtors = 0;
+                yday.debtors.forEach(d => { ydebtors += d.amount - (d.paid || 0); });
+                let ycreditors = 0;
+                yday.creditors.forEach(c => { ycreditors += c.amount - (c.paid || 0); });
+                yesterdayCapital = yrev + ystock - ycogs - yexp - ydebtors + ycreditors;
+            }
+            
+            const position = capital - yesterdayCapital;
+            let positionIcon = position > 0 ? '📈 INCREASING' : (position < 0 ? '📉 DECREASING' : '➡️ STABLE');
+            let positionColor = position > 0 ? '#27a745' : (position < 0 ? '#dc3545' : '#666');
+            
+            let html = '<h3>Today\'s Capital</h3>';
             html += '<div class="summary">';
             html += '<div class="summary-row"><span>💵 Cash (Sales)</span><span>UGX ' + fmt(revenue) + '</span></div>';
             html += '<div class="summary-row"><span>📦 Stock Value</span><span>UGX ' + fmt(stock) + '</span></div>';
@@ -535,6 +604,13 @@
             html += '<div class="summary-row"><span>👥 Debtors Owed</span><span>UGX ' + fmt(debtors) + '</span></div>';
             html += '<div class="summary-row"><span>🏪 Creditors Owed</span><span>UGX ' + fmt(creditors) + '</span></div>';
             html += '<div class="summary-row total"><span>TOTAL CAPITAL</span><span style="color: ' + (capital > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(capital)) + '</span></div>';
+            html += '</div>';
+            
+            html += '<h3>Net Position</h3>';
+            html += '<div class="summary">';
+            html += '<div class="summary-row"><span>Yesterday</span><span>UGX ' + fmt(yesterdayCapital) + '</span></div>';
+            html += '<div class="summary-row"><span>Today</span><span>UGX ' + fmt(capital) + '</span></div>';
+            html += '<div class="summary-row total"><span>Change</span><span style="color: ' + positionColor + ';">' + positionIcon + ' UGX ' + fmt(Math.abs(position)) + '</span></div>';
             html += '</div>';
             
             document.getElementById('capital-content').innerHTML = html;
