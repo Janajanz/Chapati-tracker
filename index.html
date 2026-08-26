@@ -185,6 +185,11 @@
             if (!day.usage) day.usage = [];
             if (!day.ownerStock) day.ownerStock = [];
             
+            // DEBUG: Show what's in ownerStock
+            console.log('DEBUG - ownerStock data:', day.ownerStock);
+            console.log('DEBUG - today:', today);
+            console.log('DEBUG - entire day object:', day);
+            
             // Get yesterday's closing inventory for carryover
             const yesterday = new Date(new Date(today).getTime() - 86400000).toISOString().split('T')[0];
             const data = load();
@@ -372,9 +377,13 @@
             if (unitCost <= 0) { alert('Unit cost must be > 0'); return; }
             
             day.ownerStock.push({item, qty, unitCost});
+            console.log('DEBUG - About to save, day.ownerStock:', day.ownerStock);
+            
             const data = load();
             data.days[today] = day;
+            console.log('DEBUG - Full data being saved:', data);
             save(data);
+            
             alert('Owner stock added - ' + item + ' (' + qty + ')');
             document.getElementById('owner-item').value = '';
             document.getElementById('owner-qty').value = '';
