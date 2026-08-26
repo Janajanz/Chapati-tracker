@@ -106,7 +106,18 @@
                 };
                 save(data);
             }
-            return data.days[date];
+            
+            // Ensure all required arrays exist on existing days
+            const day = data.days[date];
+            if (!day.ownerStock) day.ownerStock = [];
+            if (!day.purchases) day.purchases = [];
+            if (!day.usage) day.usage = [];
+            if (!day.sales) day.sales = [];
+            if (!day.expenses) day.expenses = [];
+            if (!day.debtors) day.debtors = [];
+            if (!day.creditors) day.creditors = [];
+            
+            return day;
         }
 
         function toggleMenu() {
@@ -273,11 +284,14 @@
             // Display owner stock (editable)
             let ownerHtml = '';
             let ownerValue = 0;
+            ownerHtml += '<p style="background: #ffe0b2; padding: 8px; border-radius: 4px; margin-bottom: 8px;">📊 Items in your stock: ' + day.ownerStock.length + '</p>';
             if (day.ownerStock.length > 0) {
                 day.ownerStock.forEach((os, i) => {
                     ownerValue += os.qty * os.unitCost;
                     ownerHtml += '<div class="item-card" style="background: #fff3e0;"><p><strong>' + os.item + ':</strong> ' + os.qty + ' @ UGX ' + fmt(os.unitCost) + ' = UGX ' + fmt(os.qty * os.unitCost) + '</p><button class="btn btn-danger" onclick="delOwnerStock(' + i + ')">Delete</button></div>';
                 });
+            } else {
+                ownerHtml += '<p style="color: #999; font-size: 12px;">No owner stock added yet</p>';
             }
             document.getElementById('owner-list').innerHTML = ownerHtml;
             
