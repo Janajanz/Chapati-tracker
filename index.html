@@ -369,15 +369,22 @@
             if (qty <= 0) { alert('Qty must be > 0'); return; }
             if (unitCost <= 0) { alert('Unit cost must be > 0'); return; }
             
-            day.ownerStock.push({item, qty, unitCost});
-            console.log('DEBUG - About to save, day.ownerStock:', day.ownerStock);
+            // Check if item with same cost already exists
+            const existing = day.ownerStock.find(o => o.item === item && o.unitCost === unitCost);
+            if (existing) {
+                // Merge - increase qty
+                existing.qty += qty;
+                alert('Updated - ' + item + ' now ' + existing.qty + ' @ ' + unitCost);
+            } else {
+                // Add new
+                day.ownerStock.push({item, qty, unitCost});
+                alert('Added - ' + item + ' (' + qty + ') @ ' + unitCost);
+            }
             
             const data = load();
             data.days[today] = day;
-            console.log('DEBUG - Full data being saved:', data);
             save(data);
             
-            alert('Owner stock added - ' + item + ' (' + qty + ')');
             document.getElementById('owner-item').value = '';
             document.getElementById('owner-qty').value = '';
             document.getElementById('owner-cost').value = '';
@@ -400,11 +407,23 @@
             const qty = parseInt(document.getElementById('purch-qty').value) || 0; 
             const unitCost = parseInt(document.getElementById('purch-cost').value) || 0; 
             if (!item || qty <= 0 || unitCost <= 0) { alert('Fill all fields'); return; } 
-            day.purchases.push({item, qty, unitCost}); 
+            
+            // Check if item with same cost already exists
+            const existing = day.purchases.find(p => p.item === item && p.unitCost === unitCost);
+            if (existing) {
+                // Merge - increase qty
+                existing.qty += qty;
+                alert('Updated - ' + item + ' now ' + existing.qty + ' @ ' + unitCost);
+            } else {
+                // Add new
+                day.purchases.push({item, qty, unitCost});
+                alert('Added - ' + item + ' (' + qty + ') @ ' + unitCost);
+            }
+            
             const data = load();
             data.days[today] = day;
             save(data);
-            msg('Purchase added');
+            
             document.getElementById('purch-item').value = '';
             document.getElementById('purch-qty').value = '';
             document.getElementById('purch-cost').value = '';
@@ -457,7 +476,19 @@
                 return; 
             }
             
-            day.usage.push({item, qty, unitCost, cost: qty * unitCost}); 
+            // Check if item with same cost already exists
+            const existingUsage = day.usage.find(u => u.item === item && u.unitCost === unitCost);
+            if (existingUsage) {
+                // Merge - increase qty
+                existingUsage.qty += qty;
+                existingUsage.cost = existingUsage.qty * unitCost;
+                alert('Updated - ' + item + ' now ' + existingUsage.qty + ' used');
+            } else {
+                // Add new
+                day.usage.push({item, qty, unitCost, cost: qty * unitCost});
+                alert('Added - ' + item + ' (' + qty + ') to usage');
+            }
+            
             const data = load();
             data.days[today] = day;
             save(data);
