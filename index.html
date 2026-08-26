@@ -437,11 +437,23 @@
             if (qty <= 0) { alert('Qty must be > 0'); return; }
             if (unitCost <= 0) { alert('Unit cost not filled - select item again'); return; }
             
-            // Check if usage exceeds purchase quantity
-            const totalPurchased = day.purchases.filter(p => p.item === item).reduce((s, p) => s + p.qty, 0);
-            const totalUsed = day.usage.filter(u => u.item === item).reduce((s, u) => s + u.qty, 0);
-            if ((totalUsed + qty) > totalPurchased) { 
-                alert('Cannot use ' + qty + ' - only ' + (totalPurchased - totalUsed) + ' available'); 
+            // Count total available from ALL sources: Carried + Owner Stock + Purchases
+            let totalAvailable = 0;
+            
+            // Count from purchases (includes carried items from yesterday)
+            const fromPurchases = (day.purchases || []).filter(p => p.item === item).reduce((s, p) => s + p.qty, 0);
+            totalAvailable += fromPurchases;
+            
+            // Count from owner stock (items you bought this morning)
+            const fromOwnerStock = (day.ownerStock || []).filter(o => o.item === item).reduce((s, o) => s + o.qty, 0);
+            totalAvailable += fromOwnerStock;
+            
+            // Count already used
+            const totalUsed = (day.usage || []).filter(u => u.item === item).reduce((s, u) => s + u.qty, 0);
+            
+            // Validate
+            if ((totalUsed + qty) > totalAvailable) { 
+                alert('Cannot use ' + qty + ' - only ' + (totalAvailable - totalUsed) + ' available from Carried + Owner + Purchases'); 
                 return; 
             }
             
@@ -449,7 +461,7 @@
             const data = load();
             data.days[today] = day;
             save(data);
-            msg('Usage added - ' + item + ' (' + qty + ') COGS recorded');
+            alert('Usage added - ' + item + ' (' + qty + ') COGS recorded');
             document.getElementById('usage-item').value = '';
             document.getElementById('usage-qty').value = '';
             document.getElementById('usage-cost').value = '';
