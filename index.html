@@ -99,6 +99,7 @@
                     date, status: 'open',
                     chapatiCarried: chapatiCarried, chapatiMade: 0, chapatiRemaining: 0,
                     purchases: carryoverItems, // Start with previous day's remaining items
+                    ownerStock: [], // Owner's additional purchases
                     usage: [], sales: [], expenses: [],
                     debtors: [], creditors: [],
                     closingInventory: { chapati: 0, items: [] }
@@ -143,7 +144,7 @@
             const remaining = day.chapatiRemaining || 0;
             const sold = (carried + made) - remaining;
             
-            let html = '<p style="color: #8B4513; font-weight: 700; margin-bottom: 16px;">' + today + '</p>';
+            let html = '<p style="color: #8B4513; font-weight: 700; margin-bottom: 16px;">📅 ' + today + '</p>';
             html += '<h3>Production</h3>';
             html += '<div class="form-group"><label>Carried</label><input type="number" id="carried" value="' + carried + '" onchange="updateProduction()"></div>';
             html += '<div class="form-group"><label>Made</label><input type="number" id="made" value="' + made + '" onchange="updateProduction()"></div>';
@@ -182,50 +183,115 @@
             // Ensure arrays exist
             if (!day.purchases) day.purchases = [];
             if (!day.usage) day.usage = [];
+            if (!day.ownerStock) day.ownerStock = [];
             
-            let html = '<h3>Add Purchase</h3>';
+            // Get yesterday's closing inventory for carryover
+            const yesterday = new Date(new Date(today).getTime() - 86400000).toISOString().split('T')[0];
+            const data = load();
+            let carriedItems = [];
+            if (data.days[yesterday] && data.days[yesterday].closingInventory && data.days[yesterday].closingInventory.items) {
+                carriedItems = data.days[yesterday].closingInventory.items;
+            }
+            
+            let html = '<h3>📦 OPENING STOCK</h3>';
+            
+            // What Was Carried (READ-ONLY)
+            html += '<h4>✅ What Was Carried (from yesterday)</h4>';
+            if (carriedItems.length > 0) {
+                html += '<div id="carried-list"></div>';
+            } else {
+                html += '<p style="color: #999; font-size: 12px;">No inventory carried from yesterday</p>';
+            }
+            
+            // What Owner Buys (EDITABLE)
+            html += '<h4>➕ What You Buy (Owner)</h4>';
+            html += '<div class="form-group"><input type="text" id="owner-item" placeholder="Item"></div>';
+            html += '<div class="form-group"><input type="number" id="owner-qty" placeholder="Qty"></div>';
+            html += '<div class="form-group"><input type="number" id="owner-cost" placeholder="Unit Cost"></div>';
+            html += '<button class="btn btn-primary" onclick="addOwnerStock()">✓ Add Owner Stock</button>';
+            html += '<div id="owner-list" style="margin-top: 12px;"></div>';
+            
+            // Total Opening Stock
+            html += '<h4>= TOTAL OPENING STOCK</h4>';
+            html += '<div id="total-opening-stock" style="background: #f9f9f9; padding: 12px; border-radius: 6px; margin-bottom: 16px;"></div>';
+            
+            html += '<hr style="margin: 20px 0;">';
+            
+            html += '<h3>➕ PURCHASES (Worker buys during day)</h3>';
             html += '<div class="form-group"><input type="text" id="purch-item" placeholder="Item"></div>';
             html += '<div class="form-group"><input type="number" id="purch-qty" placeholder="Qty"></div>';
             html += '<div class="form-group"><input type="number" id="purch-cost" placeholder="Unit Cost"></div>';
-            html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add</button>';
+            html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add Purchase</button>';
+            html += '<div id="purchases-list" style="margin-top: 12px;"></div>';
             
-            html += '<h3>Add Usage</h3>';
-            html += '<div class="form-group"><label>Select Item from Purchases</label><select id="usage-item" onchange="autoFillUsageCost()"><option value="">-- Choose Item --</option>';
+            html += '<h3>➖ USAGE</h3>';
+            html += '<div class="form-group"><label>Select Item</label><select id="usage-item" onchange="autoFillUsageCost()"><option value="">-- Choose Item --</option>';
             
-            // Build unique list of purchases with their unit costs
-            const purchaseMap = {};
+            // Build dropdown from both carried + owner stock + purchases
+            const allItems = {};
+            carriedItems.forEach(ci => {
+                if (!allItems[ci.name]) allItems[ci.name] = ci.unitCost;
+            });
+            day.ownerStock.forEach(os => {
+                if (!allItems[os.item]) allItems[os.item] = os.unitCost;
+            });
             day.purchases.forEach(p => {
-                if (p.item && !purchaseMap[p.item]) {
-                    purchaseMap[p.item] = p.unitCost;
-                }
+                if (!allItems[p.item]) allItems[p.item] = p.unitCost;
             });
             
-            // Populate dropdown with purchase items
-            Object.keys(purchaseMap).forEach(itemName => {
-                html += '<option value="' + itemName + '|' + purchaseMap[itemName] + '">' + itemName + ' (UGX ' + fmt(purchaseMap[itemName]) + ')</option>';
+            Object.keys(allItems).forEach(itemName => {
+                html += '<option value="' + itemName + '|' + allItems[itemName] + '">' + itemName + ' (UGX ' + fmt(allItems[itemName]) + ')</option>';
             });
-            
-            if (Object.keys(purchaseMap).length === 0) {
-                html += '<option disabled style="color: #999;">No purchases yet</option>';
-            }
             
             html += '</select></div>';
             html += '<div class="form-group"><input type="number" id="usage-qty" placeholder="Qty"></div>';
             html += '<div class="form-group"><label>Unit Cost (auto)</label><input type="number" id="usage-cost" placeholder="Unit Cost" readonly></div>';
             html += '<button class="btn btn-primary" onclick="addUsage()">✓ Add Usage</button>';
+            html += '<div id="usage-list" style="margin-top: 12px;"></div>';
             
-            html += '<h3>Purchases (' + day.purchases.length + ')</h3><div id="purchases-list"></div>';
-            html += '<h3>Usage (' + day.usage.length + ')</h3><div id="usage-list"></div>';
-            html += '<h3>Current Stock</h3><div id="stock-list"></div>';
+            html += '<h3>= 📊 CURRENT STOCK (TOTAL)</h3>';
+            html += '<div id="stock-list"></div>';
             
             document.getElementById('inventory-content').innerHTML = html;
             
+            // Display carried items (read-only)
+            let carriedHtml = '';
+            let carriedValue = 0;
+            if (carriedItems.length > 0) {
+                carriedItems.forEach(ci => {
+                    carriedValue += ci.qty * ci.unitCost;
+                    carriedHtml += '<div class="item-card" style="background: #e8f5e9;"><p><strong>' + ci.name + ':</strong> ' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + ' = UGX ' + fmt(ci.qty * ci.unitCost) + '</p><p style="font-size: 11px; color: #666;">✓ Carried from yesterday</p></div>';
+                });
+            }
+            document.getElementById('carried-list').innerHTML = carriedHtml;
+            
+            // Display owner stock (editable)
+            let ownerHtml = '';
+            let ownerValue = 0;
+            if (day.ownerStock.length > 0) {
+                day.ownerStock.forEach((os, i) => {
+                    ownerValue += os.qty * os.unitCost;
+                    ownerHtml += '<div class="item-card" style="background: #fff3e0;"><p><strong>' + os.item + ':</strong> ' + os.qty + ' @ UGX ' + fmt(os.unitCost) + ' = UGX ' + fmt(os.qty * os.unitCost) + '</p><button class="btn btn-danger" onclick="delOwnerStock(' + i + ')">Delete</button></div>';
+                });
+            }
+            document.getElementById('owner-list').innerHTML = ownerHtml;
+            
+            // Display total opening stock
+            const totalOpeningValue = carriedValue + ownerValue;
+            let totalOpeningHtml = '';
+            totalOpeningHtml += '<p style="font-weight: 700; font-size: 14px;">Total Value: UGX ' + fmt(totalOpeningValue) + '</p>';
+            totalOpeningHtml += '<p style="font-size: 12px; color: #666;">Carried: UGX ' + fmt(carriedValue) + ' + Your stock: UGX ' + fmt(ownerValue) + '</p>';
+            document.getElementById('total-opening-stock').innerHTML = totalOpeningHtml;
+            
             // Display all purchases
             let pList = '';
+            let purchaseValue = 0;
             if (day.purchases.length > 0) {
                 day.purchases.forEach((p, i) => {
+                    purchaseValue += p.qty * p.unitCost;
                     pList += '<div class="item-card"><p><strong>' + p.item + '</strong> - ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + ' = UGX ' + fmt(p.qty * p.unitCost) + '</p><button class="btn btn-danger" onclick="delPurchase(' + i + ')">Delete</button></div>';
                 });
+                pList = '<p style="font-weight: 700; color: #ff9800;">Total Purchases: UGX ' + fmt(purchaseValue) + '</p>' + pList;
             } else {
                 pList = '<p style="color: #999;">No purchases recorded</p>';
             }
@@ -239,23 +305,39 @@
                     totalCogs += u.cost; 
                     uList += '<div class="item-card"><p><strong>' + u.item + '</strong> - ' + u.qty + ' @ UGX ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + '</p><button class="btn btn-danger" onclick="delUsage(' + i + ')">Delete</button></div>'; 
                 });
-                uList = '<p style="font-weight: 700; color: #ff6b35;">Total COGS: UGX ' + fmt(totalCogs) + '</p>' + uList;
+                uList = '<p style="font-weight: 700; color: #dc3545;">Total COGS: UGX ' + fmt(totalCogs) + '</p>' + uList;
             } else {
                 uList = '<p style="color: #999;">No usage recorded</p>';
             }
             document.getElementById('usage-list').innerHTML = uList;
             
-            // Calculate and display consolidated stock
+            // Calculate current stock (Carried + Owner + Purchases - Usage)
             let sList = '';
             let stockValue = 0;
             const itemMap = {};
             
+            // Add carried items
+            carriedItems.forEach(ci => {
+                if (!itemMap[ci.name]) itemMap[ci.name] = { totalQty: 0, totalCost: 0 };
+                itemMap[ci.name].totalQty += ci.qty;
+                itemMap[ci.name].totalCost += ci.qty * ci.unitCost;
+            });
+            
+            // Add owner stock
+            day.ownerStock.forEach(os => {
+                if (!itemMap[os.item]) itemMap[os.item] = { totalQty: 0, totalCost: 0 };
+                itemMap[os.item].totalQty += os.qty;
+                itemMap[os.item].totalCost += os.qty * os.unitCost;
+            });
+            
+            // Add purchases
             day.purchases.forEach(p => {
                 if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
                 itemMap[p.item].totalQty += p.qty;
                 itemMap[p.item].totalCost += p.qty * p.unitCost;
             });
             
+            // Subtract usage
             Object.keys(itemMap).forEach(itemName => {
                 const totalQty = itemMap[itemName].totalQty;
                 const totalCost = itemMap[itemName].totalCost;
@@ -266,15 +348,48 @@
                 
                 if (remain > 0) {
                     stockValue += value;
-                    sList += '<div class="item-card"><p><strong>' + itemName + '</strong></p><p style="font-size: 12px;">Purchased: ' + totalQty + ' | Used: ' + used + ' | <strong>Remaining: ' + remain + '</strong></p><p style="font-size: 12px; font-weight: 700;">Value: UGX ' + fmt(value) + '</p></div>';
+                    sList += '<div class="item-card"><p><strong>' + itemName + '</strong></p><p style="font-size: 12px;">Total: ' + totalQty + ' | Used: ' + used + ' | <strong>Remaining: ' + remain + '</strong></p><p style="font-size: 12px; font-weight: 700;">Value: UGX ' + fmt(value) + '</p></div>';
                 } else if (remain === 0) {
-                    sList += '<div class="item-card"><p><strong>' + itemName + '</strong> - ✓ FINISHED</p><p style="font-size: 12px;">Purchased: ' + totalQty + ' | Used: ' + used + '</p></div>';
+                    sList += '<div class="item-card"><p><strong>' + itemName + '</strong> - ✓ FINISHED</p><p style="font-size: 12px;">Total: ' + totalQty + ' | Used: ' + used + '</p></div>';
                 }
             });
             
             if (sList) sList = '<p style="font-weight: 700; font-size: 14px; color: #8B4513;">Total Stock Value: UGX ' + fmt(stockValue) + '</p>' + sList;
             else sList = '<p style="color: #999;">No stock or all used</p>';
             document.getElementById('stock-list').innerHTML = sList;
+        }
+        
+        function addOwnerStock() {
+            const day = getDay(today);
+            if (!day.ownerStock) day.ownerStock = [];
+            
+            const item = document.getElementById('owner-item').value;
+            const qty = parseInt(document.getElementById('owner-qty').value) || 0;
+            const unitCost = parseInt(document.getElementById('owner-cost').value) || 0;
+            
+            if (!item) { alert('Enter item name'); return; }
+            if (qty <= 0) { alert('Qty must be > 0'); return; }
+            if (unitCost <= 0) { alert('Unit cost must be > 0'); return; }
+            
+            day.ownerStock.push({item, qty, unitCost});
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            alert('Owner stock added - ' + item + ' (' + qty + ')');
+            document.getElementById('owner-item').value = '';
+            document.getElementById('owner-qty').value = '';
+            document.getElementById('owner-cost').value = '';
+            renderInventory();
+        }
+        
+        function delOwnerStock(i) {
+            const day = getDay(today);
+            day.ownerStock.splice(i, 1);
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            alert('Owner stock deleted');
+            renderInventory();
         }
 
         function addPurchase() { 
@@ -592,13 +707,24 @@
         }
 
         function calculateStockValue(day) {
-            // Consolidate purchases by item name (same method as Inventory)
+            // Consolidate purchases AND owner stock by item name
             const itemMap = {};
+            
+            // Include purchases (which includes carried items)
             if (day.purchases) {
                 day.purchases.forEach(p => {
                     if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
                     itemMap[p.item].totalQty += p.qty;
                     itemMap[p.item].totalCost += p.qty * p.unitCost;
+                });
+            }
+            
+            // Include owner stock
+            if (day.ownerStock) {
+                day.ownerStock.forEach(os => {
+                    if (!itemMap[os.item]) itemMap[os.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[os.item].totalQty += os.qty;
+                    itemMap[os.item].totalCost += os.qty * os.unitCost;
                 });
             }
             
@@ -819,13 +945,24 @@
         }
 
         function calculateClosingItems(day) {
-            // Use CONSOLIDATED method - same as Inventory and Capital
+            // Use CONSOLIDATED method - includes carried items (in purchases) + owner stock
             const itemMap = {};
+            
+            // Include purchases (which includes carried items)
             if (day.purchases) {
                 day.purchases.forEach(p => {
                     if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
                     itemMap[p.item].totalQty += p.qty;
                     itemMap[p.item].totalCost += p.qty * p.unitCost;
+                });
+            }
+            
+            // Include owner stock
+            if (day.ownerStock) {
+                day.ownerStock.forEach(os => {
+                    if (!itemMap[os.item]) itemMap[os.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[os.item].totalQty += os.qty;
+                    itemMap[os.item].totalCost += os.qty * os.unitCost;
                 });
             }
             
