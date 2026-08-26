@@ -802,6 +802,31 @@
             document.getElementById('history-content').innerHTML = html;
         }
 
+        function calculateClosingItems(day) {
+            // Use CONSOLIDATED method - same as Inventory and Capital
+            const itemMap = {};
+            if (day.purchases) {
+                day.purchases.forEach(p => {
+                    if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[p.item].totalQty += p.qty;
+                    itemMap[p.item].totalCost += p.qty * p.unitCost;
+                });
+            }
+            
+            const closingItems = [];
+            Object.keys(itemMap).forEach(itemName => {
+                const totalQty = itemMap[itemName].totalQty;
+                const totalCost = itemMap[itemName].totalCost;
+                const used = (day.usage || []).filter(u => u.item === itemName).reduce((s, u) => s + u.qty, 0);
+                const remain = totalQty - used;
+                if (remain > 0) {
+                    const avgCost = totalCost / totalQty;
+                    closingItems.push({name: itemName, qty: remain, unitCost: avgCost});
+                }
+            });
+            return closingItems;
+        }
+
         function renderClose() {
             const day = getDay(today);
             const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
@@ -809,13 +834,8 @@
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
             const profit = revenue - cogs - expenses;
             
-            // Calculate closing inventory items
-            let closingItems = [];
-            day.purchases.forEach(p => {
-                const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
-                const remain = p.qty - used;
-                if (remain > 0) closingItems.push({name: p.item, qty: remain, unitCost: p.unitCost});
-            });
+            // Calculate closing inventory using consolidated method
+            const closingItems = calculateClosingItems(day);
             
             let html = '<h3>Day Summary</h3>';
             html += '<div class="summary">';
@@ -827,11 +847,11 @@
             
             html += '<h3>Closing Inventory (Carry to Next Day)</h3>';
             if (day.chapatiRemaining > 0) {
-                html += '<p style="font-size: 12px;"><strong>Chapati:</strong> ' + day.chapatiRemaining + '</p>';
+                html += '<div class="item-card"><p><strong>Chapati:</strong> ' + day.chapatiRemaining + ' pieces</p></div>';
             }
             if (closingItems.length > 0) {
                 closingItems.forEach(item => {
-                    html += '<p style="font-size: 12px;"><strong>' + item.name + ':</strong> ' + item.qty + ' @ UGX ' + fmt(item.unitCost) + '</p>';
+                    html += '<div class="item-card"><p><strong>' + item.name + ':</strong> ' + item.qty + ' @ UGX ' + fmt(item.unitCost) + '</p></div>';
                 });
             } else {
                 html += '<p style="font-size: 12px; color: #999;">No items to carry over</p>';
@@ -843,12 +863,7 @@
 
         function closeDay() {
             const day = getDay(today);
-            const closingItems = [];
-            day.purchases.forEach(p => {
-                const used = day.usage.filter(u => u.item === p.item).reduce((s, u) => s + u.qty, 0);
-                const remain = p.qty - used;
-                if (remain > 0) closingItems.push({name: p.item, qty: remain, unitCost: p.unitCost});
-            });
+            const closingItems = calculateClosingItems(day);
             day.closingInventory = {chapati: day.chapatiRemaining || 0, items: closingItems};
             day.status = 'closed';
             const data = load();
