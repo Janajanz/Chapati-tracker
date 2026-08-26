@@ -214,7 +214,9 @@
             // What Was Carried (READ-ONLY)
             html += '<h4>✅ What Was Carried (from yesterday)</h4>';
             if (carriedItems.length > 0) {
-                html += '<div id="carried-list"></div>';
+                carriedItems.forEach(ci => {
+                    html += '<div class="item-card" style="background: #e8f5e9;"><p><strong>' + ci.name + ':</strong> ' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + ' = UGX ' + fmt(ci.qty * ci.unitCost) + '</p><p style="font-size: 11px; color: #666;">✓ Carried from yesterday</p></div>';
+                });
             } else {
                 html += '<p style="color: #999; font-size: 12px;">No inventory carried from yesterday</p>';
             }
@@ -225,7 +227,16 @@
             html += '<div class="form-group"><input type="number" id="owner-qty" placeholder="Qty"></div>';
             html += '<div class="form-group"><input type="number" id="owner-cost" placeholder="Unit Cost"></div>';
             html += '<button class="btn btn-primary" onclick="addOwnerStock()">✓ Add Owner Stock</button>';
-            html += '<div id="owner-list" style="margin-top: 12px;"></div>';
+            
+            // Display owner items inline
+            if (day.ownerStock && day.ownerStock.length > 0) {
+                html += '<p style="font-weight: 700; margin-top: 12px; color: #ff9800;">Your Items (' + day.ownerStock.length + '):</p>';
+                day.ownerStock.forEach((os, i) => {
+                    html += '<div class="item-card" style="background: #fff3e0; margin: 8px 0;"><p><strong>' + os.item + ':</strong> ' + os.qty + ' @ UGX ' + fmt(os.unitCost) + ' = UGX ' + fmt(os.qty * os.unitCost) + '</p><button class="btn btn-danger" onclick="delOwnerStock(' + i + ')" style="width: 100%; margin-top: 8px;">Delete</button></div>';
+                });
+            } else {
+                html += '<p style="color: #999; font-size: 12px; margin-top: 8px;">No owner stock added yet</p>';
+            }
             
             // Total Opening Stock
             html += '<h4>= TOTAL OPENING STOCK</h4>';
@@ -269,38 +280,6 @@
             html += '<div id="stock-list"></div>';
             
             document.getElementById('inventory-content').innerHTML = html;
-            
-            // Display carried items (read-only)
-            let carriedHtml = '';
-            let carriedValue = 0;
-            if (carriedItems.length > 0) {
-                carriedItems.forEach(ci => {
-                    carriedValue += ci.qty * ci.unitCost;
-                    carriedHtml += '<div class="item-card" style="background: #e8f5e9;"><p><strong>' + ci.name + ':</strong> ' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + ' = UGX ' + fmt(ci.qty * ci.unitCost) + '</p><p style="font-size: 11px; color: #666;">✓ Carried from yesterday</p></div>';
-                });
-            }
-            document.getElementById('carried-list').innerHTML = carriedHtml;
-            
-            // Display owner stock (editable)
-            let ownerHtml = '';
-            let ownerValue = 0;
-            ownerHtml += '<p style="background: #ffe0b2; padding: 8px; border-radius: 4px; margin-bottom: 8px;">📊 Items in your stock: ' + day.ownerStock.length + '</p>';
-            if (day.ownerStock.length > 0) {
-                day.ownerStock.forEach((os, i) => {
-                    ownerValue += os.qty * os.unitCost;
-                    ownerHtml += '<div class="item-card" style="background: #fff3e0;"><p><strong>' + os.item + ':</strong> ' + os.qty + ' @ UGX ' + fmt(os.unitCost) + ' = UGX ' + fmt(os.qty * os.unitCost) + '</p><button class="btn btn-danger" onclick="delOwnerStock(' + i + ')">Delete</button></div>';
-                });
-            } else {
-                ownerHtml += '<p style="color: #999; font-size: 12px;">No owner stock added yet</p>';
-            }
-            document.getElementById('owner-list').innerHTML = ownerHtml;
-            
-            // Display total opening stock
-            const totalOpeningValue = carriedValue + ownerValue;
-            let totalOpeningHtml = '';
-            totalOpeningHtml += '<p style="font-weight: 700; font-size: 14px;">Total Value: UGX ' + fmt(totalOpeningValue) + '</p>';
-            totalOpeningHtml += '<p style="font-size: 12px; color: #666;">Carried: UGX ' + fmt(carriedValue) + ' + Your stock: UGX ' + fmt(ownerValue) + '</p>';
-            document.getElementById('total-opening-stock').innerHTML = totalOpeningHtml;
             
             // Display all purchases
             let pList = '';
