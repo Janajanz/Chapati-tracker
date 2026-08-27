@@ -63,7 +63,7 @@
         <div id="analytics" class="view"><div class="card"><h2>📈 Analytics</h2><div id="analytics-content"></div></div></div>
         <div id="history" class="view"><div class="card"><h2>📅 History</h2><div id="history-content"></div></div></div>
         <div id="close" class="view"><div class="card"><h2>🔒 Close Day</h2><div id="close-content"></div></div></div>
-        <div id="backup" class="view"><div class="card"><h2>💾 Backup</h2><button class="btn btn-primary" onclick="downloadBackup()">📥 Download</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0; padding: 8px; width: 100%; border: 1px solid #ddd; border-radius: 4px;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore</button><button class="btn btn-danger" style="width: 100%;" onclick="if(confirm('DELETE ALL?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All</button></div></div>
+        <div id="backup" class="view"><div class="card"><h2>💾 Backup</h2><button class="btn btn-primary" onclick="downloadBackup()">📥 Download</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0; padding: 8px; width: 100%; border: 1px solid #ddd; border-radius: 4px;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore</button><button class="btn btn-danger" style="width: 100%;" onclick="if(confirm('DELETE ALL?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All</button><hr style="margin: 20px 0;"><h3>🔧 Debug Tools</h3><button class="btn btn-warning" onclick="debugYesterday()" style="width: 100%; margin-bottom: 8px;">📊 Check Yesterday's Data</button><button class="btn btn-warning" onclick="repairCarryover()" style="width: 100%;">🔨 Repair Today's Carryover</button><div id="debug-output" style="margin-top: 16px; background: #f5f5f5; padding: 12px; border-radius: 4px; font-size: 12px; max-height: 300px; overflow-y: auto; display: none;"></div></div></div>
     </div>
 
     <script>
@@ -1202,6 +1202,61 @@
             alert('Day closed - inventory carried over');
             renderDashboard();
             showTab('dashboard');
+        }
+
+        function debugYesterday() {
+            const yesterday = new Date(new Date(today).getTime() - 86400000).toISOString().split('T')[0];
+            const data = load();
+            const yesterdayData = data.days[yesterday];
+            
+            let output = '<h4>📊 Yesterday (' + yesterday + '):</h4>';
+            if (!yesterdayData) {
+                output += '<p style="color: red;">❌ No data found for yesterday</p>';
+            } else {
+                output += '<p><strong>Status:</strong> ' + (yesterdayData.status || 'unknown') + '</p>';
+                output += '<p><strong>Closing Inventory:</strong></p>';
+                if (!yesterdayData.closingInventory) {
+                    output += '<p style="color: red;">❌ NO closingInventory!</p>';
+                } else {
+                    output += '<p>Chapati: ' + (yesterdayData.closingInventory.chapati || 0) + '</p>';
+                    if (yesterdayData.closingInventory.items && yesterdayData.closingInventory.items.length > 0) {
+                        output += '<p style="color: green;">✓ Items found (' + yesterdayData.closingInventory.items.length + '):</p>';
+                        yesterdayData.closingInventory.items.forEach(item => {
+                            output += '<p style="margin-left: 16px;">- ' + item.name + ': ' + item.qty + ' @ UGX ' + fmt(item.unitCost) + '</p>';
+                        });
+                    } else {
+                        output += '<p style="color: red;">❌ No items in closingInventory</p>';
+                    }
+                }
+                
+                output += '<p><strong>Today:</strong> Carried items count: ' + (data.days[today].carriedItems ? data.days[today].carriedItems.length : 0) + '</p>';
+            }
+            
+            const debugDiv = document.getElementById('debug-output');
+            debugDiv.innerHTML = output;
+            debugDiv.style.display = 'block';
+        }
+        
+        function repairCarryover() {
+            const data = load();
+            const yesterday = new Date(new Date(today).getTime() - 86400000).toISOString().split('T')[0];
+            
+            if (!data.days[yesterday] || !data.days[yesterday].closingInventory) {
+                alert('No closing inventory found for yesterday. Did you close the day?');
+                return;
+            }
+            
+            // Get yesterday's closing inventory
+            const closingItems = data.days[yesterday].closingInventory.items || [];
+            
+            // Set today's carried items
+            data.days[today].carriedItems = closingItems;
+            
+            // Save
+            save(data);
+            
+            alert('✓ Repaired! Carried over ' + closingItems.length + ' items from yesterday.\n\nRefresh the Inventory tab to see them.');
+            renderInventory();
         }
 
         function downloadBackup() { const blob = new Blob([JSON.stringify(load(), null, 2)], {type: 'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'backup.json'; a.click(); URL.revokeObjectURL(url); }
