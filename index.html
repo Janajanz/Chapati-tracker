@@ -206,10 +206,13 @@
             
             // What Was Carried (READ-ONLY)
             html += '<h4>✅ What Was Carried (from yesterday)</h4>';
+            let carriedValue = 0;
             if (carriedItems.length > 0) {
                 carriedItems.forEach(ci => {
+                    carriedValue += ci.qty * ci.unitCost;
                     html += '<div class="item-card" style="background: #e8f5e9;"><p><strong>' + ci.name + ':</strong> ' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + ' = UGX ' + fmt(ci.qty * ci.unitCost) + '</p><p style="font-size: 11px; color: #666;">✓ Carried from yesterday</p></div>';
                 });
+                html += '<p style="font-weight: 700; color: #2e7d32; margin-top: 8px;">Total Carried Value: UGX ' + fmt(carriedValue) + '</p>';
             } else {
                 html += '<p style="color: #999; font-size: 12px;">No inventory carried from yesterday</p>';
             }
@@ -222,11 +225,14 @@
             html += '<button class="btn btn-primary" onclick="addOwnerStock()">✓ Add Owner Stock</button>';
             
             // Display owner items inline
+            let ownerValue = 0;
             if (day.ownerStock && day.ownerStock.length > 0) {
                 html += '<p style="font-weight: 700; margin-top: 12px; color: #ff9800;">Your Items (' + day.ownerStock.length + '):</p>';
                 day.ownerStock.forEach((os, i) => {
+                    ownerValue += os.qty * os.unitCost;
                     html += '<div class="item-card" style="background: #fff3e0; margin: 8px 0;"><p><strong>' + os.item + ':</strong> ' + os.qty + ' @ UGX ' + fmt(os.unitCost) + ' = UGX ' + fmt(os.qty * os.unitCost) + '</p><button class="btn btn-danger" onclick="delOwnerStock(' + i + ')" style="width: 100%; margin-top: 8px;">Delete</button></div>';
                 });
+                html += '<p style="font-weight: 700; color: #ff9800; margin-top: 8px;">Total Owner Stock: UGX ' + fmt(ownerValue) + '</p>';
             } else {
                 html += '<p style="color: #999; font-size: 12px; margin-top: 8px;">No owner stock added yet</p>';
             }
@@ -242,7 +248,19 @@
             html += '<div class="form-group"><input type="number" id="purch-qty" placeholder="Qty"></div>';
             html += '<div class="form-group"><input type="number" id="purch-cost" placeholder="Unit Cost"></div>';
             html += '<button class="btn btn-primary" onclick="addPurchase()">✓ Add Purchase</button>';
-            html += '<div id="purchases-list" style="margin-top: 12px;"></div>';
+            
+            // Display purchases
+            let purchaseValue = 0;
+            if (day.purchases && day.purchases.length > 0) {
+                html += '<p style="font-weight: 700; margin-top: 12px; color: #ff9800;">Purchases (' + day.purchases.length + '):</p>';
+                day.purchases.forEach((p, i) => {
+                    purchaseValue += p.qty * p.unitCost;
+                    html += '<div class="item-card" style="background: #f5f5f5; margin: 8px 0;"><p><strong>' + p.item + ':</strong> ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + ' = UGX ' + fmt(p.qty * p.unitCost) + '</p><button class="btn btn-danger" onclick="delPurchase(' + i + ')" style="width: 100%; margin-top: 8px;">Delete</button></div>';
+                });
+                html += '<p style="font-weight: 700; color: #ff9800; margin-top: 8px;">Total Purchases: UGX ' + fmt(purchaseValue) + '</p>';
+            } else {
+                html += '<p style="color: #999; font-size: 12px; margin-top: 8px;">No purchases recorded yet</p>';
+            }
             
             html += '<h3>➖ USAGE</h3>';
             html += '<div class="form-group"><label>Select Item</label><select id="usage-item" onchange="autoFillUsageCost()"><option value="">-- Choose Item --</option>';
@@ -267,7 +285,19 @@
             html += '<div class="form-group"><input type="number" id="usage-qty" placeholder="Qty"></div>';
             html += '<div class="form-group"><label>Unit Cost (auto)</label><input type="number" id="usage-cost" placeholder="Unit Cost" readonly></div>';
             html += '<button class="btn btn-primary" onclick="addUsage()">✓ Add Usage</button>';
-            html += '<div id="usage-list" style="margin-top: 12px;"></div>';
+            
+            // Display usage
+            let totalCogs = 0;
+            if (day.usage && day.usage.length > 0) {
+                html += '<p style="font-weight: 700; margin-top: 12px; color: #dc3545;">Usage (' + day.usage.length + '):</p>';
+                day.usage.forEach((u, i) => {
+                    totalCogs += u.cost;
+                    html += '<div class="item-card" style="background: #ffebee; margin: 8px 0;"><p><strong>' + u.item + ':</strong> ' + u.qty + ' @ UGX ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + '</p><button class="btn btn-danger" onclick="delUsage(' + i + ')" style="width: 100%; margin-top: 8px;">Delete</button></div>';
+                });
+                html += '<p style="font-weight: 700; color: #dc3545; margin-top: 8px;">Total COGS: UGX ' + fmt(totalCogs) + '</p>';
+            } else {
+                html += '<p style="color: #999; font-size: 12px; margin-top: 8px;">No usage recorded yet</p>';
+            }
             
             html += '<h3>= 📊 CURRENT STOCK (TOTAL)</h3>';
             html += '<div id="stock-list"></div>';
