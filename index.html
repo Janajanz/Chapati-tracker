@@ -1050,6 +1050,21 @@
                     html += '<p style="color: #999;">No usage recorded</p>';
                 }
                 
+                html += '<hr style="margin: 16px 0;">';
+                html += '<h4 style="color: #27a745;">📦 WHAT REMAINED (Closing Inventory) 📦</h4>';
+                if (day.closingInventory && day.closingInventory.items && day.closingInventory.items.length > 0) {
+                    html += '<p style="background: #e8f5e9; padding: 8px; border-radius: 4px; margin-bottom: 8px; color: #2e7d32; font-weight: 700;">✓ Carried to next day:</p>';
+                    let closingValue = 0;
+                    day.closingInventory.items.forEach(ci => {
+                        closingValue += ci.qty * ci.unitCost;
+                        html += '<div class="item-card" style="background: #e8f5e9;"><p><strong>' + ci.name + ':</strong> ' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + ' = UGX ' + fmt(ci.qty * ci.unitCost) + '</p></div>';
+                    });
+                    html += '<p style="font-weight: 700; color: #2e7d32;">Total Remaining Value: UGX ' + fmt(closingValue) + '</p>';
+                    html += '<p style="font-size: 11px; color: #666;">✓ This becomes "What Was Carried" for the next day</p>';
+                } else {
+                    html += '<p style="background: #fff3cd; padding: 8px; border-radius: 4px; color: #856404;">⚠️ No closing inventory found! Was the day closed?</p>';
+                }
+                
             } else if (tab === 'hist-sales') {
                 html += '<h4>Sales Transactions (' + (day.sales ? day.sales.length : 0) + ')</h4>';
                 let totalSales = 0;
