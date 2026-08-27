@@ -196,11 +196,6 @@
             if (!day.usage) day.usage = [];
             if (!day.ownerStock) day.ownerStock = [];
             
-            // DEBUG: Show what's in ownerStock
-            console.log('DEBUG - ownerStock data:', day.ownerStock);
-            console.log('DEBUG - today:', today);
-            console.log('DEBUG - entire day object:', day);
-            
             // Get yesterday's closing inventory for carryover
             const yesterday = new Date(new Date(today).getTime() - 86400000).toISOString().split('T')[0];
             const data = load();
@@ -280,34 +275,6 @@
             html += '<div id="stock-list"></div>';
             
             document.getElementById('inventory-content').innerHTML = html;
-            
-            // Display all purchases
-            let pList = '';
-            let purchaseValue = 0;
-            if (day.purchases.length > 0) {
-                day.purchases.forEach((p, i) => {
-                    purchaseValue += p.qty * p.unitCost;
-                    pList += '<div class="item-card"><p><strong>' + p.item + '</strong> - ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + ' = UGX ' + fmt(p.qty * p.unitCost) + '</p><button class="btn btn-danger" onclick="delPurchase(' + i + ')">Delete</button></div>';
-                });
-                pList = '<p style="font-weight: 700; color: #ff9800;">Total Purchases: UGX ' + fmt(purchaseValue) + '</p>' + pList;
-            } else {
-                pList = '<p style="color: #999;">No purchases recorded</p>';
-            }
-            document.getElementById('purchases-list').innerHTML = pList;
-            
-            // Display usage
-            let uList = '';
-            let totalCogs = 0;
-            if (day.usage.length > 0) {
-                day.usage.forEach((u, i) => { 
-                    totalCogs += u.cost; 
-                    uList += '<div class="item-card"><p><strong>' + u.item + '</strong> - ' + u.qty + ' @ UGX ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + '</p><button class="btn btn-danger" onclick="delUsage(' + i + ')">Delete</button></div>'; 
-                });
-                uList = '<p style="font-weight: 700; color: #dc3545;">Total COGS: UGX ' + fmt(totalCogs) + '</p>' + uList;
-            } else {
-                uList = '<p style="color: #999;">No usage recorded</p>';
-            }
-            document.getElementById('usage-list').innerHTML = uList;
             
             // Calculate current stock (Carried + Owner + Purchases - Usage)
             let sList = '';
@@ -1068,7 +1035,7 @@
             data.days[today] = day;
             save(data);
             today = new Date(new Date(today).getTime() + 86400000).toISOString().split('T')[0];
-            msg('Day closed - inventory carried over');
+            alert('Day closed - inventory carried over');
             renderDashboard();
             showTab('dashboard');
         }
