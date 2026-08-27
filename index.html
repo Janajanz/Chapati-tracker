@@ -206,6 +206,10 @@
             
             // What Was Carried (READ-ONLY)
             html += '<h4>✅ What Was Carried (from yesterday)</h4>';
+            // DEBUG: Show if carriedItems exist
+            if (!carriedItems || carriedItems.length === 0) {
+                html += '<p style="background: #fff3cd; padding: 8px; border-radius: 4px; font-size: 11px; color: #856404; margin-bottom: 8px;">ℹ️ No items carried from yesterday (or first day)</p>';
+            }
             let carriedValue = 0;
             if (carriedItems.length > 0) {
                 carriedItems.forEach(ci => {
@@ -937,60 +941,174 @@
         }
 
         function showHistoryDetail(date) {
-            const data = load();
-            const day = data.days[date];
+            const day = load().days[date];
             if (!day) return;
             
-            const rev = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
-            const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
-            const exp = day.expenses.reduce((s, e) => s + e.amount, 0);
-            const profit = rev - cogs - exp;
-            const carried = day.chapatiCarried || 0;
-            const made = day.chapatiMade || 0;
-            const remaining = day.chapatiRemaining || 0;
-            const sold = (carried + made) - remaining;
+            // Store current date and switch to viewing history date
+            window.historyViewDate = date;
+            window.originalToday = today;
             
-            let html = '<h3>Details - ' + date + '</h3>';
-            html += '<h4 style="font-size: 12px; margin-top: 16px; color: #666; font-weight: 700;">PRODUCTION</h4>';
-            html += '<div class="summary">';
-            html += '<div class="summary-row"><span>Carried</span><span>' + carried + '</span></div>';
-            html += '<div class="summary-row"><span>Made</span><span>' + made + '</span></div>';
-            html += '<div class="summary-row"><span>Total Available</span><span>' + (carried + made) + '</span></div>';
-            html += '<div class="summary-row"><span>Remaining</span><span>' + remaining + '</span></div>';
-            html += '<div class="summary-row total"><span>SOLD</span><span>' + sold + '</span></div>';
+            let html = '<h3>📅 ' + date + ' (History View)</h3>';
+            html += '<p style="font-size: 12px; color: #666; margin-bottom: 16px;">Viewing all details for ' + date + '</p>';
+            
+            // Add tab navigation for historical day
+            html += '<div style="display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 2px solid #ddd; padding-bottom: 12px;">';
+            html += '<button class="btn btn-primary" onclick="showHistoryTab(\'hist-dashboard\')">Dashboard</button>';
+            html += '<button class="btn btn-primary" onclick="showHistoryTab(\'hist-inventory\')">Inventory</button>';
+            html += '<button class="btn btn-primary" onclick="showHistoryTab(\'hist-sales\')">Sales</button>';
+            html += '<button class="btn btn-primary" onclick="showHistoryTab(\'hist-capital\')">Capital</button>';
+            html += '<button class="btn btn-primary" onclick="showHistoryTab(\'hist-expenses\')">Expenses</button>';
             html += '</div>';
             
-            html += '<h4 style="font-size: 12px; margin-top: 16px; color: #666; font-weight: 700;">FINANCIAL</h4>';
-            html += '<div class="summary">';
-            html += '<div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(rev) + '</span></div>';
-            html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
-            html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(exp) + '</span></div>';
-            html += '<div class="summary-row total"><span>PROFIT</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(Math.abs(profit)) + '</span></div>';
-            html += '</div>';
+            html += '<div id="history-tab-content"></div>';
             
-            if (day.sales.length > 0) {
-                html += '<h4 style="font-size: 12px; margin-top: 16px; color: #666; font-weight: 700;">SALES (' + day.sales.length + ')</h4>';
-                day.sales.forEach(s => {
-                    html += '<div class="item-card"><p style="font-size: 12px;"><strong>' + s.product + '</strong> - ' + s.qty + ' @ UGX ' + fmt(s.price) + ' = UGX ' + fmt(s.qty * s.price) + '</p></div>';
-                });
-            }
+            html += '<button class="btn btn-secondary" onclick="exitHistoryView()" style="margin-top: 16px; width: 100%;">← Return to Today (' + window.originalToday + ')</button>';
             
-            if (day.debtors.length > 0) {
-                html += '<h4 style="font-size: 12px; margin-top: 16px; color: #666; font-weight: 700;">DEBTORS (' + day.debtors.length + ')</h4>';
-                day.debtors.forEach(d => {
-                    html += '<div class="item-card"><p style="font-size: 12px;"><strong>' + d.name + '</strong> - Owed: UGX ' + fmt(d.amount) + ' | Paid: UGX ' + fmt(d.paid || 0) + '</p></div>';
-                });
-            }
-            
-            if (day.creditors.length > 0) {
-                html += '<h4 style="font-size: 12px; margin-top: 16px; color: #666; font-weight: 700;">CREDITORS (' + day.creditors.length + ')</h4>';
-                day.creditors.forEach(c => {
-                    html += '<div class="item-card"><p style="font-size: 12px;"><strong>' + c.name + '</strong> - Owed: UGX ' + fmt(c.amount) + ' | Paid: UGX ' + fmt(c.paid || 0) + '</p></div>';
-                });
-            }
-            
-            html += '<button class="btn btn-primary" onclick="renderHistory()" style="margin-top: 16px;">← Back to History</button>';
             document.getElementById('history-content').innerHTML = html;
+            
+            // Show dashboard by default
+            showHistoryTab('hist-dashboard');
+        }
+        
+        function showHistoryTab(tab) {
+            const date = window.historyViewDate;
+            const day = load().days[date];
+            if (!day) return;
+            
+            let html = '';
+            
+            if (tab === 'hist-dashboard') {
+                const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
+                const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
+                const profit = revenue - cogs - expenses;
+                const ownerShare = profit / 2;
+                const carried = day.chapatiCarried || 0;
+                const made = day.chapatiMade || 0;
+                const remaining = day.chapatiRemaining || 0;
+                const sold = (carried + made) - remaining;
+                
+                html += '<h4>Production</h4>';
+                html += '<div class="summary"><div class="summary-row"><span>Carried</span><span>' + carried + '</span></div>';
+                html += '<div class="summary-row"><span>Made</span><span>' + made + '</span></div>';
+                html += '<div class="summary-row"><span>Remaining</span><span>' + remaining + '</span></div>';
+                html += '<div class="summary-row total"><span>SOLD</span><span>' + sold + '</span></div></div>';
+                
+                html += '<h4>Financial</h4>';
+                html += '<div class="summary"><div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
+                html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
+                html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
+                html += '<div class="summary-row total"><span>PROFIT</span><span style="color: ' + (profit > 0 ? '#27a745' : '#dc3545') + ';">UGX ' + fmt(profit) + '</span></div>';
+                html += '<div class="summary-row"><span>Your Share (50%)</span><span>UGX ' + fmt(ownerShare) + '</span></div></div>';
+                
+            } else if (tab === 'hist-inventory') {
+                html += '<h4>Opening Stock</h4>';
+                let carriedValue = 0;
+                if (day.carriedItems && day.carriedItems.length > 0) {
+                    day.carriedItems.forEach(ci => {
+                        carriedValue += ci.qty * ci.unitCost;
+                        html += '<div class="item-card"><p><strong>' + ci.name + ':</strong> ' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + '</p></div>';
+                    });
+                    html += '<p style="font-weight: 700; color: #2e7d32;">Total Carried: UGX ' + fmt(carriedValue) + '</p>';
+                } else {
+                    html += '<p style="color: #999;">No inventory carried</p>';
+                }
+                
+                html += '<h4>Your Purchases</h4>';
+                let ownerValue = 0;
+                if (day.ownerStock && day.ownerStock.length > 0) {
+                    day.ownerStock.forEach(os => {
+                        ownerValue += os.qty * os.unitCost;
+                        html += '<div class="item-card"><p><strong>' + os.item + ':</strong> ' + os.qty + ' @ UGX ' + fmt(os.unitCost) + '</p></div>';
+                    });
+                    html += '<p style="font-weight: 700; color: #ff9800;">Total Owner Stock: UGX ' + fmt(ownerValue) + '</p>';
+                } else {
+                    html += '<p style="color: #999;">No owner purchases</p>';
+                }
+                
+                html += '<h4>Worker Purchases</h4>';
+                let purchaseValue = 0;
+                if (day.purchases && day.purchases.length > 0) {
+                    day.purchases.forEach(p => {
+                        purchaseValue += p.qty * p.unitCost;
+                        html += '<div class="item-card"><p><strong>' + p.item + ':</strong> ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + '</p></div>';
+                    });
+                    html += '<p style="font-weight: 700; color: #ff9800;">Total Purchases: UGX ' + fmt(purchaseValue) + '</p>';
+                } else {
+                    html += '<p style="color: #999;">No purchases</p>';
+                }
+                
+                html += '<h4>Usage (COGS)</h4>';
+                let totalCogs = 0;
+                if (day.usage && day.usage.length > 0) {
+                    day.usage.forEach(u => {
+                        totalCogs += u.cost;
+                        html += '<div class="item-card"><p><strong>' + u.item + ':</strong> ' + u.qty + ' used = UGX ' + fmt(u.cost) + '</p></div>';
+                    });
+                    html += '<p style="font-weight: 700; color: #dc3545;">Total COGS: UGX ' + fmt(totalCogs) + '</p>';
+                } else {
+                    html += '<p style="color: #999;">No usage recorded</p>';
+                }
+                
+            } else if (tab === 'hist-sales') {
+                html += '<h4>Sales Transactions (' + (day.sales ? day.sales.length : 0) + ')</h4>';
+                let totalSales = 0;
+                if (day.sales && day.sales.length > 0) {
+                    day.sales.forEach(s => {
+                        totalSales += s.qty * s.price;
+                        html += '<div class="item-card"><p><strong>' + s.product + ':</strong> ' + s.qty + ' @ UGX ' + fmt(s.price) + ' = UGX ' + fmt(s.qty * s.price) + '</p></div>';
+                    });
+                    html += '<p style="font-weight: 700;">Total Revenue: UGX ' + fmt(totalSales) + '</p>';
+                } else {
+                    html += '<p style="color: #999;">No sales recorded</p>';
+                }
+                
+            } else if (tab === 'hist-capital') {
+                const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                const purchases = (day.purchases ? day.purchases.reduce((s, p) => s + (p.qty * p.unitCost), 0) : 0) + (day.ownerStock ? day.ownerStock.reduce((s, o) => s + (o.qty * o.unitCost), 0) : 0);
+                const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
+                const cash = revenue - purchases - expenses;
+                const stockValue = calculateStockValue(day);
+                const totalCapital = cash + stockValue;
+                const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
+                const profit = revenue - cogs - expenses;
+                
+                html += '<h4>Capital Position</h4>';
+                html += '<div class="summary"><div class="summary-row"><span>Sales</span><span>UGX ' + fmt(revenue) + '</span></div>';
+                html += '<div class="summary-row"><span>- Purchases</span><span>UGX ' + fmt(purchases) + '</span></div>';
+                html += '<div class="summary-row"><span>- Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
+                html += '<div class="summary-row total"><span>= Cash at Hand</span><span>UGX ' + fmt(cash) + '</span></div>';
+                html += '<div class="summary-row"><span>+ Stock Value</span><span>UGX ' + fmt(stockValue) + '</span></div>';
+                html += '<div class="summary-row total"><span>Total Capital</span><span>UGX ' + fmt(totalCapital) + '</span></div></div>';
+                
+                html += '<h4>Profit Sharing</h4>';
+                html += '<div class="summary"><div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
+                html += '<div class="summary-row"><span>- COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
+                html += '<div class="summary-row"><span>- Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
+                html += '<div class="summary-row total"><span>Profit to Share</span><span>UGX ' + fmt(profit) + '</span></div>';
+                html += '<div class="summary-row"><span>Owner (50%)</span><span>UGX ' + fmt(profit / 2) + '</span></div>';
+                html += '<div class="summary-row"><span>Worker (50%)</span><span>UGX ' + fmt(profit / 2) + '</span></div></div>';
+                
+            } else if (tab === 'hist-expenses') {
+                html += '<h4>Expenses (' + (day.expenses ? day.expenses.length : 0) + ')</h4>';
+                let totalExp = 0;
+                if (day.expenses && day.expenses.length > 0) {
+                    day.expenses.forEach(e => {
+                        totalExp += e.amount;
+                        html += '<div class="item-card"><p><strong>' + e.desc + '</strong> (' + e.category + ') = UGX ' + fmt(e.amount) + '</p></div>';
+                    });
+                    html += '<p style="font-weight: 700;">Total Expenses: UGX ' + fmt(totalExp) + '</p>';
+                } else {
+                    html += '<p style="color: #999;">No expenses recorded</p>';
+                }
+            }
+            
+            document.getElementById('history-tab-content').innerHTML = html;
+        }
+        
+        function exitHistoryView() {
+            today = window.originalToday;
+            renderHistory();
         }
 
         function calculateClosingItems(day) {
