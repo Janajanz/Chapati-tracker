@@ -98,8 +98,9 @@
                 data.days[date] = {
                     date, status: 'open',
                     chapatiCarried: chapatiCarried, chapatiMade: 0, chapatiRemaining: 0,
-                    purchases: carryoverItems, // Start with previous day's remaining items
+                    carriedItems: carryoverItems, // Yesterday's remaining items (READ-ONLY)
                     ownerStock: [], // Owner's additional purchases
+                    purchases: [], // TODAY's purchases (worker buys during day) - empty at start
                     usage: [], sales: [], expenses: [],
                     debtors: [], creditors: [],
                     closingInventory: { chapati: 0, items: [] }
@@ -109,6 +110,7 @@
             
             // Ensure all required arrays exist on existing days
             const day = data.days[date];
+            if (!day.carriedItems) day.carriedItems = [];
             if (!day.ownerStock) day.ownerStock = [];
             if (!day.purchases) day.purchases = [];
             if (!day.usage) day.usage = [];
@@ -192,17 +194,13 @@
             const day = getDay(today);
             
             // Ensure arrays exist
+            if (!day.carriedItems) day.carriedItems = [];
             if (!day.purchases) day.purchases = [];
             if (!day.usage) day.usage = [];
             if (!day.ownerStock) day.ownerStock = [];
             
-            // Get yesterday's closing inventory for carryover
-            const yesterday = new Date(new Date(today).getTime() - 86400000).toISOString().split('T')[0];
-            const data = load();
-            let carriedItems = [];
-            if (data.days[yesterday] && data.days[yesterday].closingInventory && data.days[yesterday].closingInventory.items) {
-                carriedItems = data.days[yesterday].closingInventory.items;
-            }
+            // Use carried items from the day object (set when day was created)
+            const carriedItems = day.carriedItems || [];
             
             let html = '<h3>📦 OPENING STOCK</h3>';
             
@@ -719,10 +717,19 @@
         }
 
         function calculateStockValue(day) {
-            // Consolidate purchases AND owner stock by item name
+            // Consolidate carried items + owner stock + purchases by item name
             const itemMap = {};
             
-            // Include purchases (which includes carried items)
+            // Include carried items (from yesterday)
+            if (day.carriedItems) {
+                day.carriedItems.forEach(c => {
+                    if (!itemMap[c.item]) itemMap[c.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[c.item].totalQty += c.qty;
+                    itemMap[c.item].totalCost += c.qty * c.unitCost;
+                });
+            }
+            
+            // Include purchases (today's purchases)
             if (day.purchases) {
                 day.purchases.forEach(p => {
                     if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
@@ -957,24 +964,33 @@
         }
 
         function calculateClosingItems(day) {
-            // Use CONSOLIDATED method - includes carried items (in purchases) + owner stock
+            // Use CONSOLIDATED method - includes carried items + owner stock + purchases
             const itemMap = {};
             
-            // Include purchases (which includes carried items)
-            if (day.purchases) {
-                day.purchases.forEach(p => {
-                    if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
-                    itemMap[p.item].totalQty += p.qty;
-                    itemMap[p.item].totalCost += p.qty * p.unitCost;
+            // Include carried items (from yesterday)
+            if (day.carriedItems) {
+                day.carriedItems.forEach(c => {
+                    if (!itemMap[c.item]) itemMap[c.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[c.item].totalQty += c.qty;
+                    itemMap[c.item].totalCost += c.qty * c.unitCost;
                 });
             }
             
-            // Include owner stock
+            // Include owner stock (today's owner purchases)
             if (day.ownerStock) {
                 day.ownerStock.forEach(os => {
                     if (!itemMap[os.item]) itemMap[os.item] = { totalQty: 0, totalCost: 0 };
                     itemMap[os.item].totalQty += os.qty;
                     itemMap[os.item].totalCost += os.qty * os.unitCost;
+                });
+            }
+            
+            // Include purchases (today's worker purchases)
+            if (day.purchases) {
+                day.purchases.forEach(p => {
+                    if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[p.item].totalQty += p.qty;
+                    itemMap[p.item].totalCost += p.qty * p.unitCost;
                 });
             }
             
