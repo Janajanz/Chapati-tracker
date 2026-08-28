@@ -47,6 +47,7 @@
         <div class="sidebar-item" onclick="showTab('creditors')">🏪 Creditors</div>
         <div class="sidebar-item" onclick="showTab('expenses')">💸 Expenses</div>
         <div class="sidebar-item" onclick="showTab('capital')">💰 Capital</div>
+        <div class="sidebar-item" onclick="showTab('earnings')">💸 My Earnings</div>
         <div class="sidebar-item" onclick="showTab('analytics')">📈 Analytics</div>
         <div class="sidebar-item" onclick="showTab('history')">📅 History</div>
         <div class="sidebar-item" onclick="showTab('close')">🔒 Close Day</div>
@@ -60,6 +61,7 @@
         <div id="creditors" class="view"><div class="card"><h2>🏪 Creditors</h2><div id="creditors-content"></div></div></div>
         <div id="expenses" class="view"><div class="card"><h2>💸 Expenses</h2><div id="expenses-content"></div></div></div>
         <div id="capital" class="view"><div class="card"><h2>💰 Capital</h2><div id="capital-content"></div></div></div>
+        <div id="earnings" class="view"><div class="card"><h2>💸 My Earnings</h2><div id="earnings-content"></div></div></div>
         <div id="analytics" class="view"><div class="card"><h2>📈 Analytics</h2><div id="analytics-content"></div></div></div>
         <div id="history" class="view"><div class="card"><h2>📅 History</h2><div id="history-content"></div></div></div>
         <div id="close" class="view"><div class="card"><h2>🔒 Close Day</h2><div id="close-content"></div></div></div>
@@ -139,6 +141,7 @@
             else if (name === 'creditors') renderCreditors();
             else if (name === 'expenses') renderExpenses();
             else if (name === 'capital') renderCapital();
+            else if (name === 'earnings') renderEarnings();
             else if (name === 'analytics') renderAnalytics();
             else if (name === 'history') renderHistory();
             else if (name === 'close') renderClose();
@@ -884,6 +887,95 @@
             html += '<div class="summary-row total"><span>Change</span><span style="color: ' + posColor + ';">' + posIcon + ' UGX ' + fmt(Math.abs(position)) + '</span></div>';
             html += '</div>';
             document.getElementById('capital-content').innerHTML = html;
+        }
+
+        function renderEarnings() {
+            const data = load();
+            const days = data.days || {};
+            
+            // Calculate earnings for each day
+            let todayEarnings = 0;
+            let weekEarnings = 0;
+            let monthEarnings = 0;
+            let totalEarnings = 0;
+            
+            const dailyEarnings = [];
+            const now = new Date();
+            const currentDate = today;
+            const currentMonth = currentDate.substring(0, 7); // YYYY-MM
+            const weekAgoDate = new Date(new Date(currentDate).getTime() - 7 * 86400000).toISOString().split('T')[0];
+            
+            Object.keys(days).sort().reverse().forEach(date => {
+                const day = days[date];
+                const revenue = day.sales ? day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0) : 0;
+                const cogs = day.usage ? day.usage.reduce((s, u) => s + u.cost, 0) : 0;
+                const expenses = day.expenses ? day.expenses.reduce((s, e) => s + e.amount, 0) : 0;
+                const profit = revenue - cogs - expenses;
+                const ownerEarnings = profit / 2;
+                
+                totalEarnings += ownerEarnings;
+                
+                // Check if this day is in the month
+                if (date.substring(0, 7) === currentMonth) {
+                    monthEarnings += ownerEarnings;
+                }
+                
+                // Check if this day is today
+                if (date === currentDate) {
+                    todayEarnings = ownerEarnings;
+                }
+                
+                // Check if this day is within last 7 days
+                if (date >= weekAgoDate) {
+                    weekEarnings += ownerEarnings;
+                }
+                
+                dailyEarnings.push({date, ownerEarnings, revenue, cogs, expenses, profit});
+            });
+            
+            let html = '<h3>Your Personal Earnings</h3>';
+            
+            // Summary cards
+            html += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 20px;">';
+            
+            html += '<div style="background: #e3f2fd; padding: 16px; border-radius: 8px; border-left: 4px solid #2196f3;">';
+            html += '<p style="font-size: 12px; color: #666; margin: 0 0 8px 0;">TODAY</p>';
+            html += '<p style="font-size: 20px; font-weight: 700; color: #2196f3; margin: 0;">UGX ' + fmt(todayEarnings) + '</p>';
+            html += '</div>';
+            
+            html += '<div style="background: #e8f5e9; padding: 16px; border-radius: 8px; border-left: 4px solid #4caf50;">';
+            html += '<p style="font-size: 12px; color: #666; margin: 0 0 8px 0;">LAST 7 DAYS</p>';
+            html += '<p style="font-size: 20px; font-weight: 700; color: #4caf50; margin: 0;">UGX ' + fmt(weekEarnings) + '</p>';
+            html += '</div>';
+            
+            html += '<div style="background: #fff3e0; padding: 16px; border-radius: 8px; border-left: 4px solid #ff9800;">';
+            html += '<p style="font-size: 12px; color: #666; margin: 0 0 8px 0;">THIS MONTH</p>';
+            html += '<p style="font-size: 20px; font-weight: 700; color: #ff9800; margin: 0;">UGX ' + fmt(monthEarnings) + '</p>';
+            html += '</div>';
+            
+            html += '<div style="background: #f3e5f5; padding: 16px; border-radius: 8px; border-left: 4px solid #9c27b0;">';
+            html += '<p style="font-size: 12px; color: #666; margin: 0 0 8px 0;">TOTAL (ALL TIME)</p>';
+            html += '<p style="font-size: 20px; font-weight: 700; color: #9c27b0; margin: 0;">UGX ' + fmt(totalEarnings) + '</p>';
+            html += '</div>';
+            
+            html += '</div>';
+            
+            // Daily breakdown
+            html += '<h4>Daily Earnings Breakdown</h4>';
+            if (dailyEarnings.length > 0) {
+                dailyEarnings.forEach(de => {
+                    const earningColor = de.ownerEarnings > 0 ? '#27a745' : (de.ownerEarnings < 0 ? '#dc3545' : '#999');
+                    html += '<div class="item-card"><div style="display: flex; justify-content: space-between; align-items: center;">';
+                    html += '<div><p style="font-weight: 700; margin: 0;">' + de.date + '</p>';
+                    html += '<p style="font-size: 12px; color: #666; margin: 4px 0 0 0;">Revenue: UGX ' + fmt(de.revenue) + ' | COGS: UGX ' + fmt(de.cogs) + ' | Expenses: UGX ' + fmt(de.expenses) + '</p></div>';
+                    html += '<p style="font-size: 18px; font-weight: 700; color: ' + earningColor + '; margin: 0;">UGX ' + fmt(de.ownerEarnings) + '</p>';
+                    html += '</div></div>';
+                });
+            } else {
+                html += '<p style="color: #999;">No earnings recorded yet</p>';
+            }
+            
+            document.getElementById('earnings-content').innerHTML = html;
         }
 
         function renderAnalytics() {
