@@ -274,19 +274,29 @@
             
             // Build dropdown from both carried + owner stock + purchases
             const allItems = {};
+            
+            // Helper: normalize item names
+            function normalizeItem(name) {
+                return (name || '').toLowerCase().trim();
+            }
+            
             carriedItems.forEach(ci => {
-                const itemName = ci.item || ci.name; // Support both
-                if (!allItems[itemName]) allItems[itemName] = ci.unitCost;
+                const normalized = normalizeItem(ci.item || ci.name);
+                const displayName = ci.item || ci.name;
+                if (!allItems[normalized]) allItems[normalized] = { displayName, unitCost: ci.unitCost };
             });
             day.ownerStock.forEach(os => {
-                if (!allItems[os.item]) allItems[os.item] = os.unitCost;
+                const normalized = normalizeItem(os.item);
+                if (!allItems[normalized]) allItems[normalized] = { displayName: os.item, unitCost: os.unitCost };
             });
             day.purchases.forEach(p => {
-                if (!allItems[p.item]) allItems[p.item] = p.unitCost;
+                const normalized = normalizeItem(p.item);
+                if (!allItems[normalized]) allItems[normalized] = { displayName: p.item, unitCost: p.unitCost };
             });
             
-            Object.keys(allItems).forEach(itemName => {
-                html += '<option value="' + itemName + '|' + allItems[itemName] + '">' + itemName + ' (UGX ' + fmt(allItems[itemName]) + ')</option>';
+            Object.keys(allItems).forEach(normalized => {
+                const item = allItems[normalized];
+                html += '<option value="' + item.displayName + '|' + item.unitCost + '">' + item.displayName + ' (UGX ' + fmt(item.unitCost) + ')</option>';
             });
             
             html += '</select></div>';
@@ -317,42 +327,51 @@
             let stockValue = 0;
             const itemMap = {};
             
+            // Helper: normalize item names (case-insensitive, trimmed)
+            function normalizeItem(name) {
+                return (name || '').toLowerCase().trim();
+            }
+            
             // Add carried items
             carriedItems.forEach(ci => {
-                const itemName = ci.item || ci.name; // Support both field names for compatibility
-                if (!itemMap[itemName]) itemMap[itemName] = { totalQty: 0, totalCost: 0 };
-                itemMap[itemName].totalQty += ci.qty;
-                itemMap[itemName].totalCost += ci.qty * ci.unitCost;
+                const normalized = normalizeItem(ci.item || ci.name);
+                const displayName = ci.item || ci.name;
+                if (!itemMap[normalized]) itemMap[normalized] = { displayName, totalQty: 0, totalCost: 0 };
+                itemMap[normalized].totalQty += ci.qty;
+                itemMap[normalized].totalCost += ci.qty * ci.unitCost;
             });
             
             // Add owner stock
             day.ownerStock.forEach(os => {
-                if (!itemMap[os.item]) itemMap[os.item] = { totalQty: 0, totalCost: 0 };
-                itemMap[os.item].totalQty += os.qty;
-                itemMap[os.item].totalCost += os.qty * os.unitCost;
+                const normalized = normalizeItem(os.item);
+                if (!itemMap[normalized]) itemMap[normalized] = { displayName: os.item, totalQty: 0, totalCost: 0 };
+                itemMap[normalized].totalQty += os.qty;
+                itemMap[normalized].totalCost += os.qty * os.unitCost;
             });
             
             // Add purchases
             day.purchases.forEach(p => {
-                if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
-                itemMap[p.item].totalQty += p.qty;
-                itemMap[p.item].totalCost += p.qty * p.unitCost;
+                const normalized = normalizeItem(p.item);
+                if (!itemMap[normalized]) itemMap[normalized] = { displayName: p.item, totalQty: 0, totalCost: 0 };
+                itemMap[normalized].totalQty += p.qty;
+                itemMap[normalized].totalCost += p.qty * p.unitCost;
             });
             
-            // Subtract usage
-            Object.keys(itemMap).forEach(itemName => {
-                const totalQty = itemMap[itemName].totalQty;
-                const totalCost = itemMap[itemName].totalCost;
-                const used = day.usage.filter(u => u.item === itemName).reduce((s, u) => s + u.qty, 0);
+            // Subtract usage and display
+            Object.keys(itemMap).forEach(normalized => {
+                const itemData = itemMap[normalized];
+                const totalQty = itemData.totalQty;
+                const totalCost = itemData.totalCost;
+                const used = day.usage.filter(u => normalizeItem(u.item) === normalized).reduce((s, u) => s + u.qty, 0);
                 const remain = totalQty - used;
                 const avgCost = totalCost / totalQty;
                 const value = remain * avgCost;
                 
                 if (remain > 0) {
                     stockValue += value;
-                    sList += '<div class="item-card"><p><strong>' + itemName + '</strong></p><p style="font-size: 12px;">Total: ' + totalQty + ' | Used: ' + used + ' | <strong>Remaining: ' + remain + '</strong></p><p style="font-size: 12px; font-weight: 700;">Value: UGX ' + fmt(value) + '</p></div>';
+                    sList += '<div class="item-card"><p><strong>' + itemData.displayName + '</strong></p><p style="font-size: 12px;">Total: ' + totalQty + ' | Used: ' + used + ' | <strong>Remaining: ' + remain + '</strong></p><p style="font-size: 12px; font-weight: 700;">Value: UGX ' + fmt(value) + '</p></div>';
                 } else if (remain === 0) {
-                    sList += '<div class="item-card"><p><strong>' + itemName + '</strong> - ✓ FINISHED</p><p style="font-size: 12px;">Total: ' + totalQty + ' | Used: ' + used + '</p></div>';
+                    sList += '<div class="item-card"><p><strong>' + itemData.displayName + '</strong> - ✓ FINISHED</p><p style="font-size: 12px;">Total: ' + totalQty + ' | Used: ' + used + '</p></div>';
                 }
             });
             
@@ -460,8 +479,12 @@
             if (qty <= 0) { alert('Qty must be > 0'); return; }
             if (unitCost <= 0) { alert('Unit cost not filled - select item again'); return; }
             
+            // Normalize item name for comparison
+            const normalizeItem = (name) => (name || '').toLowerCase().trim();
+            const normalizedItem = normalizeItem(item);
+            
             // DEBUG: Log what we have
-            console.log('DEBUG - Looking for item:', item);
+            console.log('DEBUG - Looking for item:', item, '(normalized:', normalizedItem + ')');
             console.log('DEBUG - carriedItems:', day.carriedItems);
             console.log('DEBUG - ownerStock:', day.ownerStock);
             console.log('DEBUG - purchases:', day.purchases);
@@ -472,25 +495,25 @@
             // Count from carried items (from yesterday)
             const fromCarried = (day.carriedItems || []).filter(c => {
                 const itemName = c.item || c.name; // Support both field names
-                return itemName === item;
+                return normalizeItem(itemName) === normalizedItem;
             }).reduce((s, c) => s + c.qty, 0);
             console.log('DEBUG - fromCarried:', fromCarried);
             totalAvailable += fromCarried;
             
             // Count from purchases (today's purchases)
-            const fromPurchases = (day.purchases || []).filter(p => p.item === item).reduce((s, p) => s + p.qty, 0);
+            const fromPurchases = (day.purchases || []).filter(p => normalizeItem(p.item) === normalizedItem).reduce((s, p) => s + p.qty, 0);
             console.log('DEBUG - fromPurchases:', fromPurchases);
             totalAvailable += fromPurchases;
             
             // Count from owner stock (items you bought this morning)
-            const fromOwnerStock = (day.ownerStock || []).filter(o => o.item === item).reduce((s, o) => s + o.qty, 0);
+            const fromOwnerStock = (day.ownerStock || []).filter(o => normalizeItem(o.item) === normalizedItem).reduce((s, o) => s + o.qty, 0);
             console.log('DEBUG - fromOwnerStock:', fromOwnerStock);
             totalAvailable += fromOwnerStock;
             
             console.log('DEBUG - totalAvailable:', totalAvailable);
             
             // Count already used
-            const totalUsed = (day.usage || []).filter(u => u.item === item).reduce((s, u) => s + u.qty, 0);
+            const totalUsed = (day.usage || []).filter(u => normalizeItem(u.item) === normalizedItem).reduce((s, u) => s + u.qty, 0);
             
             // Validate
             if ((totalUsed + qty) > totalAvailable) { 
@@ -498,8 +521,10 @@
                 return; 
             }
             
-            // Check if item with same cost already exists
-            const existingUsage = day.usage.find(u => u.item === item && u.unitCost === unitCost);
+            // Check if item with same cost already exists (use normalized name)
+            const normalizeItem = (name) => (name || '').toLowerCase().trim();
+            const normalizedItem = normalizeItem(item);
+            const existingUsage = day.usage.find(u => normalizeItem(u.item) === normalizedItem && u.unitCost === unitCost);
             if (existingUsage) {
                 // Merge - increase qty
                 existingUsage.qty += qty;
