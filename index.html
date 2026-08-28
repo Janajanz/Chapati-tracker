@@ -461,7 +461,11 @@
             // Count total available from ALL sources: Carried + Owner Stock + Purchases
             let totalAvailable = 0;
             
-            // Count from purchases (includes carried items from yesterday)
+            // Count from carried items (from yesterday)
+            const fromCarried = (day.carriedItems || []).filter(c => c.item === item).reduce((s, c) => s + c.qty, 0);
+            totalAvailable += fromCarried;
+            
+            // Count from purchases (today's purchases)
             const fromPurchases = (day.purchases || []).filter(p => p.item === item).reduce((s, p) => s + p.qty, 0);
             totalAvailable += fromPurchases;
             
