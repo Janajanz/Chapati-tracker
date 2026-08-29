@@ -93,13 +93,19 @@
         function getDay(date) {
             const data = load();
             if (!data.days[date]) {
+                // Get yesterday's date
+                const yesterday = new Date(date + 'T00:00:00');
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayDate = yesterday.toISOString().split('T')[0];
+                
+                // Initialize new day
                 data.days[date] = {
                     date: date,
                     status: 'open',
-                    chapatiCarried: 0,
+                    chapatiCarried: data.days[yesterdayDate] ? (data.days[yesterdayDate].closingInventory?.chapati || 0) : 0,
                     chapatiMade: 0,
                     chapatiRemaining: 0,
-                    carriedItems: [],
+                    carriedItems: (data.days[yesterdayDate] && data.days[yesterdayDate].closingInventory && data.days[yesterdayDate].closingInventory.items) ? data.days[yesterdayDate].closingInventory.items : [],
                     ownerStock: [],
                     purchases: [],
                     usage: [],
@@ -177,6 +183,7 @@
             const selectedDate = document.getElementById('date-picker').value;
             if (selectedDate) {
                 today = selectedDate;
+                getDay(today); // Initialize the day (which will copy carried items from yesterday)
                 renderDashboard();
             }
         }
