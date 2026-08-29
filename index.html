@@ -224,8 +224,9 @@
             }
             html += '</div>';
             
-            html += '<h3 class="color-usage">➖ Usage (What Was Used)</h3>';
-            html += '<div class="form-group"><label>Select Item</label><select id="usage-item" onchange="autoFillUsageCost()"><option value="">-- Choose --</option>';
+            html += '<h3 class="color-usage">➖ USAGE (What Was Used in Production)</h3>';
+            html += '<p style="font-size: 12px; color: #666; margin-bottom: 12px;">Select items used and quantity. Cost is auto-filled.</p>';
+            html += '<div class="form-group"><label>Select Item</label><select id="usage-item" onchange="autoFillUsageCost()"><option value="">-- Choose Item --</option>';
             
             const items = {};
             day.carriedItems.forEach(ci => { const n = (ci.item || ci.name); if (!items[n]) items[n] = ci.unitCost; });
@@ -233,25 +234,68 @@
             day.purchases.forEach(p => { if (!items[p.item]) items[p.item] = p.unitCost; });
             
             Object.keys(items).forEach(name => {
-                html += '<option value="' + name + '|' + items[name] + '">' + name + ' (UGX ' + fmt(items[name]) + ')</option>';
+                html += '<option value="' + name + '|' + items[name] + '">' + name + ' (UGX ' + fmt(items[name]) + ' each)</option>';
             });
             
             html += '</select></div>';
-            html += '<div class="form-group"><input type="number" id="usage-qty" placeholder="Quantity"></div>';
-            html += '<div class="form-group"><input type="number" id="usage-cost" placeholder="Unit cost" readonly></div>';
-            html += '<button class="btn btn-primary" onclick="addUsage()">✓ Add Usage</button>';
+            html += '<div class="form-group"><label>Quantity Used</label><input type="number" id="usage-qty" placeholder="How many used"></div>';
+            html += '<div class="form-group"><label style="color: #999;">Unit Cost (Auto-filled)</label><input type="number" id="usage-cost" placeholder="Auto-fills when you select item" readonly style="background: #f5f5f5;"></div>';
+            html += '<button class="btn btn-primary" onclick="addUsage()" style="background: #dc3545; margin-top: 8px;">✓ Add Usage</button>';
             
             if (day.usage.length > 0) {
+                html += '<h4 style="margin-top: 16px; color: #dc3545;">Items Used:</h4>';
                 day.usage.forEach((u, i) => {
-                    html += '<div class="item-card"><p><strong>' + u.item + '</strong>: ' + u.qty + ' @ UGX ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + ' <button class="btn btn-danger" onclick="delUsage(' + i + ')" style="width: auto; padding: 6px 10px; font-size: 12px;">Delete</button></p></div>';
+                    html += '<div class="item-card"><p><strong>' + u.item + '</strong>: ' + u.qty + ' used @ UGX ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + ' <button class="btn btn-danger" onclick="delUsage(' + i + ')" style="width: auto; padding: 6px 10px; font-size: 12px;">Delete</button></p></div>';
                 });
             }
             
-            const totalValue = calculateStockValue(day);
             document.getElementById('inventory-content').innerHTML = html + renderCurrentStock(day);
         }
 
-        function calculateStockValue(day) {
+        function getConsolidatedStock(day) {
+            // This function returns ALL stock items with their remaining quantities
+            // It's used by BOTH renderCurrentStock AND closeDay so they ALWAYS match
+            const items = {};
+            
+            // Collect all items from all sources
+            day.carriedItems.forEach(ci => {
+                const n = ci.item || ci.name;
+                if (!items[n]) items[n] = { displayName: n, totalQty: 0, totalCost: 0 };
+                items[n].totalQty += ci.qty;
+                items[n].totalCost += ci.qty * ci.unitCost;
+            });
+            day.ownerStock.forEach(os => {
+                if (!items[os.item]) items[os.item] = { displayName: os.item, totalQty: 0, totalCost: 0 };
+                items[os.item].totalQty += os.qty;
+                items[os.item].totalCost += os.qty * os.unitCost;
+            });
+            day.purchases.forEach(p => {
+                if (!items[p.item]) items[p.item] = { displayName: p.item, totalQty: 0, totalCost: 0 };
+                items[p.item].totalQty += p.qty;
+                items[p.item].totalCost += p.qty * p.unitCost;
+            });
+            
+            // Calculate remaining for each item
+            const consolidated = {};
+            Object.keys(items).forEach(name => {
+                const totalQty = items[name].totalQty;
+                const totalCost = items[name].totalCost;
+                const used = day.usage.filter(u => u.item === name).reduce((s, u) => s + u.qty, 0);
+                const remaining = totalQty - used;
+                
+                if (remaining > 0) {
+                    const avgCost = totalCost / totalQty;
+                    consolidated[name] = {
+                        displayName: items[name].displayName,
+                        qty: remaining,
+                        unitCost: avgCost,
+                        value: remaining * avgCost
+                    };
+                }
+            });
+            
+            return consolidated;
+        }
             const items = {};
             day.carriedItems.forEach(ci => {
                 const n = ci.item || ci.name;
@@ -285,51 +329,18 @@
         }
         
         function renderCurrentStock(day) {
-            const items = {};
-            
-            // Collect all items from all sources
-            day.carriedItems.forEach(ci => {
-                const n = ci.item || ci.name;
-                if (!items[n]) items[n] = { displayName: n, entries: [] };
-                items[n].entries.push({qty: ci.qty, unitCost: ci.unitCost});
-            });
-            day.ownerStock.forEach(os => {
-                if (!items[os.item]) items[os.item] = { displayName: os.item, entries: [] };
-                items[os.item].entries.push({qty: os.qty, unitCost: os.unitCost});
-            });
-            day.purchases.forEach(p => {
-                if (!items[p.item]) items[p.item] = { displayName: p.item, entries: [] };
-                items[p.item].entries.push({qty: p.qty, unitCost: p.unitCost});
-            });
+            const consolidated = getConsolidatedStock(day);
             
             let html = '<h3>📊 CURRENT STOCK (TOTAL)</h3>';
             let totalValue = 0;
             let stockHtml = '';
             
-            Object.keys(items).forEach(name => {
-                let totalQty = 0;
-                let totalCost = 0;
-                
-                // Sum up all entries for this item
-                items[name].entries.forEach(entry => {
-                    totalQty += entry.qty;
-                    totalCost += entry.qty * entry.unitCost;
-                });
-                
-                // Subtract usage
-                const used = day.usage.filter(u => u.item === name).reduce((s, u) => s + u.qty, 0);
-                const remaining = totalQty - used;
-                
-                if (remaining > 0) {
-                    // Calculate average cost per unit
-                    const avgCost = totalCost / totalQty;
-                    const itemValue = remaining * avgCost;
-                    totalValue += itemValue;
-                    
-                    stockHtml += '<div class="item-card"><p><strong>' + items[name].displayName + '</strong></p>';
-                    stockHtml += '<p style="font-size: 12px;">Total: ' + totalQty + ' | Used: ' + used + ' | <strong>Remaining: ' + remaining + '</strong></p>';
-                    stockHtml += '<p style="font-size: 12px; font-weight: 700; color: #27a745;">Value: UGX ' + fmt(itemValue) + '</p></div>';
-                }
+            Object.keys(consolidated).forEach(name => {
+                const item = consolidated[name];
+                totalValue += item.value;
+                stockHtml += '<div class="item-card"><p><strong>' + item.displayName + '</strong></p>';
+                stockHtml += '<p style="font-size: 12px;"><strong>Remaining: ' + item.qty + '</strong></p>';
+                stockHtml += '<p style="font-size: 12px; font-weight: 700; color: #27a745;">Value: UGX ' + fmt(item.value) + '</p></div>';
             });
             
             if (stockHtml) {
@@ -449,7 +460,13 @@
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
             const profit = revenue - cogs - expenses;
-            const stockValue = calculateStockValue(day);
+            
+            // Calculate stock value using shared function
+            const consolidated = getConsolidatedStock(day);
+            let stockValue = 0;
+            Object.keys(consolidated).forEach(name => {
+                stockValue += consolidated[name].value;
+            });
             
             const allPurchases = (day.ownerStock || []).reduce((s, os) => s + (os.qty * os.unitCost), 0) + (day.purchases || []).reduce((s, p) => s + (p.qty * p.unitCost), 0);
             const cash = revenue - allPurchases - expenses;
@@ -667,11 +684,7 @@
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
             const profit = revenue - cogs - expenses;
             
-            const items = {};
-            day.carriedItems.forEach(ci => { const n = ci.item || ci.name; if (!items[n]) items[n] = { qty: 0, cost: 0 }; items[n].qty += ci.qty; items[n].cost += ci.qty * ci.unitCost; });
-            day.ownerStock.forEach(os => { if (!items[os.item]) items[os.item] = { qty: 0, cost: 0 }; items[os.item].qty += os.qty; items[os.item].cost += os.qty * os.unitCost; });
-            day.purchases.forEach(p => { if (!items[p.item]) items[p.item] = { qty: 0, cost: 0 }; items[p.item].qty += p.qty; items[p.item].cost += p.qty * p.unitCost; });
-            day.usage.forEach(u => { if (items[u.item]) items[u.item].qty -= u.qty; });
+            const consolidated = getConsolidatedStock(day);
             
             let html = '<h3>Day Summary</h3>';
             html += '<div class="summary"><div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
@@ -680,12 +693,13 @@
             html += '<div class="summary-row total" style="color: #27a745;"><span>PROFIT</span><span>UGX ' + fmt(profit) + '</span></div></div>';
             
             html += '<h3>Closing Inventory (Carry to Next Day)</h3>';
-            Object.keys(items).forEach(name => {
-                if (items[name].qty > 0) {
-                    const avg = items[name].cost / (items[name].qty + (day.usage.filter(u => u.item === name).reduce((s, u) => s + u.qty, 0)));
-                    html += '<div class="item-card"><p><strong>' + name + '</strong>: ' + items[name].qty + ' @ UGX ' + fmt(avg) + '</p></div>';
-                }
+            let totalValue = 0;
+            Object.keys(consolidated).forEach(name => {
+                const item = consolidated[name];
+                totalValue += item.value;
+                html += '<div class="item-card"><p><strong>' + item.displayName + '</strong>: ' + item.qty + ' @ UGX ' + fmt(item.unitCost) + ' = UGX ' + fmt(item.value) + '</p></div>';
             });
+            html += '<div class="summary" style="background: #e8f5e9; border: 2px solid #27a745;"><div class="summary-row total"><span>Total Closing Value</span><span style="color: #27a745; font-weight: 700;">UGX ' + fmt(totalValue) + '</span></div></div>';
             
             html += '<button class="btn btn-primary" onclick="closeDay()" style="margin-top: 20px; background: #27a745;">✓ Close Day & Move to Tomorrow</button>';
             document.getElementById('close-content').innerHTML = html;
@@ -693,20 +707,17 @@
 
         function closeDay() {
             const day = getDay(today);
-            const items = {};
-            day.carriedItems.forEach(ci => { const n = ci.item || ci.name; if (!items[n]) items[n] = { qty: 0, cost: 0 }; items[n].qty += ci.qty; items[n].cost += ci.qty * ci.unitCost; });
-            day.ownerStock.forEach(os => { if (!items[os.item]) items[os.item] = { qty: 0, cost: 0 }; items[os.item].qty += os.qty; items[os.item].cost += os.qty * os.unitCost; });
-            day.purchases.forEach(p => { if (!items[p.item]) items[p.item] = { qty: 0, cost: 0 }; items[p.item].qty += p.qty; items[p.item].cost += p.qty * p.unitCost; });
-            day.usage.forEach(u => { if (items[u.item]) items[u.item].qty -= u.qty; });
+            const consolidated = getConsolidatedStock(day);
             
+            // Convert consolidated to closing inventory format
             const closing = [];
-            Object.keys(items).forEach(name => {
-                if (items[name].qty > 0) {
-                    const used = day.usage.filter(u => u.item === name).reduce((s, u) => s + u.qty, 0);
-                    const totalQty = items[name].qty + used;
-                    const avg = items[name].cost / totalQty;
-                    closing.push({name, qty: items[name].qty, unitCost: avg});
-                }
+            Object.keys(consolidated).forEach(name => {
+                const item = consolidated[name];
+                closing.push({
+                    item: item.displayName,
+                    qty: item.qty,
+                    unitCost: item.unitCost
+                });
             });
             
             day.closingInventory = {chapati: day.chapatiRemaining, items: closing};
