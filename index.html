@@ -802,48 +802,38 @@
             // Consolidate carried items + owner stock + purchases by item name
             const itemMap = {};
             
-            // Helper: normalize item names
-            function normalizeItem(name) {
-                return (name || '').toLowerCase().trim();
-            }
-            
             // Include carried items (from yesterday)
             if (day.carriedItems) {
                 day.carriedItems.forEach(c => {
-                    const itemName = c.item || c.name; // Support both field names
-                    const normalized = normalizeItem(itemName);
-                    if (!itemMap[normalized]) itemMap[normalized] = { totalQty: 0, totalCost: 0 };
-                    itemMap[normalized].totalQty += c.qty;
-                    itemMap[normalized].totalCost += c.qty * c.unitCost;
+                    if (!itemMap[c.item]) itemMap[c.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[c.item].totalQty += c.qty;
+                    itemMap[c.item].totalCost += c.qty * c.unitCost;
                 });
             }
             
             // Include purchases (today's purchases)
             if (day.purchases) {
                 day.purchases.forEach(p => {
-                    const normalized = normalizeItem(p.item);
-                    if (!itemMap[normalized]) itemMap[normalized] = { totalQty: 0, totalCost: 0 };
-                    itemMap[normalized].totalQty += p.qty;
-                    itemMap[normalized].totalCost += p.qty * p.unitCost;
+                    if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[p.item].totalQty += p.qty;
+                    itemMap[p.item].totalCost += p.qty * p.unitCost;
                 });
             }
             
             // Include owner stock
             if (day.ownerStock) {
                 day.ownerStock.forEach(os => {
-                    const normalized = normalizeItem(os.item);
-                    if (!itemMap[normalized]) itemMap[normalized] = { totalQty: 0, totalCost: 0 };
-                    itemMap[normalized].totalQty += os.qty;
-                    itemMap[normalized].totalCost += os.qty * os.unitCost;
+                    if (!itemMap[os.item]) itemMap[os.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[os.item].totalQty += os.qty;
+                    itemMap[os.item].totalCost += os.qty * os.unitCost;
                 });
             }
             
             let totalStockValue = 0;
-            Object.keys(itemMap).forEach(normalized => {
-                const totalQty = itemMap[normalized].totalQty;
-                const totalCost = itemMap[normalized].totalCost;
-                // Filter usage with normalized matching
-                const used = (day.usage || []).filter(u => normalizeItem(u.item) === normalized).reduce((s, u) => s + u.qty, 0);
+            Object.keys(itemMap).forEach(itemName => {
+                const totalQty = itemMap[itemName].totalQty;
+                const totalCost = itemMap[itemName].totalCost;
+                const used = (day.usage || []).filter(u => u.item === itemName).reduce((s, u) => s + u.qty, 0);
                 const remain = totalQty - used;
                 if (remain > 0) {
                     const avgCost = totalCost / totalQty;
@@ -1277,53 +1267,42 @@
             // Use CONSOLIDATED method - includes carried items + owner stock + purchases
             const itemMap = {};
             
-            // Helper: normalize item names
-            function normalizeItem(name) {
-                return (name || '').toLowerCase().trim();
-            }
-            
             // Include carried items (from yesterday)
             if (day.carriedItems) {
                 day.carriedItems.forEach(c => {
-                    const itemName = c.item || c.name; // Support both field names
-                    const normalized = normalizeItem(itemName);
-                    if (!itemMap[normalized]) itemMap[normalized] = { displayName: itemName, totalQty: 0, totalCost: 0 };
-                    itemMap[normalized].totalQty += c.qty;
-                    itemMap[normalized].totalCost += c.qty * c.unitCost;
+                    if (!itemMap[c.item]) itemMap[c.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[c.item].totalQty += c.qty;
+                    itemMap[c.item].totalCost += c.qty * c.unitCost;
                 });
             }
             
             // Include owner stock (today's owner purchases)
             if (day.ownerStock) {
                 day.ownerStock.forEach(os => {
-                    const normalized = normalizeItem(os.item);
-                    if (!itemMap[normalized]) itemMap[normalized] = { displayName: os.item, totalQty: 0, totalCost: 0 };
-                    itemMap[normalized].totalQty += os.qty;
-                    itemMap[normalized].totalCost += os.qty * os.unitCost;
+                    if (!itemMap[os.item]) itemMap[os.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[os.item].totalQty += os.qty;
+                    itemMap[os.item].totalCost += os.qty * os.unitCost;
                 });
             }
             
             // Include purchases (today's worker purchases)
             if (day.purchases) {
                 day.purchases.forEach(p => {
-                    const normalized = normalizeItem(p.item);
-                    if (!itemMap[normalized]) itemMap[normalized] = { displayName: p.item, totalQty: 0, totalCost: 0 };
-                    itemMap[normalized].totalQty += p.qty;
-                    itemMap[normalized].totalCost += p.qty * p.unitCost;
+                    if (!itemMap[p.item]) itemMap[p.item] = { totalQty: 0, totalCost: 0 };
+                    itemMap[p.item].totalQty += p.qty;
+                    itemMap[p.item].totalCost += p.qty * p.unitCost;
                 });
             }
             
             const closingItems = [];
-            Object.keys(itemMap).forEach(normalized => {
-                const itemData = itemMap[normalized];
-                const totalQty = itemData.totalQty;
-                const totalCost = itemData.totalCost;
-                // Filter usage with normalized matching
-                const used = (day.usage || []).filter(u => normalizeItem(u.item) === normalized).reduce((s, u) => s + u.qty, 0);
+            Object.keys(itemMap).forEach(itemName => {
+                const totalQty = itemMap[itemName].totalQty;
+                const totalCost = itemMap[itemName].totalCost;
+                const used = (day.usage || []).filter(u => u.item === itemName).reduce((s, u) => s + u.qty, 0);
                 const remain = totalQty - used;
                 if (remain > 0) {
                     const avgCost = totalCost / totalQty;
-                    closingItems.push({name: itemData.displayName, qty: remain, unitCost: avgCost});
+                    closingItems.push({name: itemName, qty: remain, unitCost: avgCost});
                 }
             });
             return closingItems;
