@@ -169,22 +169,26 @@
                 html += '<p style="color: #999;">None</p>';
             }
             
+            html += '<div style="background: #fff3e0; padding: 16px; margin: 20px 0; border-radius: 8px; border: 2px solid #ff9800;">';
             html += '<h3 class="color-owner">➕ What You Buy (Owner)</h3>';
-            html += '<div class="form-group"><input type="text" id="owner-item" placeholder="Item name"></div>';
-            html += '<div class="form-group"><input type="number" id="owner-qty" placeholder="Quantity"></div>';
-            html += '<div class="form-group"><input type="number" id="owner-cost" placeholder="Unit cost"></div>';
-            html += '<button class="btn btn-primary" onclick="addOwnerStock()">✓ Add Owner Stock</button>';
+            html += '<p style="font-size: 12px; color: #666; margin-bottom: 12px;">Add items that you (the owner) buy to start the day</p>';
+            html += '<div class="form-group"><label style="color: #333;">Item Name</label><input type="text" id="owner-item" placeholder="e.g. Flour, Eggs, Oil" style="border: 2px solid #ff9800;"></div>';
+            html += '<div class="form-group"><label style="color: #333;">Quantity</label><input type="number" id="owner-qty" placeholder="How many" style="border: 2px solid #ff9800;"></div>';
+            html += '<div class="form-group"><label style="color: #333;">Unit Cost (UGX)</label><input type="number" id="owner-cost" placeholder="Price per unit" style="border: 2px solid #ff9800;"></div>';
+            html += '<button class="btn btn-primary" onclick="addOwnerStock()" style="background: #ff9800; margin-top: 8px;">✓ Add Owner Stock</button>';
             
             if (day.ownerStock.length > 0) {
+                html += '<h4 style="margin-top: 16px; color: #ff9800;">Your Purchases:</h4>';
                 day.ownerStock.forEach((os, i) => {
-                    html += '<div class="item-card"><p><strong>' + os.item + '</strong>: ' + os.qty + ' @ UGX ' + fmt(os.unitCost) + ' <button class="btn btn-danger" onclick="delOwnerStock(' + i + ')">Delete</button></p></div>';
+                    html += '<div class="item-card"><p><strong>' + os.item + '</strong>: ' + os.qty + ' @ UGX ' + fmt(os.unitCost) + ' <button class="btn btn-danger" onclick="delOwnerStock(' + i + ')" style="width: auto; padding: 6px 10px; font-size: 12px;">Delete</button></p></div>';
                 });
             }
+            html += '</div>';
             
             html += '<h3 class="color-purchase">➕ Purchases (Worker)</h3>';
             if (day.purchases.length > 0) {
                 day.purchases.forEach((p, i) => {
-                    html += '<div class="item-card"><p><strong>' + p.item + '</strong>: ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + ' <button class="btn btn-danger" onclick="delPurchase(' + i + ')">Delete</button></p></div>';
+                    html += '<div class="item-card"><p><strong>' + p.item + '</strong>: ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + ' <button class="btn btn-danger" onclick="delPurchase(' + i + ')" style="width: auto; padding: 6px 10px; font-size: 12px;">Delete</button></p></div>';
                 });
             } else {
                 html += '<p style="color: #999;">None</p>';
@@ -209,7 +213,7 @@
             
             if (day.usage.length > 0) {
                 day.usage.forEach((u, i) => {
-                    html += '<div class="item-card"><p><strong>' + u.item + '</strong>: ' + u.qty + ' @ UGX ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + ' <button class="btn btn-danger" onclick="delUsage(' + i + ')">Delete</button></p></div>';
+                    html += '<div class="item-card"><p><strong>' + u.item + '</strong>: ' + u.qty + ' @ UGX ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + ' <button class="btn btn-danger" onclick="delUsage(' + i + ')" style="width: auto; padding: 6px 10px; font-size: 12px;">Delete</button></p></div>';
                 });
             }
             
