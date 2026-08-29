@@ -185,14 +185,23 @@
             }
             html += '</div>';
             
-            html += '<h3 class="color-purchase">➕ Purchases (Worker)</h3>';
+            html += '<h3 class="color-purchase">➕ Purchases (Worker Buys During Day)</h3>';
+            html += '<div style="background: #e3f2fd; padding: 16px; margin: 12px 0; border-radius: 8px; border: 2px solid #2196f3;">';
+            html += '<p style="font-size: 12px; color: #666; margin-bottom: 12px;">Add items that the worker buys during the day from sales revenue</p>';
+            html += '<div class="form-group"><label style="color: #333;">Item Name</label><input type="text" id="purchase-item" placeholder="e.g. Flour, Eggs, Oil" style="border: 2px solid #2196f3;"></div>';
+            html += '<div class="form-group"><label style="color: #333;">Quantity</label><input type="number" id="purchase-qty" placeholder="How many" style="border: 2px solid #2196f3;"></div>';
+            html += '<div class="form-group"><label style="color: #333;">Unit Cost (UGX)</label><input type="number" id="purchase-cost" placeholder="Price per unit" style="border: 2px solid #2196f3;"></div>';
+            html += '<button class="btn btn-primary" onclick="addPurchase()" style="background: #2196f3; margin-top: 8px;">✓ Add Worker Purchase</button>';
+            
             if (day.purchases.length > 0) {
+                html += '<h4 style="margin-top: 16px; color: #2196f3;">Worker Purchases Today:</h4>';
                 day.purchases.forEach((p, i) => {
                     html += '<div class="item-card"><p><strong>' + p.item + '</strong>: ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + ' <button class="btn btn-danger" onclick="delPurchase(' + i + ')" style="width: auto; padding: 6px 10px; font-size: 12px;">Delete</button></p></div>';
                 });
             } else {
-                html += '<p style="color: #999;">None</p>';
+                html += '<p style="color: #999; margin-top: 12px;">None yet</p>';
             }
+            html += '</div>';
             
             html += '<h3 class="color-usage">➖ Usage (What Was Used)</h3>';
             html += '<div class="form-group"><label>Select Item</label><select id="usage-item" onchange="autoFillUsageCost()"><option value="">-- Choose --</option>';
@@ -272,6 +281,23 @@
         }
 
         function delOwnerStock(i) { const day = getDay(today); day.ownerStock.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
+        
+        function addPurchase() {
+            const day = getDay(today);
+            const item = document.getElementById('purchase-item').value.trim();
+            const qty = parseInt(document.getElementById('purchase-qty').value) || 0;
+            const cost = parseInt(document.getElementById('purchase-cost').value) || 0;
+            if (!item || qty <= 0 || cost <= 0) { alert('Fill all fields'); return; }
+            day.purchases.push({item, qty, unitCost: cost});
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            document.getElementById('purchase-item').value = '';
+            document.getElementById('purchase-qty').value = '';
+            document.getElementById('purchase-cost').value = '';
+            renderInventory();
+        }
+        
         function delPurchase(i) { const day = getDay(today); day.purchases.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
         function delUsage(i) { const day = getDay(today); day.usage.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
 
