@@ -199,50 +199,62 @@
         function renderInventory() {
             const day = getDay(today);
             
-            // Build consolidated items list with Current | Used | Remaining
-            const consolidatedItems = getConsolidatedStock(day);
-            const allItems = {};
+            let html = '<div style="margin-bottom: 30px;">';
             
-            // Track all items with their details
+            // OPENING INVENTORY - PROMINENTLY AT TOP
+            html += '<div style="background: #d4edda; padding: 20px; border-radius: 8px; border: 3px solid #28a745; margin-bottom: 30px;">';
+            html += '<h3 style="color: #28a745; margin-top: 0; margin-bottom: 16px; font-size: 16px;">📦 OPENING INVENTORY</h3>';
+            
+            if (day.carriedItems && day.carriedItems.length > 0) {
+                day.carriedItems.forEach(ci => {
+                    const n = (ci.item || ci.name);
+                    html += '<div style="background: white; padding: 12px 16px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #28a745;">';
+                    html += '<p style="margin: 0; font-weight: 700; font-size: 15px;">' + n + '</p>';
+                    html += '<p style="margin: 6px 0 0 0; color: #666; font-size: 13px;">' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + '/each</p>';
+                    html += '</div>';
+                });
+            } else {
+                html += '<p style="color: #666; margin: 0;">No items from yesterday</p>';
+            }
+            html += '</div>';
+            
+            // BUILD CONSOLIDATED ITEMS
+            const allItems = {};
             day.carriedItems.forEach(ci => { const n = (ci.item || ci.name); if (!allItems[n]) allItems[n] = {name: n, current: 0, used: 0, unitCost: ci.unitCost}; allItems[n].current += ci.qty; });
             day.ownerStock.forEach(os => { if (!allItems[os.item]) allItems[os.item] = {name: os.item, current: 0, used: 0, unitCost: os.unitCost}; allItems[os.item].current += os.qty; });
             day.purchases.forEach(p => { if (!allItems[p.item]) allItems[p.item] = {name: p.item, current: 0, used: 0, unitCost: p.unitCost}; allItems[p.item].current += p.qty; });
             day.usage.forEach(u => { if (allItems[u.item]) allItems[u.item].used += u.qty; });
             
-            // Calculate remaining
             Object.keys(allItems).forEach(name => {
                 allItems[name].remaining = allItems[name].current - allItems[name].used;
             });
             
-            let html = '<div style="margin-bottom: 40px;">';
-            
-            // ADD STOCK FORMS (condensed, side by side or stacked with better padding)
-            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 30px;">';
+            // ADD STOCK FORMS - RESPONSIVE
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 30px;">';
             
             // OWNER STOCK FORM
-            html += '<div style="background: #fff3e0; padding: 20px; border-radius: 8px; border: 2px solid #ff9800;">';
-            html += '<h4 style="color: #ff9800; margin-bottom: 16px; font-size: 14px;">➕ Owner Buys</h4>';
-            html += '<div class="form-group"><label style="color: #333; font-size: 11px;">Item</label><input type="text" id="owner-item" placeholder="Flour" style="border: 2px solid #ff9800; font-size: 13px;"></div>';
-            html += '<div class="form-group"><label style="color: #333; font-size: 11px;">Qty</label><input type="number" id="owner-qty" placeholder="How many" style="border: 2px solid #ff9800; font-size: 13px;"></div>';
-            html += '<div class="form-group"><label style="color: #333; font-size: 11px;">Cost/Unit</label><input type="number" id="owner-cost" placeholder="UGX" style="border: 2px solid #ff9800; font-size: 13px;"></div>';
-            html += '<button class="btn btn-primary" onclick="addOwnerStock()" style="background: #ff9800; font-size: 13px; padding: 10px;">✓ Add</button>';
+            html += '<div style="background: #fff3e0; padding: 16px; border-radius: 8px; border: 2px solid #ff9800;">';
+            html += '<h4 style="color: #ff9800; margin: 0 0 14px 0; font-size: 13px;">➕ OWNER BUYS</h4>';
+            html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Item</label><input type="text" id="owner-item" placeholder="Flour" style="border: 2px solid #ff9800; font-size: 12px; padding: 8px;"></div>';
+            html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Qty</label><input type="number" id="owner-qty" placeholder="4" style="border: 2px solid #ff9800; font-size: 12px; padding: 8px;"></div>';
+            html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Cost/Unit</label><input type="number" id="owner-cost" placeholder="7000" style="border: 2px solid #ff9800; font-size: 12px; padding: 8px;"></div>';
+            html += '<button class="btn btn-primary" onclick="addOwnerStock()" style="background: #ff9800; font-size: 12px; padding: 10px; width: 100%; margin-top: 4px;">✓ Add</button>';
             html += '</div>';
             
             // WORKER PURCHASE FORM
-            html += '<div style="background: #e3f2fd; padding: 20px; border-radius: 8px; border: 2px solid #2196f3;">';
-            html += '<h4 style="color: #2196f3; margin-bottom: 16px; font-size: 14px;">➕ Worker Buys</h4>';
-            html += '<div class="form-group"><label style="color: #333; font-size: 11px;">Item</label><input type="text" id="purchase-item" placeholder="Flour" style="border: 2px solid #2196f3; font-size: 13px;"></div>';
-            html += '<div class="form-group"><label style="color: #333; font-size: 11px;">Qty</label><input type="number" id="purchase-qty" placeholder="How many" style="border: 2px solid #2196f3; font-size: 13px;"></div>';
-            html += '<div class="form-group"><label style="color: #333; font-size: 11px;">Cost/Unit</label><input type="number" id="purchase-cost" placeholder="UGX" style="border: 2px solid #2196f3; font-size: 13px;"></div>';
-            html += '<button class="btn btn-primary" onclick="addPurchase()" style="background: #2196f3; font-size: 13px; padding: 10px;">✓ Add</button>';
+            html += '<div style="background: #e3f2fd; padding: 16px; border-radius: 8px; border: 2px solid #2196f3;">';
+            html += '<h4 style="color: #2196f3; margin: 0 0 14px 0; font-size: 13px;">➕ WORKER BUYS</h4>';
+            html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Item</label><input type="text" id="purchase-item" placeholder="Flour" style="border: 2px solid #2196f3; font-size: 12px; padding: 8px;"></div>';
+            html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Qty</label><input type="number" id="purchase-qty" placeholder="2" style="border: 2px solid #2196f3; font-size: 12px; padding: 8px;"></div>';
+            html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Cost/Unit</label><input type="number" id="purchase-cost" placeholder="7000" style="border: 2px solid #2196f3; font-size: 12px; padding: 8px;"></div>';
+            html += '<button class="btn btn-primary" onclick="addPurchase()" style="background: #2196f3; font-size: 12px; padding: 10px; width: 100%; margin-top: 4px;">✓ Add</button>';
             html += '</div>';
-            
             html += '</div>';
             
             // USAGE FORM
-            html += '<div style="background: #ffebee; padding: 20px; border-radius: 8px; border: 2px solid #dc3545; margin-bottom: 30px;">';
-            html += '<h4 style="color: #dc3545; margin-bottom: 16px; font-size: 14px;">➖ Record Usage</h4>';
-            html += '<div class="form-group"><label style="color: #333; font-size: 11px;">Item Used</label><select id="usage-item" onchange="autoFillUsageCost()" style="font-size: 13px;"><option value="">-- Select Item --</option>';
+            html += '<div style="background: #ffebee; padding: 16px; border-radius: 8px; border: 2px solid #dc3545; margin-bottom: 30px;">';
+            html += '<h4 style="color: #dc3545; margin: 0 0 14px 0; font-size: 13px;">➖ RECORD USAGE</h4>';
+            html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Item</label><select id="usage-item" onchange="autoFillUsageCost()" style="font-size: 12px; padding: 8px; border: 2px solid #dc3545;"><option value="">-- Select --</option>';
             
             const items = {};
             day.carriedItems.forEach(ci => { const n = (ci.item || ci.name); if (!items[n]) items[n] = ci.unitCost; });
@@ -250,31 +262,21 @@
             day.purchases.forEach(p => { if (!items[p.item]) items[p.item] = p.unitCost; });
             
             Object.keys(items).forEach(name => {
-                html += '<option value="' + name + '|' + items[name] + '">' + name + ' @ UGX ' + fmt(items[name]) + '</option>';
+                html += '<option value="' + name + '|' + items[name] + '">' + name + '</option>';
             });
             
             html += '</select></div>';
-            html += '<div class="form-group"><label style="color: #333; font-size: 11px;">Quantity</label><input type="number" id="usage-qty" placeholder="How many used" style="font-size: 13px;"></div>';
-            html += '<div class="form-group"><label style="color: #333; font-size: 11px;">Cost (Auto)</label><input type="number" id="usage-cost" readonly style="background: #f5f5f5; font-size: 13px;"></div>';
-            html += '<button class="btn btn-primary" onclick="addUsage()" style="background: #dc3545; font-size: 13px; padding: 10px;">✓ Record</button>';
+            html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Qty</label><input type="number" id="usage-qty" placeholder="2" style="font-size: 12px; padding: 8px;"></div>';
+            html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Cost (Auto)</label><input type="number" id="usage-cost" readonly style="background: #f5f5f5; font-size: 12px; padding: 8px;"></div>';
+            html += '<button class="btn btn-primary" onclick="addUsage()" style="background: #dc3545; font-size: 12px; padding: 10px; width: 100%; margin-top: 4px;">✓ Record</button>';
             html += '</div>';
             
-            html += '</div>';
-            
-            // CONSOLIDATED INVENTORY TABLE
-            html += '<h3 style="margin: 30px 0 20px 0; padding-bottom: 12px; border-bottom: 3px solid #8B4513;">📊 INVENTORY SUMMARY</h3>';
-            html += '<div style="overflow-x: auto;">';
-            html += '<table style="width: 100%; border-collapse: collapse; font-size: 14px;">';
-            html += '<tr style="background: #8B4513; color: white; font-weight: 700;">';
-            html += '<th style="padding: 14px; text-align: left; border: 1px solid #ddd;">ITEM</th>';
-            html += '<th style="padding: 14px; text-align: center; border: 1px solid #ddd;">CURRENT</th>';
-            html += '<th style="padding: 14px; text-align: center; border: 1px solid #ddd;">USED</th>';
-            html += '<th style="padding: 14px; text-align: center; border: 1px solid #ddd;">REMAINING</th>';
-            html += '<th style="padding: 14px; text-align: right; border: 1px solid #ddd;">VALUE</th>';
-            html += '</tr>';
+            // INVENTORY SUMMARY - CARD VIEW (MOBILE FRIENDLY)
+            html += '<h3 style="margin: 30px 0 16px 0; padding-bottom: 10px; border-bottom: 3px solid #8B4513; font-size: 16px;">📊 INVENTORY TODAY</h3>';
             
             let totalValue = 0;
             let hasItems = false;
+            let cardsHtml = '';
             
             Object.keys(allItems).sort().forEach(name => {
                 const item = allItems[name];
@@ -282,29 +284,31 @@
                     hasItems = true;
                     const itemValue = (item.remaining > 0) ? item.remaining * item.unitCost : 0;
                     totalValue += itemValue;
-                    const bgColor = (item.remaining > 0) ? '#f9f9f9' : '#ffebee';
-                    html += '<tr style="background: ' + bgColor + ';">';
-                    html += '<td style="padding: 14px; border: 1px solid #ddd;"><strong>' + item.name + '</strong></td>';
-                    html += '<td style="padding: 14px; text-align: center; border: 1px solid #ddd;">' + item.current + '</td>';
-                    html += '<td style="padding: 14px; text-align: center; border: 1px solid #ddd; color: #dc3545;">' + item.used + '</td>';
-                    html += '<td style="padding: 14px; text-align: center; border: 1px solid #ddd; font-weight: 700; color: #27a745;">' + item.remaining + '</td>';
-                    html += '<td style="padding: 14px; text-align: right; border: 1px solid #ddd;">UGX ' + fmt(itemValue) + '</td>';
-                    html += '</tr>';
+                    const statusColor = (item.remaining > 0) ? '#27a745' : '#dc3545';
+                    
+                    cardsHtml += '<div style="background: #f9f9f9; padding: 14px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid ' + statusColor + ';">';
+                    cardsHtml += '<p style="margin: 0 0 8px 0; font-weight: 700; font-size: 14px;">' + item.name + '</p>';
+                    cardsHtml += '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px;">';
+                    cardsHtml += '<div style="text-align: center; padding: 8px; background: white; border-radius: 4px;"><p style="margin: 0; font-size: 10px; color: #666;">Current</p><p style="margin: 4px 0 0 0; font-weight: 700; font-size: 15px;">' + item.current + '</p></div>';
+                    cardsHtml += '<div style="text-align: center; padding: 8px; background: white; border-radius: 4px;"><p style="margin: 0; font-size: 10px; color: #666;">Used</p><p style="margin: 4px 0 0 0; font-weight: 700; font-size: 15px; color: #dc3545;">' + item.used + '</p></div>';
+                    cardsHtml += '<div style="text-align: center; padding: 8px; background: white; border-radius: 4px;"><p style="margin: 0; font-size: 10px; color: #666;">Remaining</p><p style="margin: 4px 0 0 0; font-weight: 700; font-size: 15px; color: #27a745;">' + item.remaining + '</p></div>';
+                    cardsHtml += '</div>';
+                    cardsHtml += '<p style="margin: 8px 0 0 0; text-align: right; color: #666; font-size: 11px;">UGX <strong style="color: #27a745;">' + fmt(itemValue) + '</strong></p>';
+                    cardsHtml += '</div>';
                 }
             });
             
             if (!hasItems) {
-                html += '<tr><td colspan="5" style="padding: 20px; text-align: center; color: #999;">No items yet</td></tr>';
+                html += '<p style="color: #999; text-align: center; padding: 20px;">No items yet</p>';
             } else {
-                html += '<tr style="background: #e8f5e9; font-weight: 700;">';
-                html += '<td colspan="4" style="padding: 14px; text-align: right; border: 1px solid #ddd;">TOTAL VALUE:</td>';
-                html += '<td style="padding: 14px; text-align: right; border: 1px solid #ddd; color: #27a745;">UGX ' + fmt(totalValue) + '</td>';
-                html += '</tr>';
+                html += cardsHtml;
+                html += '<div style="background: #e8f5e9; padding: 14px; border-radius: 8px; text-align: right;">';
+                html += '<p style="margin: 0; font-size: 11px; color: #666;">TOTAL VALUE:</p>';
+                html += '<p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 700; color: #27a745;">UGX ' + fmt(totalValue) + '</p>';
+                html += '</div>';
             }
             
-            html += '</table>';
             html += '</div>';
-            
             document.getElementById('inventory-content').innerHTML = html;
         }
 
