@@ -98,14 +98,22 @@
                 yesterday.setDate(yesterday.getDate() - 1);
                 const yesterdayDate = yesterday.toISOString().split('T')[0];
                 
+                console.log('Creating new day:', date);
+                console.log('Looking for yesterday:', yesterdayDate);
+                
                 // Initialize new day
+                const yesterdayData = data.days[yesterdayDate];
+                const carriedFromYesterday = (yesterdayData && yesterdayData.closingInventory && yesterdayData.closingInventory.items) ? yesterdayData.closingInventory.items : [];
+                
+                console.log('Found items from yesterday:', carriedFromYesterday);
+                
                 data.days[date] = {
                     date: date,
                     status: 'open',
-                    chapatiCarried: data.days[yesterdayDate] ? (data.days[yesterdayDate].closingInventory?.chapati || 0) : 0,
+                    chapatiCarried: yesterdayData ? (yesterdayData.closingInventory?.chapati || 0) : 0,
                     chapatiMade: 0,
                     chapatiRemaining: 0,
-                    carriedItems: (data.days[yesterdayDate] && data.days[yesterdayDate].closingInventory && data.days[yesterdayDate].closingInventory.items) ? data.days[yesterdayDate].closingInventory.items : [],
+                    carriedItems: carriedFromYesterday,
                     ownerStock: [],
                     purchases: [],
                     usage: [],
