@@ -203,14 +203,15 @@
             
             // OPENING INVENTORY - PROMINENTLY AT TOP
             html += '<div style="background: #d4edda; padding: 20px; border-radius: 8px; border: 3px solid #28a745; margin-bottom: 30px;">';
-            html += '<h3 style="color: #28a745; margin-top: 0; margin-bottom: 16px; font-size: 16px;">📦 OPENING INVENTORY</h3>';
+            html += '<h3 style="color: #28a745; margin-top: 0; margin-bottom: 16px; font-size: 16px;">📦 OPENING INVENTORY (From Yesterday)</h3>';
             
             if (day.carriedItems && day.carriedItems.length > 0) {
-                day.carriedItems.forEach(ci => {
+                day.carriedItems.forEach((ci, idx) => {
                     const n = (ci.item || ci.name);
-                    html += '<div style="background: white; padding: 12px 16px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #28a745;">';
-                    html += '<p style="margin: 0; font-weight: 700; font-size: 15px;">' + n + '</p>';
-                    html += '<p style="margin: 6px 0 0 0; color: #666; font-size: 13px;">' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + '/each</p>';
+                    html += '<div style="background: white; padding: 12px 16px; margin-bottom: 10px; border-radius: 6px; border-left: 4px solid #28a745; display: flex; justify-content: space-between; align-items: center;">';
+                    html += '<div style="flex: 1;"><p style="margin: 0; font-weight: 700; font-size: 15px;">' + n + '</p>';
+                    html += '<p style="margin: 6px 0 0 0; color: #666; font-size: 13px;">' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + '/each</p></div>';
+                    html += '<button class="btn btn-danger" onclick="delCarriedItem(' + idx + ')" style="width: auto; padding: 6px 10px; font-size: 12px; margin-left: 10px;">✕ Delete</button>';
                     html += '</div>';
                 });
             } else {
@@ -239,6 +240,19 @@
             html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Qty</label><input type="number" id="owner-qty" placeholder="4" style="border: 2px solid #ff9800; font-size: 12px; padding: 8px;"></div>';
             html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Cost/Unit</label><input type="number" id="owner-cost" placeholder="7000" style="border: 2px solid #ff9800; font-size: 12px; padding: 8px;"></div>';
             html += '<button class="btn btn-primary" onclick="addOwnerStock()" style="background: #ff9800; font-size: 12px; padding: 10px; width: 100%; margin-top: 4px;">✓ Add</button>';
+            
+            // Show added owner stock with delete buttons
+            if (day.ownerStock && day.ownerStock.length > 0) {
+                html += '<div style="margin-top: 12px; padding: 10px; background: #fffaf0; border-radius: 6px;">';
+                html += '<p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 600; color: #ff9800;">Added Owner Stock:</p>';
+                day.ownerStock.forEach((os, idx) => {
+                    html += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 6px; background: white; margin-bottom: 6px; border-radius: 4px;">';
+                    html += '<span style="font-size: 12px;">' + os.item + ': ' + os.qty + ' @ UGX ' + fmt(os.unitCost) + '</span>';
+                    html += '<button class="btn btn-danger" onclick="delOwnerStock(' + idx + ')" style="width: auto; padding: 4px 8px; font-size: 11px;">✕</button>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
             html += '</div>';
             
             // WORKER PURCHASE FORM
@@ -248,6 +262,19 @@
             html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Qty</label><input type="number" id="purchase-qty" placeholder="2" style="border: 2px solid #2196f3; font-size: 12px; padding: 8px;"></div>';
             html += '<div class="form-group"><label style="font-size: 10px; font-weight: 600;">Cost/Unit</label><input type="number" id="purchase-cost" placeholder="7000" style="border: 2px solid #2196f3; font-size: 12px; padding: 8px;"></div>';
             html += '<button class="btn btn-primary" onclick="addPurchase()" style="background: #2196f3; font-size: 12px; padding: 10px; width: 100%; margin-top: 4px;">✓ Add</button>';
+            
+            // Show added worker purchases with delete buttons
+            if (day.purchases && day.purchases.length > 0) {
+                html += '<div style="margin-top: 12px; padding: 10px; background: #f0f9ff; border-radius: 6px;">';
+                html += '<p style="margin: 0 0 8px 0; font-size: 11px; font-weight: 600; color: #2196f3;">Added Worker Purchases:</p>';
+                day.purchases.forEach((p, idx) => {
+                    html += '<div style="display: flex; justify-content: space-between; align-items: center; padding: 6px; background: white; margin-bottom: 6px; border-radius: 4px;">';
+                    html += '<span style="font-size: 12px;">' + p.item + ': ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + '</span>';
+                    html += '<button class="btn btn-danger" onclick="delPurchase(' + idx + ')" style="width: auto; padding: 4px 8px; font-size: 11px;">✕</button>';
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
             html += '</div>';
             html += '</div>';
             
@@ -417,6 +444,9 @@
             renderInventory();
         }
         
+        function delPurchase(i) { const day = getDay(today); day.purchases.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
+        function delCarriedItem(i) { const day = getDay(today); day.carriedItems.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
+        function delOwnerStock(i) { const day = getDay(today); day.ownerStock.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
         function delPurchase(i) { const day = getDay(today); day.purchases.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
         function delUsage(i) { const day = getDay(today); day.usage.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
 
