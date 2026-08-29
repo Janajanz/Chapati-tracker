@@ -53,9 +53,13 @@
         <div class="sidebar-item" onclick="showTab('dashboard')">📊 Dashboard</div>
         <div class="sidebar-item" onclick="showTab('inventory')">🏪 Inventory</div>
         <div class="sidebar-item" onclick="showTab('sales')">💰 Sales</div>
+        <div class="sidebar-item" onclick="showTab('debtors')">👥 Debtors</div>
+        <div class="sidebar-item" onclick="showTab('creditors')">🏪 Creditors</div>
         <div class="sidebar-item" onclick="showTab('expenses')">💸 Expenses</div>
         <div class="sidebar-item" onclick="showTab('capital')">💰 Capital</div>
         <div class="sidebar-item" onclick="showTab('earnings')">💸 My Earnings</div>
+        <div class="sidebar-item" onclick="showTab('analytics')">📈 Analytics</div>
+        <div class="sidebar-item" onclick="showTab('history')">📅 History</div>
         <div class="sidebar-item" onclick="showTab('close')">🔒 Close Day</div>
         <div class="sidebar-item" onclick="showTab('backup')">💾 Backup</div>
     </div>
@@ -63,9 +67,13 @@
         <div id="dashboard" class="view active"><div class="card"><h2>📊 Dashboard</h2><div id="dashboard-content"></div></div></div>
         <div id="inventory" class="view"><div class="card"><h2>🏪 Inventory</h2><div id="inventory-content"></div></div></div>
         <div id="sales" class="view"><div class="card"><h2>💰 Sales</h2><div id="sales-content"></div></div></div>
+        <div id="debtors" class="view"><div class="card"><h2>👥 Debtors</h2><div id="debtors-content"></div></div></div>
+        <div id="creditors" class="view"><div class="card"><h2>🏪 Creditors</h2><div id="creditors-content"></div></div></div>
         <div id="expenses" class="view"><div class="card"><h2>💸 Expenses</h2><div id="expenses-content"></div></div></div>
         <div id="capital" class="view"><div class="card"><h2>💰 Capital</h2><div id="capital-content"></div></div></div>
         <div id="earnings" class="view"><div class="card"><h2>💸 My Earnings</h2><div id="earnings-content"></div></div></div>
+        <div id="analytics" class="view"><div class="card"><h2>📈 Analytics</h2><div id="analytics-content"></div></div></div>
+        <div id="history" class="view"><div class="card"><h2>📅 History</h2><div id="history-content"></div></div></div>
         <div id="close" class="view"><div class="card"><h2>🔒 Close Day</h2><div id="close-content"></div></div></div>
         <div id="backup" class="view"><div class="card"><h2>💾 Backup</h2><button class="btn btn-primary" onclick="downloadBackup()">📥 Download Backup</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore Backup</button><button class="btn btn-danger" onclick="if(confirm('DELETE ALL DATA?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All</button></div></div>
     </div>
@@ -94,6 +102,8 @@
                     usage: [],
                     sales: [],
                     expenses: [],
+                    debtors: [],
+                    creditors: [],
                     closingInventory: { chapati: 0, items: [] }
                 };
                 save(data);
@@ -109,9 +119,13 @@
             if (name === 'dashboard') renderDashboard();
             else if (name === 'inventory') renderInventory();
             else if (name === 'sales') renderSales();
+            else if (name === 'debtors') renderDebtors();
+            else if (name === 'creditors') renderCreditors();
             else if (name === 'expenses') renderExpenses();
             else if (name === 'capital') renderCapital();
             else if (name === 'earnings') renderEarnings();
+            else if (name === 'analytics') renderAnalytics();
+            else if (name === 'history') renderHistory();
             else if (name === 'close') renderClose();
         }
 
@@ -388,6 +402,154 @@
             html += '<div class="summary-row total" style="color: #9c27b0;"><span>ALL TIME</span><span>UGX ' + fmt(total) + '</span></div></div>';
             
             document.getElementById('earnings-content').innerHTML = html;
+        }
+
+        function renderDebtors() {
+            const day = getDay(today);
+            if (!day.debtors) day.debtors = [];
+            const total = day.debtors.reduce((s, d) => s + (d.amount - (d.paid || 0)), 0);
+            
+            let html = '<h3>Add Debtor</h3>';
+            html += '<div class="form-group"><input type="text" id="debtor-name" placeholder="Name"></div>';
+            html += '<div class="form-group"><input type="number" id="debtor-amount" placeholder="Amount"></div>';
+            html += '<button class="btn btn-primary" onclick="addDebtor()">✓ Add</button>';
+            html += '<h3>Debtors (' + day.debtors.length + ')</h3>';
+            
+            day.debtors.forEach((d, i) => {
+                const paid = d.paid || 0;
+                const remaining = d.amount - paid;
+                html += '<div class="item-card"><p><strong>' + d.name + '</strong> - UGX ' + fmt(d.amount) + ' | Paid: UGX ' + fmt(paid) + ' | Remaining: UGX ' + fmt(remaining) + ' <button class="btn btn-danger" onclick="delDebtor(' + i + ')">Del</button></p></div>';
+            });
+            
+            html += '<div class="summary"><div class="summary-row total"><span>Total Outstanding</span><span>UGX ' + fmt(total) + '</span></div></div>';
+            document.getElementById('debtors-content').innerHTML = html;
+        }
+
+        function addDebtor() { const day = getDay(today); if (!day.debtors) day.debtors = []; const name = document.getElementById('debtor-name').value; const amount = parseInt(document.getElementById('debtor-amount').value) || 0; if (!name || amount <= 0) { alert('Invalid'); return; } day.debtors.push({name, amount, paid: 0}); const data = load(); data.days[today] = day; save(data); document.getElementById('debtor-name').value = ''; document.getElementById('debtor-amount').value = ''; renderDebtors(); }
+        function delDebtor(i) { const day = getDay(today); day.debtors.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderDebtors(); }
+
+        function renderCreditors() {
+            const day = getDay(today);
+            if (!day.creditors) day.creditors = [];
+            const total = day.creditors.reduce((s, c) => s + (c.amount - (c.paid || 0)), 0);
+            
+            let html = '<h3>Add Creditor</h3>';
+            html += '<div class="form-group"><input type="text" id="creditor-name" placeholder="Name"></div>';
+            html += '<div class="form-group"><input type="number" id="creditor-amount" placeholder="Amount"></div>';
+            html += '<button class="btn btn-primary" onclick="addCreditor()">✓ Add</button>';
+            html += '<h3>Creditors (' + day.creditors.length + ')</h3>';
+            
+            day.creditors.forEach((c, i) => {
+                const paid = c.paid || 0;
+                const remaining = c.amount - paid;
+                html += '<div class="item-card"><p><strong>' + c.name + '</strong> - UGX ' + fmt(c.amount) + ' | Paid: UGX ' + fmt(paid) + ' | Remaining: UGX ' + fmt(remaining) + ' <button class="btn btn-danger" onclick="delCreditor(' + i + ')">Del</button></p></div>';
+            });
+            
+            html += '<div class="summary"><div class="summary-row total"><span>Total Owed</span><span>UGX ' + fmt(total) + '</span></div></div>';
+            document.getElementById('creditors-content').innerHTML = html;
+        }
+
+        function addCreditor() { const day = getDay(today); if (!day.creditors) day.creditors = []; const name = document.getElementById('creditor-name').value; const amount = parseInt(document.getElementById('creditor-amount').value) || 0; if (!name || amount <= 0) { alert('Invalid'); return; } day.creditors.push({name, amount, paid: 0}); const data = load(); data.days[today] = day; save(data); document.getElementById('creditor-name').value = ''; document.getElementById('creditor-amount').value = ''; renderCreditors(); }
+        function delCreditor(i) { const day = getDay(today); day.creditors.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderCreditors(); }
+
+        function renderAnalytics() {
+            const data = load();
+            const days = data.days || {};
+            const daysList = Object.keys(days).sort().reverse().slice(0, 7);
+            
+            let html = '<h3>Last 7 Days</h3>';
+            daysList.forEach(date => {
+                const d = days[date];
+                const rev = d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                const cogs = d.usage.reduce((s, u) => s + u.cost, 0);
+                const exp = d.expenses.reduce((s, e) => s + e.amount, 0);
+                const profit = rev - cogs - exp;
+                html += '<div class="item-card"><p><strong>' + date + '</strong></p>';
+                html += '<p style="font-size: 12px;">Revenue: UGX ' + fmt(rev) + ' | COGS: UGX ' + fmt(cogs) + ' | Expenses: UGX ' + fmt(exp) + '</p>';
+                html += '<p style="font-weight: 700; color: #27a745;">Profit: UGX ' + fmt(profit) + '</p></div>';
+            });
+            
+            document.getElementById('analytics-content').innerHTML = html;
+        }
+
+        function renderHistory() {
+            const data = load();
+            const days = data.days || {};
+            const daysList = Object.keys(days).sort().reverse();
+            
+            let html = '<h3>All Days</h3>';
+            if (daysList.length === 0) {
+                html += '<p style="color: #999;">No days recorded</p>';
+            } else {
+                daysList.forEach(date => {
+                    const d = days[date];
+                    const rev = d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                    const profit = rev - d.usage.reduce((s, u) => s + u.cost, 0) - d.expenses.reduce((s, e) => s + e.amount, 0);
+                    html += '<div class="item-card" onclick="showHistoryDetail(\'' + date + '\')" style="cursor: pointer;"><p><strong>' + date + '</strong> ' + (d.status === 'closed' ? '✓' : '') + '</p>';
+                    html += '<p style="font-size: 12px;">Revenue: UGX ' + fmt(rev) + ' | Profit: UGX ' + fmt(profit) + '</p>';
+                    html += '<p style="font-size: 11px; color: #0066cc;">Tap to view details</p></div>';
+                });
+            }
+            
+            document.getElementById('history-content').innerHTML = html;
+        }
+
+        function showHistoryDetail(date) {
+            const data = load();
+            const d = data.days[date];
+            if (!d) return;
+            
+            const rev = d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+            const cogs = d.usage.reduce((s, u) => s + u.cost, 0);
+            const exp = d.expenses.reduce((s, e) => s + e.amount, 0);
+            const profit = rev - cogs - exp;
+            
+            let html = '<button class="btn btn-primary" onclick="renderHistory()">← Back to History</button>';
+            html += '<h3>' + date + ' - Full Details</h3>';
+            
+            html += '<h4>Inventory</h4>';
+            if (d.carriedItems && d.carriedItems.length > 0) {
+                html += '<p style="font-weight: 600; color: #27a745;">Carried:</p>';
+                d.carriedItems.forEach(ci => {
+                    html += '<div class="item-card"><p>' + (ci.item || ci.name) + ': ' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + '</p></div>';
+                });
+            }
+            
+            if (d.ownerStock && d.ownerStock.length > 0) {
+                html += '<p style="font-weight: 600; color: #ff9800;">Owner Bought:</p>';
+                d.ownerStock.forEach(os => {
+                    html += '<div class="item-card"><p>' + os.item + ': ' + os.qty + ' @ UGX ' + fmt(os.unitCost) + '</p></div>';
+                });
+            }
+            
+            if (d.purchases && d.purchases.length > 0) {
+                html += '<p style="font-weight: 600; color: #2196f3;">Purchases:</p>';
+                d.purchases.forEach(p => {
+                    html += '<div class="item-card"><p>' + p.item + ': ' + p.qty + ' @ UGX ' + fmt(p.unitCost) + '</p></div>';
+                });
+            }
+            
+            if (d.usage && d.usage.length > 0) {
+                html += '<p style="font-weight: 600; color: #dc3545;">Usage:</p>';
+                d.usage.forEach(u => {
+                    html += '<div class="item-card"><p>' + u.item + ': ' + u.qty + ' @ UGX ' + fmt(u.unitCost) + '</p></div>';
+                });
+            }
+            
+            html += '<h4>Sales & Finances</h4>';
+            html += '<div class="summary"><div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(rev) + '</span></div>';
+            html += '<div class="summary-row"><span>COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
+            html += '<div class="summary-row"><span>Expenses</span><span>UGX ' + fmt(exp) + '</span></div>';
+            html += '<div class="summary-row total"><span>Profit</span><span>UGX ' + fmt(profit) + '</span></div></div>';
+            
+            if (d.closingInventory && d.closingInventory.items && d.closingInventory.items.length > 0) {
+                html += '<h4>What Remained</h4>';
+                d.closingInventory.items.forEach(ci => {
+                    html += '<div class="item-card"><p><strong>' + ci.name + '</strong>: ' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + '</p></div>';
+                });
+            }
+            
+            document.getElementById('history-content').innerHTML = html;
         }
 
         function renderClose() {
