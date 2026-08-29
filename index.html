@@ -286,21 +286,20 @@
         
         function renderCurrentStock(day) {
             const items = {};
+            
+            // Collect all items from all sources
             day.carriedItems.forEach(ci => {
                 const n = ci.item || ci.name;
-                if (!items[n]) items[n] = { qty: 0, cost: 0, displayName: n };
-                items[n].qty += ci.qty;
-                items[n].cost += ci.qty * ci.unitCost;
+                if (!items[n]) items[n] = { displayName: n, entries: [] };
+                items[n].entries.push({qty: ci.qty, unitCost: ci.unitCost});
             });
             day.ownerStock.forEach(os => {
-                if (!items[os.item]) items[os.item] = { qty: 0, cost: 0, displayName: os.item };
-                items[os.item].qty += os.qty;
-                items[os.item].cost += os.qty * os.unitCost;
+                if (!items[os.item]) items[os.item] = { displayName: os.item, entries: [] };
+                items[os.item].entries.push({qty: os.qty, unitCost: os.unitCost});
             });
             day.purchases.forEach(p => {
-                if (!items[p.item]) items[p.item] = { qty: 0, cost: 0, displayName: p.item };
-                items[p.item].qty += p.qty;
-                items[p.item].cost += p.qty * p.unitCost;
+                if (!items[p.item]) items[p.item] = { displayName: p.item, entries: [] };
+                items[p.item].entries.push({qty: p.qty, unitCost: p.unitCost});
             });
             
             let html = '<h3>📊 CURRENT STOCK (TOTAL)</h3>';
@@ -308,14 +307,22 @@
             let stockHtml = '';
             
             Object.keys(items).forEach(name => {
-                const totalQty = items[name].qty;
-                const totalCost = items[name].cost;
+                let totalQty = 0;
+                let totalCost = 0;
+                
+                // Sum up all entries for this item
+                items[name].entries.forEach(entry => {
+                    totalQty += entry.qty;
+                    totalCost += entry.qty * entry.unitCost;
+                });
+                
+                // Subtract usage
                 const used = day.usage.filter(u => u.item === name).reduce((s, u) => s + u.qty, 0);
                 const remaining = totalQty - used;
                 
                 if (remaining > 0) {
-                    const totalQtyWithUsage = totalQty + used;
-                    const avgCost = totalCost / totalQtyWithUsage;
+                    // Calculate average cost per unit
+                    const avgCost = totalCost / totalQty;
                     const itemValue = remaining * avgCost;
                     totalValue += itemValue;
                     
