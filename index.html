@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Chapati Tracker</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; font-family: 'Segoe UI', sans-serif; background: #fafafa; }
@@ -75,7 +78,7 @@
         <div id="analytics" class="view"><div class="card"><h2>📈 Analytics</h2><div id="analytics-content"></div></div></div>
         <div id="history" class="view"><div class="card"><h2>📅 History</h2><div id="history-content"></div></div></div>
         <div id="close" class="view"><div class="card"><h2>🔒 Close Day</h2><div id="close-content"></div></div></div>
-        <div id="backup" class="view"><div class="card"><h2>💾 Backup</h2><button class="btn btn-primary" onclick="downloadBackup()">📥 Download Backup</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore Backup</button><button class="btn btn-danger" onclick="if(confirm('DELETE ALL DATA?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All</button></div></div>
+        <div id="backup" class="view"><div class="card"><h2>💾 Backup & Cache</h2><p style="font-size: 12px; color: #999; margin-bottom: 16px;">App Version: <strong>v14.26</strong></p><button class="btn btn-primary" onclick="downloadBackup()">📥 Download Backup</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore Backup</button><button class="btn btn-danger" onclick="clearAppCache()">🔄 Clear App Cache & Reload</button><button class="btn btn-danger" onclick="if(confirm('DELETE ALL DATA?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All Data</button></div></div>
     </div>
 
     <script>
@@ -296,38 +299,8 @@
             
             return consolidated;
         }
-            const items = {};
-            day.carriedItems.forEach(ci => {
-                const n = ci.item || ci.name;
-                if (!items[n]) items[n] = { qty: 0, cost: 0, displayName: n };
-                items[n].qty += ci.qty;
-                items[n].cost += ci.qty * ci.unitCost;
-            });
-            day.ownerStock.forEach(os => {
-                if (!items[os.item]) items[os.item] = { qty: 0, cost: 0, displayName: os.item };
-                items[os.item].qty += os.qty;
-                items[os.item].cost += os.qty * os.unitCost;
-            });
-            day.purchases.forEach(p => {
-                if (!items[p.item]) items[p.item] = { qty: 0, cost: 0, displayName: p.item };
-                items[p.item].qty += p.qty;
-                items[p.item].cost += p.qty * p.unitCost;
-            });
-            day.usage.forEach(u => {
-                if (items[u.item]) items[u.item].qty -= u.qty;
-            });
-            
-            let total = 0;
-            Object.keys(items).forEach(name => {
-                if (items[name].qty > 0) {
-                    const totalQtyWithUsage = items[name].qty + (day.usage.filter(u => u.item === name).reduce((s, u) => s + u.qty, 0));
-                    const avg = items[name].cost / totalQtyWithUsage;
-                    total += items[name].qty * avg;
-                }
-            });
-            return total;
-        }
         
+
         function renderCurrentStock(day) {
             const consolidated = getConsolidatedStock(day);
             
@@ -733,6 +706,18 @@
 
         function downloadBackup() { const blob = new Blob([JSON.stringify(load(), null, 2)], {type: 'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'chapati-backup.json'; a.click(); URL.revokeObjectURL(url); }
         function restoreBackup() { const file = document.getElementById('restore-file').files[0]; if (!file) { alert('Select a file'); return; } const reader = new FileReader(); reader.onload = e => { try { save(JSON.parse(e.target.result)); alert('✓ Restored!'); location.reload(); } catch (err) { alert('Error reading file'); } }; reader.readAsText(file); }
+        function clearAppCache() { 
+            if (!navigator.serviceWorker) { 
+                alert('Service Worker not available. Try: Settings → Safari → Clear History and Website Data'); 
+                return; 
+            }
+            navigator.serviceWorker.getRegistrations().then(registrations => {
+                registrations.forEach(reg => reg.unregister());
+                localStorage.removeItem('sw-cache-v');
+                alert('✓ Cache cleared! Reloading...');
+                location.reload();
+            });
+        }
 
         window.addEventListener('load', () => renderDashboard());
     </script>
