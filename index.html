@@ -137,7 +137,20 @@
             const chapatiRemaining = day.chapatiRemaining || 0;
             const chapatySold = totalAvailable - chapatiRemaining;
 
-            let html = '<h3>Production Tracking</h3>';
+            // Format date nicely
+            const dateObj = new Date(today + 'T00:00:00');
+            const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+            const dateFormatted = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+            let html = '<div style="background: linear-gradient(135deg, #8B4513, #a0522d); color: white; padding: 16px; border-radius: 8px; margin-bottom: 20px;">';
+            html += '<p style="font-size: 14px; margin: 0 0 8px 0; opacity: 0.9;">TODAY</p>';
+            html += '<p style="font-size: 24px; font-weight: 700; margin: 0;">' + dayName + '</p>';
+            html += '<p style="font-size: 14px; margin: 4px 0 12px 0; opacity: 0.9;">' + dateFormatted + '</p>';
+            html += '<div><label style="color: white; font-size: 12px; display: block; margin-bottom: 6px;">Navigate to date:</label>';
+            html += '<input type="date" value="' + today + '" id="date-picker" onchange="changeDate()" style="width: 100%; padding: 8px; border-radius: 4px; border: none;"></div>';
+            html += '</div>';
+            
+            html += '<h3>Production Tracking</h3>';
             html += '<div class="form-group"><label>Chapati Carried</label><input type="number" value="' + chapatiCarried + '" id="chapati-carried" onchange="updateChapati()"></div>';
             html += '<div class="form-group"><label>Chapati Made</label><input type="number" value="' + chapatiMade + '" id="chapati-made" onchange="updateChapati()"></div>';
             html += '<div class="summary"><div class="summary-row"><span>Total Available</span><span>' + totalAvailable + '</span></div><div class="summary-row"><span>Remaining</span><span>' + chapatiRemaining + '</span></div><div class="summary-row total"><span>Sold</span><span>' + chapatySold + '</span></div></div>';
@@ -155,6 +168,14 @@
             data.days[today] = day;
             save(data);
             renderDashboard();
+        }
+
+        function changeDate() {
+            const selectedDate = document.getElementById('date-picker').value;
+            if (selectedDate) {
+                today = selectedDate;
+                renderDashboard();
+            }
         }
 
         function renderInventory() {
