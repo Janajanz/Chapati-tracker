@@ -154,24 +154,114 @@
             const chapatiRemaining = day.chapatiRemaining || 0;
             const chapatySold = totalAvailable - chapatiRemaining;
 
-            // Format date nicely
             const dateObj = new Date(today + 'T00:00:00');
             const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
             const dateFormatted = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-            let html = '<div style="background: linear-gradient(135deg, #8B4513, #a0522d); color: white; padding: 16px; border-radius: 8px; margin-bottom: 20px;">';
-            html += '<p style="font-size: 14px; margin: 0 0 8px 0; opacity: 0.9;">TODAY</p>';
-            html += '<p style="font-size: 24px; font-weight: 700; margin: 0;">' + dayName + '</p>';
-            html += '<p style="font-size: 14px; margin: 4px 0 12px 0; opacity: 0.9;">' + dateFormatted + '</p>';
-            html += '<div><label style="color: white; font-size: 12px; display: block; margin-bottom: 6px;">Navigate to date:</label>';
-            html += '<input type="date" value="' + today + '" id="date-picker" onchange="changeDate()" style="width: 100%; padding: 8px; border-radius: 4px; border: none;"></div>';
+            let html = '';
+            
+            // HEADER - Date and Navigation
+            html += '<div style="background: linear-gradient(135deg, #8B4513 0%, #d4a574 100%); color: white; padding: 24px 20px; border-radius: 14px; margin-bottom: 24px; box-shadow: 0 6px 16px rgba(139, 69, 19, 0.25);">';
+            html += '<p style="font-size: 11px; margin: 0 0 8px 0; opacity: 0.85; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700;">📅 TODAY</p>';
+            html += '<p style="font-size: 32px; font-weight: 800; margin: 0 0 4px 0; line-height: 1;">' + dayName + '</p>';
+            html += '<p style="font-size: 15px; margin: 0 0 16px 0; opacity: 0.9;">' + dateFormatted + '</p>';
+            html += '<label style="color: white; font-size: 10px; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 8px;">🗓️ Pick Date:</label>';
+            html += '<input type="date" value="' + today + '" id="date-picker" onchange="changeDate()" style="width: 100%; padding: 10px; border-radius: 8px; border: none; font-size: 12px; font-weight: 600;">';
             html += '</div>';
             
-            html += '<h3>Production Tracking</h3>';
-            html += '<div class="form-group"><label>Chapati Carried</label><input type="number" value="' + chapatiCarried + '" id="chapati-carried" onchange="updateChapati()"></div>';
-            html += '<div class="form-group"><label>Chapati Made</label><input type="number" value="' + chapatiMade + '" id="chapati-made" onchange="updateChapati()"></div>';
-            html += '<div class="summary"><div class="summary-row"><span>Total Available</span><span>' + totalAvailable + '</span></div><div class="summary-row"><span>Remaining</span><span>' + chapatiRemaining + '</span></div><div class="summary-row total"><span>Sold</span><span>' + chapatySold + '</span></div></div>';
-            html += '<div class="form-group"><label>Chapati Remaining</label><input type="number" value="' + chapatiRemaining + '" id="chapati-remaining" onchange="updateChapati()"></div>';
+            // OPENING INVENTORY - HERO SECTION
+            html += '<div style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); color: white; padding: 28px 24px; border-radius: 14px; margin-bottom: 24px; text-align: center; box-shadow: 0 10px 28px rgba(16, 185, 129, 0.3);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9; letter-spacing: 1px;">📦 OPENING INVENTORY</p>';
+            html += '<p style="margin: 0 0 8px 0; font-size: 13px; opacity: 0.9;">From Yesterday</p>';
+            html += '<p style="margin: 0; font-size: 52px; font-weight: 800; line-height: 1;">' + chapatiCarried + '</p>';
+            html += '<p style="margin: 8px 0 0 0; font-size: 13px; font-weight: 600;">Chapatis ready to sell</p>';
+            html += '</div>';
+            
+            // INPUT SECTION - Made Today & Remaining
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px;">';
+            
+            // Made Today
+            html += '<div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 20px; border-radius: 12px; color: white; box-shadow: 0 6px 16px rgba(245, 158, 11, 0.2);">';
+            html += '<label style="font-size: 10px; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 10px; opacity: 0.9;">🍳 Made Today</label>';
+            html += '<input type="number" value="' + chapatiMade + '" id="chapati-made" onchange="updateChapati()" placeholder="0" style="width: 100%; padding: 12px; font-size: 22px; border: none; border-radius: 8px; font-weight: 800; text-align: center; color: #d97706; background: white;">';
+            html += '<p style="margin: 8px 0 0 0; font-size: 11px; opacity: 0.9;">pieces made</p>';
+            html += '</div>';
+            
+            // Remaining
+            html += '<div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 20px; border-radius: 12px; color: white; box-shadow: 0 6px 16px rgba(239, 68, 68, 0.2);">';
+            html += '<label style="font-size: 10px; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 10px; opacity: 0.9;">📊 Remaining</label>';
+            html += '<input type="number" value="' + chapatiRemaining + '" id="chapati-remaining" onchange="updateChapati()" placeholder="0" style="width: 100%; padding: 12px; font-size: 22px; border: none; border-radius: 8px; font-weight: 800; text-align: center; color: #dc2626; background: white;">';
+            html += '<p style="margin: 8px 0 0 0; font-size: 11px; opacity: 0.9;">carry to tomorrow</p>';
+            html += '</div>';
+            
+            html += '</div>';
+            
+            // KEY METRICS - Three Cards
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 24px;">';
+            
+            // Total Available
+            html += '<div style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); color: white; padding: 18px 14px; border-radius: 11px; text-align: center; box-shadow: 0 6px 12px rgba(124, 58, 237, 0.2);">';
+            html += '<p style="margin: 0 0 6px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">Total</p>';
+            html += '<p style="margin: 0; font-size: 38px; font-weight: 800;">' + totalAvailable + '</p>';
+            html += '<p style="margin: 4px 0 0 0; font-size: 10px; opacity: 0.8;">available</p>';
+            html += '</div>';
+            
+            // Sold
+            html += '<div style="background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%); color: white; padding: 18px 14px; border-radius: 11px; text-align: center; box-shadow: 0 6px 12px rgba(14, 165, 233, 0.2);">';
+            html += '<p style="margin: 0 0 6px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">Sold</p>';
+            html += '<p style="margin: 0; font-size: 38px; font-weight: 800;">' + chapatySold + '</p>';
+            html += '<p style="margin: 4px 0 0 0; font-size: 10px; opacity: 0.8;">today</p>';
+            html += '</div>';
+            
+            // To Carry
+            html += '<div style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; padding: 18px 14px; border-radius: 11px; text-align: center; box-shadow: 0 6px 12px rgba(236, 72, 153, 0.2);">';
+            html += '<p style="margin: 0 0 6px 0; font-size: 10px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">Carry</p>';
+            html += '<p style="margin: 0; font-size: 38px; font-weight: 800;">' + chapatiRemaining + '</p>';
+            html += '<p style="margin: 4px 0 0 0; font-size: 10px; opacity: 0.8;">tomorrow</p>';
+            html += '</div>';
+            
+            html += '</div>';
+            
+            // PRODUCTION FLOW DIAGRAM
+            html += '<div style="background: #f9fafb; padding: 18px; border-radius: 12px; border: 2px solid #e5e7eb;">';
+            html += '<p style="margin: 0 0 14px 0; font-size: 11px; font-weight: 700; color: #374151; text-transform: uppercase;">📈 Production Flow</p>';
+            
+            // First line: Carried + Made = Available
+            html += '<div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; margin-bottom: 12px;">';
+            html += '<div style="flex: 1; text-align: center; padding: 10px; background: linear-gradient(135deg, #d1fae5, #ecfdf5); border-radius: 8px;">';
+            html += '<p style="margin: 0; font-size: 9px; color: #059669; font-weight: 600;">CARRIED</p>';
+            html += '<p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 800; color: #059669;">' + chapatiCarried + '</p>';
+            html += '</div>';
+            html += '<div style="font-size: 16px; color: #9ca3af; font-weight: 600;">+</div>';
+            html += '<div style="flex: 1; text-align: center; padding: 10px; background: linear-gradient(135deg, #fef3c7, #fffbeb); border-radius: 8px;">';
+            html += '<p style="margin: 0; font-size: 9px; color: #b45309; font-weight: 600;">MADE</p>';
+            html += '<p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 800; color: #b45309;">' + chapatiMade + '</p>';
+            html += '</div>';
+            html += '<div style="font-size: 16px; color: #9ca3af; font-weight: 600;">=</div>';
+            html += '<div style="flex: 1; text-align: center; padding: 10px; background: linear-gradient(135deg, #e0e7ff, #f0f4ff); border-radius: 8px;">';
+            html += '<p style="margin: 0; font-size: 9px; color: #4c1d95; font-weight: 600;">AVAILABLE</p>';
+            html += '<p style="margin: 4px 0 0 0; font-size: 18px; font-weight: 800; color: #4c1d95;">' + totalAvailable + '</p>';
+            html += '</div>';
+            html += '</div>';
+            
+            // Second line: Available - Remaining = Sold
+            html += '<div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; padding-top: 12px; border-top: 1px dashed #d1d5db;">';
+            html += '<div style="flex: 1.2; text-align: center; padding: 10px; background: linear-gradient(135deg, #e0e7ff, #f0f4ff); border-radius: 8px;">';
+            html += '<p style="margin: 0; font-size: 9px; color: #4c1d95; font-weight: 600;">AVAILABLE</p>';
+            html += '<p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 800; color: #4c1d95;">' + totalAvailable + '</p>';
+            html += '</div>';
+            html += '<div style="font-size: 14px; color: #9ca3af; font-weight: 600;">−</div>';
+            html += '<div style="flex: 1; text-align: center; padding: 10px; background: linear-gradient(135deg, #fee2e2, #fef2f2); border-radius: 8px;">';
+            html += '<p style="margin: 0; font-size: 9px; color: #b91c1c; font-weight: 600;">REMAINING</p>';
+            html += '<p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 800; color: #b91c1c;">' + chapatiRemaining + '</p>';
+            html += '</div>';
+            html += '<div style="font-size: 14px; color: #9ca3af; font-weight: 600;">=</div>';
+            html += '<div style="flex: 1; text-align: center; padding: 10px; background: linear-gradient(135deg, #fce7f3, #fdf2f8); border-radius: 8px;">';
+            html += '<p style="margin: 0; font-size: 9px; color: #be185d; font-weight: 600;">SOLD</p>';
+            html += '<p style="margin: 4px 0 0 0; font-size: 16px; font-weight: 800; color: #be185d;">' + chapatySold + '</p>';
+            html += '</div>';
+            html += '</div>';
+            html += '</div>';
             
             document.getElementById('dashboard-content').innerHTML = html;
         }
