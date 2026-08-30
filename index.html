@@ -93,10 +93,19 @@
         function getDay(date) {
             const data = load();
             if (!data.days[date]) {
-                // Get yesterday's date
-                const yesterday = new Date(date + 'T00:00:00');
-                yesterday.setDate(yesterday.getDate() - 1);
-                const yesterdayDate = yesterday.toISOString().split('T')[0];
+                // Get yesterday's date using same method
+                const parts = date.split('-');
+                const year = parseInt(parts[0]);
+                const month = parseInt(parts[1]);
+                const day_num = parseInt(parts[2]);
+                
+                const yesterday_date = new Date(year, month - 1, day_num);
+                yesterday_date.setDate(yesterday_date.getDate() - 1);
+                
+                const yesterday_year = yesterday_date.getFullYear();
+                const yesterday_month = String(yesterday_date.getMonth() + 1).padStart(2, '0');
+                const yesterday_day = String(yesterday_date.getDate()).padStart(2, '0');
+                const yesterdayDate = yesterday_year + '-' + yesterday_month + '-' + yesterday_day;
                 
                 console.log('=== CREATING NEW DAY ===');
                 console.log('Today:', date);
@@ -110,7 +119,7 @@
                     console.log('Yesterday closingInventory:', yesterdayData.closingInventory);
                     console.log('Chapati to carry from yesterday:', yesterdayData.closingInventory?.chapati);
                 } else {
-                    console.log('Yesterday data NOT FOUND');
+                    console.log('Yesterday data NOT FOUND - this is first day');
                 }
                 
                 const carriedFromYesterday = (yesterdayData && yesterdayData.closingInventory && yesterdayData.closingInventory.items) ? yesterdayData.closingInventory.items : [];
@@ -924,12 +933,22 @@
             const verifyData = load();
             console.log('Verified in storage - today closing:', verifyData.days[today].closingInventory);
             
-            // Calculate tomorrow correctly using today's date string
-            const todayDate = new Date(today + 'T00:00:00');
-            todayDate.setDate(todayDate.getDate() + 1);
-            const tomorrowDate = todayDate.toISOString().split('T')[0];
+            // Calculate tomorrow using UTC to avoid timezone issues
+            const parts = today.split('-');
+            const year = parseInt(parts[0]);
+            const month = parseInt(parts[1]);
+            const day_num = parseInt(parts[2]);
             
-            console.log('Moving to tomorrow:', tomorrowDate);
+            const date = new Date(year, month - 1, day_num);
+            date.setDate(date.getDate() + 1);
+            
+            const tomorrow_year = date.getFullYear();
+            const tomorrow_month = String(date.getMonth() + 1).padStart(2, '0');
+            const tomorrow_day = String(date.getDate()).padStart(2, '0');
+            const tomorrowDate = tomorrow_year + '-' + tomorrow_month + '-' + tomorrow_day;
+            
+            console.log('TODAY was:', today);
+            console.log('TOMORROW will be:', tomorrowDate);
             today = tomorrowDate;
             
             alert('✓ Day closed! Moved to ' + today);
