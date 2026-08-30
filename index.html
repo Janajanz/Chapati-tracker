@@ -268,7 +268,7 @@
 
         function updateChapati() {
             const day = getDay(today);
-            day.chapatiCarried = parseInt(document.getElementById('chapati-carried').value) || 0;
+            // Don't update chapatiCarried - it auto-populates from yesterday!
             day.chapatiMade = parseInt(document.getElementById('chapati-made').value) || 0;
             day.chapatiRemaining = parseInt(document.getElementById('chapati-remaining').value) || 0;
             const data = load();
