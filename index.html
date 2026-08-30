@@ -195,11 +195,12 @@
             html += '<input type="date" value="' + today + '" id="date-picker" onchange="changeDate()" style="width: 100%; padding: 10px; border-radius: 8px; border: none; font-size: 12px; font-weight: 600;">';
             html += '</div>';
             
-            // OPENING INVENTORY - HERO SECTION
+            // OPENING INVENTORY - HERO SECTION (EDITABLE)
             html += '<div style="background: linear-gradient(135deg, #10b981 0%, #34d399 100%); color: white; padding: 28px 24px; border-radius: 14px; margin-bottom: 24px; text-align: center; box-shadow: 0 10px 28px rgba(16, 185, 129, 0.3);">';
             html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9; letter-spacing: 1px;">📦 OPENING INVENTORY</p>';
-            html += '<p style="margin: 0 0 8px 0; font-size: 13px; opacity: 0.9;">From Yesterday</p>';
-            html += '<p style="margin: 0; font-size: 52px; font-weight: 800; line-height: 1;">' + chapatiCarried + '</p>';
+            html += '<p style="margin: 0 0 8px 0; font-size: 13px; opacity: 0.9;">From Yesterday (EDITABLE)</p>';
+            html += '<input type="number" value="' + chapatiCarried + '" id="chapati-carried" onchange="updateChapati()" placeholder="0" style="width: 100%; padding: 16px; font-size: 48px; border: none; border-radius: 10px; font-weight: 800; text-align: center; color: #10b981; background: white; margin-bottom: 8px;">';
+            html += '<p style="margin: 0; font-size: 13px; font-weight: 600;">Chapatis ready to sell</p>';
             html += '<p style="margin: 8px 0 0 0; font-size: 13px; font-weight: 600;">Chapatis ready to sell</p>';
             html += '</div>';
             
@@ -294,7 +295,7 @@
 
         function updateChapati() {
             const day = getDay(today);
-            // Don't update chapatiCarried - it auto-populates from yesterday!
+            day.chapatiCarried = parseInt(document.getElementById('chapati-carried').value) || 0;
             day.chapatiMade = parseInt(document.getElementById('chapati-made').value) || 0;
             day.chapatiRemaining = parseInt(document.getElementById('chapati-remaining').value) || 0;
             const data = load();
