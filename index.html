@@ -93,16 +93,13 @@
         function getDay(date) {
             const data = load();
             if (!data.days[date]) {
-                // Get yesterday's date - pure string-based, no timezone issues
+                // Get yesterday's date - pure string-based
                 const parts = date.split('-');
                 let year = parseInt(parts[0]);
                 let month = parseInt(parts[1]);
                 let day_num = parseInt(parts[2]);
                 
-                // Simple day decrement
                 day_num -= 1;
-                
-                // Handle month/year transitions
                 if (day_num < 1) {
                     month -= 1;
                     if (month < 1) {
@@ -118,26 +115,34 @@
                 
                 const yesterdayDate = year + '-' + String(month).padStart(2, '0') + '-' + String(day_num).padStart(2, '0');
                 
-                console.log('=== CREATING NEW DAY ===');
-                console.log('Today:', date);
-                console.log('Yesterday:', yesterdayDate);
+                console.log('===== GET DAY - NEW DAY CREATION =====');
+                console.log('TODAY:', date);
+                console.log('YESTERDAY:', yesterdayDate);
                 
-                // Initialize new day
+                // Check what's in storage
+                console.log('ALL STORED DAYS:', Object.keys(data.days));
+                
                 const yesterdayData = data.days[yesterdayDate];
                 
+                console.log('===== GET DAY - LOOKING FOR YESTERDAY =====');
+                console.log('Looking for key:', yesterdayDate);
+                console.log('Found yesterdayData?:', !!yesterdayData);
+                
                 if (yesterdayData) {
-                    console.log('Yesterday data FOUND');
-                    console.log('Yesterday closingInventory:', yesterdayData.closingInventory);
-                    console.log('Chapati to carry from yesterday:', yesterdayData.closingInventory?.chapati);
+                    console.log('YESTERDAY DATA FOUND:');
+                    console.log('Yesterday full object:', JSON.stringify(yesterdayData, null, 2));
+                    console.log('Yesterday closingInventory:', JSON.stringify(yesterdayData.closingInventory, null, 2));
+                    console.log('Chapati to carry:', yesterdayData.closingInventory?.chapati);
                 } else {
-                    console.log('Yesterday data NOT FOUND - this is first day');
+                    console.log('YESTERDAY DATA NOT FOUND - No previous day');
                 }
                 
                 const carriedFromYesterday = (yesterdayData && yesterdayData.closingInventory && yesterdayData.closingInventory.items) ? yesterdayData.closingInventory.items : [];
                 const carriedChapati = yesterdayData ? (yesterdayData.closingInventory?.chapati || 0) : 0;
                 
-                console.log('Carried items (inventory) from yesterday:', carriedFromYesterday);
-                console.log('Carried chapati from yesterday:', carriedChapati);
+                console.log('===== GET DAY - CARRYOVER VALUES =====');
+                console.log('Carried chapati:', carriedChapati);
+                console.log('Carried items:', JSON.stringify(carriedFromYesterday, null, 2));
                 
                 data.days[date] = {
                     date: date,
@@ -156,10 +161,12 @@
                     closingInventory: { chapati: 0, items: [] }
                 };
                 save(data);
-                console.log('=== NEW DAY CREATED ===');
-                console.log('New day chapatiCarried set to:', carriedChapati);
+                
+                console.log('===== GET DAY - NEW DAY SAVED =====');
+                console.log('New day created with chapatiCarried:', carriedChapati);
             } else {
-                console.log('Day already exists:', date, '- chapatiCarried:', data.days[date].chapatiCarried);
+                console.log('GET DAY - Day already exists:', date);
+                console.log('Existing chapatiCarried:', data.days[date].chapatiCarried);
             }
             return data.days[date];
         }
@@ -913,11 +920,12 @@
             const day = getDay(today);
             const consolidated = getConsolidatedStock(day);
             
-            console.log('=== CLOSING DAY ===');
-            console.log('TODAY:', today);
-            console.log('Chapati Remaining to carry:', day.chapatiRemaining);
-            console.log('Current day inventory:', day.carriedItems, day.ownerStock, day.purchases, day.usage);
-            console.log('Consolidated remaining stock:', consolidated);
+            console.log('===== CLOSING DAY - STEP 1 =====');
+            console.log('TODAY DATE:', today);
+            console.log('day object:', JSON.stringify(day, null, 2));
+            console.log('day.chapatiRemaining:', day.chapatiRemaining);
+            console.log('day.chapatiMade:', day.chapatiMade);
+            console.log('day.chapatiCarried:', day.chapatiCarried);
             
             // Convert consolidated to closing inventory format
             const closing = [];
@@ -928,32 +936,29 @@
                     qty: item.qty,
                     unitCost: item.unitCost
                 });
-                console.log('Saving item to closing inventory:', item.displayName, 'qty:', item.qty, 'unitCost:', item.unitCost);
             });
             
             day.closingInventory = {chapati: day.chapatiRemaining, items: closing};
-            console.log('FINAL closingInventory being saved:', day.closingInventory);
-            console.log('Specifically - Chapati to carry tomorrow:', day.chapatiRemaining);
+            
+            console.log('===== CLOSING DAY - STEP 2 =====');
+            console.log('About to save closingInventory:', JSON.stringify(day.closingInventory, null, 2));
             
             day.status = 'closed';
             const data = load();
             data.days[today] = day;
             save(data);
             
-            console.log('=== SAVED TO STORAGE - VERIFYING ===');
+            console.log('===== CLOSING DAY - STEP 3 VERIFY =====');
             const verifyData = load();
-            console.log('Verified in storage - today closing:', verifyData.days[today].closingInventory);
+            console.log('After save - what is in storage for', today, ':', JSON.stringify(verifyData.days[today].closingInventory, null, 2));
             
-            // Calculate tomorrow - pure string-based, no timezone issues
+            // Calculate tomorrow - pure string-based
             const parts = today.split('-');
             let year = parseInt(parts[0]);
             let month = parseInt(parts[1]);
             let day_num = parseInt(parts[2]);
             
-            // Simple day increment
             day_num += 1;
-            
-            // Handle month/year transitions
             const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
             if (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) {
                 daysInMonth[1] = 29;
@@ -970,11 +975,14 @@
             
             const tomorrowDate = year + '-' + String(month).padStart(2, '0') + '-' + String(day_num).padStart(2, '0');
             
-            console.log('TODAY was:', today);
-            console.log('TOMORROW will be:', tomorrowDate);
+            console.log('===== CLOSING DAY - STEP 4 DATE CALC =====');
+            console.log('TODAY:', today);
+            console.log('TOMORROW:', tomorrowDate);
             today = tomorrowDate;
             
             alert('✓ Day closed! Moved to ' + today);
+            
+            console.log('===== CLOSING DAY - COMPLETE =====');
             renderDashboard();
         }
 
