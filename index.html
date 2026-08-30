@@ -172,12 +172,13 @@
 
             console.log('=== RENDERING DASHBOARD ===');
             console.log('Today:', today);
-            console.log('Chapati Carried (from yesterday):', chapatiCarried);
+            console.log('day.chapatiCarried:', day.chapatiCarried);
+            console.log('chapatiCarried variable:', chapatiCarried);
+            console.log('FULL DAY OBJECT:', JSON.stringify(day));
             console.log('Chapati Made:', chapatiMade);
             console.log('Total Available:', totalAvailable);
             console.log('Chapati Remaining:', chapatiRemaining);
             console.log('Chapati Sold:', chapatySold);
-            console.log('Full day object:', day);
 
             const dateObj = new Date(today + 'T00:00:00');
             const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
