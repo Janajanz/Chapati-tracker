@@ -922,7 +922,11 @@
             const verifyData = load();
             console.log('Verified in storage - today closing:', verifyData.days[today].closingInventory);
             
-            const tomorrowDate = new Date(new Date().getTime() + 86400000).toISOString().split('T')[0];
+            // Calculate tomorrow correctly using today's date string
+            const todayDate = new Date(today + 'T00:00:00');
+            todayDate.setDate(todayDate.getDate() + 1);
+            const tomorrowDate = todayDate.toISOString().split('T')[0];
+            
             console.log('Moving to tomorrow:', tomorrowDate);
             today = tomorrowDate;
             
