@@ -99,21 +99,30 @@
                 const yesterdayDate = yesterday.toISOString().split('T')[0];
                 
                 console.log('=== CREATING NEW DAY ===');
-                console.log('Date:', date);
-                console.log('Looking for yesterday:', yesterdayDate);
+                console.log('Today:', date);
+                console.log('Yesterday:', yesterdayDate);
                 
                 // Initialize new day
                 const yesterdayData = data.days[yesterdayDate];
-                const carriedFromYesterday = (yesterdayData && yesterdayData.closingInventory && yesterdayData.closingInventory.items) ? yesterdayData.closingInventory.items : [];
                 
-                console.log('Yesterday data exists:', !!yesterdayData);
-                console.log('Carried items from yesterday:', carriedFromYesterday);
-                console.log('Carried chapati:', yesterdayData ? (yesterdayData.closingInventory?.chapati || 0) : 0);
+                if (yesterdayData) {
+                    console.log('Yesterday data FOUND');
+                    console.log('Yesterday closingInventory:', yesterdayData.closingInventory);
+                    console.log('Chapati to carry from yesterday:', yesterdayData.closingInventory?.chapati);
+                } else {
+                    console.log('Yesterday data NOT FOUND');
+                }
+                
+                const carriedFromYesterday = (yesterdayData && yesterdayData.closingInventory && yesterdayData.closingInventory.items) ? yesterdayData.closingInventory.items : [];
+                const carriedChapati = yesterdayData ? (yesterdayData.closingInventory?.chapati || 0) : 0;
+                
+                console.log('Carried items (inventory) from yesterday:', carriedFromYesterday);
+                console.log('Carried chapati from yesterday:', carriedChapati);
                 
                 data.days[date] = {
                     date: date,
                     status: 'open',
-                    chapatiCarried: yesterdayData ? (yesterdayData.closingInventory?.chapati || 0) : 0,
+                    chapatiCarried: carriedChapati,
                     chapatiMade: 0,
                     chapatiRemaining: 0,
                     carriedItems: carriedFromYesterday,
@@ -128,6 +137,9 @@
                 };
                 save(data);
                 console.log('=== NEW DAY CREATED ===');
+                console.log('New day chapatiCarried set to:', carriedChapati);
+            } else {
+                console.log('Day already exists:', date, '- chapatiCarried:', data.days[date].chapatiCarried);
             }
             return data.days[date];
         }
@@ -157,6 +169,15 @@
             const totalAvailable = chapatiCarried + chapatiMade;
             const chapatiRemaining = day.chapatiRemaining || 0;
             const chapatySold = totalAvailable - chapatiRemaining;
+
+            console.log('=== RENDERING DASHBOARD ===');
+            console.log('Today:', today);
+            console.log('Chapati Carried (from yesterday):', chapatiCarried);
+            console.log('Chapati Made:', chapatiMade);
+            console.log('Total Available:', totalAvailable);
+            console.log('Chapati Remaining:', chapatiRemaining);
+            console.log('Chapati Sold:', chapatySold);
+            console.log('Full day object:', day);
 
             const dateObj = new Date(today + 'T00:00:00');
             const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
@@ -863,9 +884,10 @@
             const day = getDay(today);
             const consolidated = getConsolidatedStock(day);
             
-            // DEBUG: Log what's being saved
             console.log('=== CLOSING DAY ===');
-            console.log('Current day items:', day.carriedItems, day.ownerStock, day.purchases, day.usage);
+            console.log('TODAY:', today);
+            console.log('Chapati Remaining to carry:', day.chapatiRemaining);
+            console.log('Current day inventory:', day.carriedItems, day.ownerStock, day.purchases, day.usage);
             console.log('Consolidated remaining stock:', consolidated);
             
             // Convert consolidated to closing inventory format
@@ -877,20 +899,26 @@
                     qty: item.qty,
                     unitCost: item.unitCost
                 });
-                console.log('Saving to closing inventory:', item.displayName, item.qty, item.unitCost);
+                console.log('Saving item to closing inventory:', item.displayName, 'qty:', item.qty, 'unitCost:', item.unitCost);
             });
             
             day.closingInventory = {chapati: day.chapatiRemaining, items: closing};
-            console.log('Final closingInventory:', day.closingInventory);
+            console.log('FINAL closingInventory being saved:', day.closingInventory);
+            console.log('Specifically - Chapati to carry tomorrow:', day.chapatiRemaining);
             
             day.status = 'closed';
             const data = load();
             data.days[today] = day;
             save(data);
             
-            console.log('=== SAVED TO STORAGE ===');
+            console.log('=== SAVED TO STORAGE - VERIFYING ===');
+            const verifyData = load();
+            console.log('Verified in storage - today closing:', verifyData.days[today].closingInventory);
             
-            today = new Date(new Date().getTime() + 86400000).toISOString().split('T')[0];
+            const tomorrowDate = new Date(new Date().getTime() + 86400000).toISOString().split('T')[0];
+            console.log('Moving to tomorrow:', tomorrowDate);
+            today = tomorrowDate;
+            
             alert('✓ Day closed! Moved to ' + today);
             renderDashboard();
         }
