@@ -868,6 +868,13 @@
             html += '<div class="summary-row total" style="color: #27a745;"><span>PROFIT</span><span>UGX ' + fmt(profit) + '</span></div></div>';
             
             html += '<h3>Closing Inventory (Carry to Next Day)</h3>';
+            
+            // DISPLAY CHAPATI AT TOP
+            html += '<div class="item-card" style="background: linear-gradient(135deg, #10b981, #34d399); color: white; padding: 16px; margin-bottom: 12px; border-radius: 8px;">';
+            html += '<p style="margin: 0; font-size: 14px; font-weight: 700;">📦 CHAPATI TO CARRY: <span style="font-size: 18px;">' + day.chapatiRemaining + ' pieces</span></p>';
+            html += '<p style="margin: 4px 0 0 0; font-size: 12px; opacity: 0.9;">These will be your opening inventory tomorrow</p>';
+            html += '</div>';
+            
             let totalValue = 0;
             Object.keys(consolidated).forEach(name => {
                 const item = consolidated[name];
