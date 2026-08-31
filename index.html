@@ -10,40 +10,184 @@
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body { width: 100%; height: 100%; font-family: 'Segoe UI', sans-serif; background: #fafafa; }
-        .header { background: linear-gradient(135deg, #8B4513, #a0522d); color: white; padding: 14px 16px; position: fixed; top: 0; left: 0; right: 0; height: 60px; display: flex; justify-content: space-between; align-items: center; z-index: 100; }
-        h1 { font-size: 24px; }
-        .menu-btn { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
-        .sidebar { position: fixed; right: -280px; top: 0; width: 280px; height: 100%; background: white; z-index: 200; transition: right 0.3s; overflow-y: auto; padding-top: 60px; box-shadow: -2px 0 8px rgba(0,0,0,0.2); }
+        
+        /* HEADER - Mobile optimized */
+        .header { 
+            background: linear-gradient(135deg, #8B4513, #a0522d); 
+            color: white; 
+            padding: 16px 16px; 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            height: auto;
+            min-height: 60px;
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            z-index: 100; 
+        }
+        
+        h1 { font-size: 26px; font-weight: 700; }
+        .menu-btn { background: none; border: none; color: white; font-size: 28px; cursor: pointer; padding: 8px; }
+        
+        /* SIDEBAR */
+        .sidebar { 
+            position: fixed; 
+            right: -280px; 
+            top: 0; 
+            width: 280px; 
+            height: 100%; 
+            background: white; 
+            z-index: 200; 
+            transition: right 0.3s; 
+            overflow-y: auto; 
+            padding-top: 60px; 
+            box-shadow: -2px 0 8px rgba(0,0,0,0.2); 
+        }
         .sidebar.open { right: 0; }
-        .sidebar-item { padding: 16px; border-bottom: 1px solid #f0f0f0; cursor: pointer; font-size: 14px; font-weight: 500; }
+        .sidebar-item { 
+            padding: 16px 18px; 
+            border-bottom: 1px solid #f0f0f0; 
+            cursor: pointer; 
+            font-size: 14px; 
+            font-weight: 500;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+        }
         .sidebar-item:hover { background: #f5f5f5; }
-        .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 150; opacity: 0; pointer-events: none; transition: opacity 0.3s; }
+        .overlay { 
+            position: fixed; 
+            top: 0; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            background: rgba(0,0,0,0.5); 
+            z-index: 150; 
+            opacity: 0; 
+            pointer-events: none; 
+            transition: opacity 0.3s; 
+        }
         .overlay.open { opacity: 1; pointer-events: all; }
-        .container { position: fixed; top: 60px; left: 0; right: 0; bottom: 0; overflow-y: auto; padding: 16px; -webkit-overflow-scrolling: touch; }
+        
+        /* CONTAINER */
+        .container { 
+            position: fixed; 
+            top: 60px; 
+            left: 0; 
+            right: 0; 
+            bottom: 0; 
+            overflow-y: auto; 
+            padding: 18px 16px 20px 16px; 
+            -webkit-overflow-scrolling: touch;
+            padding-bottom: 40px;
+        }
+        
         .view { display: none; }
         .view.active { display: block; }
-        .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        h2 { font-size: 20px; margin-bottom: 16px; color: #333; }
-        h3 { font-size: 16px; margin: 20px 0 12px 0; color: #555; font-weight: 600; }
-        .form-group { margin-bottom: 12px; }
-        label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; color: #666; }
-        input, select { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
-        input:focus, select:focus { outline: none; border-color: #8B4513; box-shadow: 0 0 0 2px rgba(139,69,19,0.1); }
-        .btn { padding: 12px 16px; border: none; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; width: 100%; margin-bottom: 8px; }
+        
+        /* CARDS & SECTIONS */
+        .card { 
+            background: white; 
+            border-radius: 10px; 
+            padding: 18px; 
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 16px;
+        }
+        
+        h2 { font-size: 22px; margin-bottom: 16px; color: #333; font-weight: 700; }
+        h3 { font-size: 17px; margin: 20px 0 14px 0; color: #555; font-weight: 600; }
+        
+        /* FORMS */
+        .form-group { margin-bottom: 14px; }
+        label { 
+            display: block; 
+            font-size: 12px; 
+            font-weight: 600; 
+            margin-bottom: 8px; 
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        input, select { 
+            width: 100%; 
+            padding: 14px; 
+            border: 1px solid #ddd; 
+            border-radius: 6px; 
+            font-size: 15px;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input:focus, select:focus { 
+            outline: none; 
+            border-color: #8B4513; 
+            box-shadow: 0 0 0 3px rgba(139,69,19,0.1); 
+        }
+        
+        /* BUTTONS - Large touch targets */
+        .btn { 
+            padding: 16px 20px; 
+            border: none; 
+            border-radius: 8px; 
+            font-size: 15px; 
+            font-weight: 700; 
+            cursor: pointer; 
+            width: 100%; 
+            margin-bottom: 10px;
+            min-height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
         .btn-primary { background: #8B4513; color: white; }
-        .btn-primary:hover { background: #7a3a0d; }
+        .btn-primary:hover { background: #7a3a0d; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(139,69,19,0.3); }
         .btn-danger { background: #dc3545; color: white; }
         .btn-danger:hover { background: #c82333; }
-        .item-card { background: #f9f9f9; padding: 12px; margin: 8px 0; border-radius: 6px; border-left: 4px solid #8B4513; }
-        .item-card p { margin: 4px 0; font-size: 13px; }
-        .summary { background: #f0f0f0; padding: 12px; border-radius: 6px; margin: 12px 0; }
-        .summary-row { display: flex; justify-content: space-between; padding: 8px 0; }
-        .summary-row.total { font-weight: 700; border-top: 2px solid #ddd; padding-top: 12px; }
+        
+        /* ITEM CARDS */
+        .item-card { 
+            background: #f9f9f9; 
+            padding: 14px; 
+            margin: 10px 0; 
+            border-radius: 8px; 
+            border-left: 4px solid #8B4513;
+        }
+        .item-card p { margin: 6px 0; font-size: 14px; }
+        
+        /* SUMMARY */
+        .summary { 
+            background: #f0f0f0; 
+            padding: 14px; 
+            border-radius: 8px; 
+            margin: 14px 0; 
+        }
+        .summary-row { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 10px 0;
+            font-size: 14px;
+        }
+        .summary-row.total { 
+            font-weight: 700; 
+            border-top: 2px solid #ddd; 
+            padding-top: 14px;
+            font-size: 16px;
+        }
+        
         .color-carried { color: #27a745; }
         .color-owner { color: #ff9800; }
         .color-purchase { color: #2196f3; }
         .color-usage { color: #dc3545; }
-        p { line-height: 1.5; }
+        p { line-height: 1.6; }
+        
+        /* RESPONSIVE GRID - Mobile first */
+        @media (min-width: 768px) {
+            .container { padding: 24px; }
+            .card { padding: 24px; }
+            .btn { width: auto; min-width: 140px; }
+        }
     </style>
 </head>
 <body>
@@ -231,21 +375,21 @@
             html += '<p style="margin: 8px 0 0 0; font-size: 13px; font-weight: 600;">Chapatis ready to sell</p>';
             html += '</div>';
             
-            // INPUT SECTION - Made Today & Remaining
-            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px;">';
+            // INPUT SECTION - Made Today & Remaining (STACK ON MOBILE)
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px;">';
             
             // Made Today
             html += '<div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 20px; border-radius: 12px; color: white; box-shadow: 0 6px 16px rgba(245, 158, 11, 0.2);">';
-            html += '<label style="font-size: 10px; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 10px; opacity: 0.9;">🍳 Made Today</label>';
-            html += '<input type="number" value="' + chapatiMade + '" id="chapati-made" onchange="updateChapati()" placeholder="0" style="width: 100%; padding: 12px; font-size: 22px; border: none; border-radius: 8px; font-weight: 800; text-align: center; color: #d97706; background: white;">';
-            html += '<p style="margin: 8px 0 0 0; font-size: 11px; opacity: 0.9;">pieces made</p>';
+            html += '<label style="font-size: 11px; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 12px; opacity: 0.9;">🍳 Made Today</label>';
+            html += '<input type="number" value="' + chapatiMade + '" id="chapati-made" onchange="updateChapati()" placeholder="0" style="width: 100%; padding: 14px; font-size: 22px; border: none; border-radius: 8px; font-weight: 800; text-align: center; color: #d97706; background: white;">';
+            html += '<p style="margin: 8px 0 0 0; font-size: 12px; opacity: 0.9;">pieces made</p>';
             html += '</div>';
             
             // Remaining
             html += '<div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 20px; border-radius: 12px; color: white; box-shadow: 0 6px 16px rgba(239, 68, 68, 0.2);">';
-            html += '<label style="font-size: 10px; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 10px; opacity: 0.9;">📊 Remaining</label>';
-            html += '<input type="number" value="' + chapatiRemaining + '" id="chapati-remaining" onchange="updateChapati()" placeholder="0" style="width: 100%; padding: 12px; font-size: 22px; border: none; border-radius: 8px; font-weight: 800; text-align: center; color: #dc2626; background: white;">';
-            html += '<p style="margin: 8px 0 0 0; font-size: 11px; opacity: 0.9;">carry to tomorrow</p>';
+            html += '<label style="font-size: 11px; font-weight: 700; text-transform: uppercase; display: block; margin-bottom: 12px; opacity: 0.9;">📊 Remaining</label>';
+            html += '<input type="number" value="' + chapatiRemaining + '" id="chapati-remaining" onchange="updateChapati()" placeholder="0" style="width: 100%; padding: 14px; font-size: 22px; border: none; border-radius: 8px; font-weight: 800; text-align: center; color: #dc2626; background: white;">';
+            html += '<p style="margin: 8px 0 0 0; font-size: 12px; opacity: 0.9;">carry to tomorrow</p>';
             html += '</div>';
             
             html += '</div>';
