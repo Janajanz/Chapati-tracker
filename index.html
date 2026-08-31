@@ -361,6 +361,17 @@
             } else {
                 html += '<p style="color: #666; margin: 0;">No items from yesterday</p>';
             }
+            
+            // ADD NEW OPENING ITEM FORM
+            html += '<div style="margin-top: 16px; padding: 14px; background: white; border-radius: 6px; border: 2px dashed #28a745;">';
+            html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 600; color: #28a745; text-transform: uppercase;">➕ Add Item to Opening Stock</p>';
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: end;">';
+            html += '<input type="text" id="opening-item" placeholder="Item name" style="padding: 8px; border: 1px solid #28a745; border-radius: 4px; font-size: 12px;">';
+            html += '<input type="number" id="opening-qty" placeholder="Qty" style="padding: 8px; border: 1px solid #28a745; border-radius: 4px; font-size: 12px;">';
+            html += '<input type="number" id="opening-cost" placeholder="Cost/unit" style="padding: 8px; border: 1px solid #28a745; border-radius: 4px; font-size: 12px;">';
+            html += '<button class="btn btn-primary" onclick="addOpeningItem()" style="background: #28a745; padding: 8px 12px; font-size: 11px;">✓ Add</button>';
+            html += '</div>';
+            html += '</div>';
             html += '</div>';
             
             // BUILD CONSOLIDATED ITEMS
@@ -554,6 +565,22 @@
             return html;
         }
 
+        function addOpeningItem() {
+            const day = getDay(today);
+            const item = document.getElementById('opening-item').value.trim();
+            const qty = parseInt(document.getElementById('opening-qty').value) || 0;
+            const cost = parseInt(document.getElementById('opening-cost').value) || 0;
+            if (!item || qty <= 0 || cost <= 0) { alert('Fill all fields'); return; }
+            day.carriedItems.push({item, qty, unitCost: cost});
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            document.getElementById('opening-item').value = '';
+            document.getElementById('opening-qty').value = '';
+            document.getElementById('opening-cost').value = '';
+            renderInventory();
+        }
+        
         function addOwnerStock() {
             const day = getDay(today);
             const item = document.getElementById('owner-item').value.trim();
@@ -591,7 +618,6 @@
         function delPurchase(i) { const day = getDay(today); day.purchases.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
         function delCarriedItem(i) { const day = getDay(today); day.carriedItems.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
         function delOwnerStock(i) { const day = getDay(today); day.ownerStock.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
-        function delPurchase(i) { const day = getDay(today); day.purchases.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
         function delUsage(i) { const day = getDay(today); day.usage.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
 
         function autoFillUsageCost() {
