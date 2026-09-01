@@ -954,21 +954,140 @@
         function renderAnalytics() {
             const data = load();
             const days = data.days || {};
-            const daysList = Object.keys(days).sort().reverse().slice(0, 7);
+            const daysList = Object.keys(days).sort().reverse();
             
-            let html = '<h3>Last 7 Days</h3>';
-            daysList.forEach(date => {
+            let html = '';
+            
+            // TIME PERIOD SELECTOR
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; margin-bottom: 24px;">';
+            html += '<button class="btn btn-primary" onclick="showAnalyticsPeriod(\'today\')" style="background: #8B4513; font-size: 13px; padding: 12px; margin-bottom: 0;">Today</button>';
+            html += '<button class="btn btn-primary" onclick="showAnalyticsPeriod(\'week\')" style="background: #8B4513; font-size: 13px; padding: 12px; margin-bottom: 0;">7 Days</button>';
+            html += '<button class="btn btn-primary" onclick="showAnalyticsPeriod(\'month\')" style="background: #8B4513; font-size: 13px; padding: 12px; margin-bottom: 0;">Month</button>';
+            html += '<button class="btn btn-primary" onclick="showAnalyticsPeriod(\'all\')" style="background: #8B4513; font-size: 13px; padding: 12px; margin-bottom: 0;">All Time</button>';
+            html += '</div>';
+            
+            // Calculate metrics for last 7 days
+            const last7 = daysList.slice(0, 7);
+            let totalRev = 0, totalCogs = 0, totalExp = 0;
+            
+            last7.forEach(date => {
+                const d = days[date];
+                totalRev += d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                totalCogs += d.usage.reduce((s, u) => s + u.cost, 0);
+                totalExp += d.expenses.reduce((s, e) => s + e.amount, 0);
+            });
+            
+            const totalProfit = totalRev - totalCogs - totalExp;
+            const avgDaily = last7.length > 0 ? Math.round(totalProfit / last7.length) : 0;
+            
+            // SUMMARY CARDS - Four metrics
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px;">';
+            
+            // Total Revenue
+            html += '<div style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 6px 16px rgba(59, 130, 246, 0.2);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">💰 Revenue</p>';
+            html += '<p style="margin: 0; font-size: 24px; font-weight: 800;">UGX ' + fmt(totalRev) + '</p>';
+            html += '<p style="margin: 6px 0 0 0; font-size: 11px; opacity: 0.85;">Last 7 days</p>';
+            html += '</div>';
+            
+            // Total COGS
+            html += '<div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 6px 16px rgba(245, 158, 11, 0.2);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">📦 COGS</p>';
+            html += '<p style="margin: 0; font-size: 24px; font-weight: 800;">UGX ' + fmt(totalCogs) + '</p>';
+            html += '<p style="margin: 6px 0 0 0; font-size: 11px; opacity: 0.85;">Cost of goods</p>';
+            html += '</div>';
+            
+            // Total Expenses
+            html += '<div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 6px 16px rgba(239, 68, 68, 0.2);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">💸 Expenses</p>';
+            html += '<p style="margin: 0; font-size: 24px; font-weight: 800;">UGX ' + fmt(totalExp) + '</p>';
+            html += '<p style="margin: 6px 0 0 0; font-size: 11px; opacity: 0.85;">Operating costs</p>';
+            html += '</div>';
+            
+            // Total Profit
+            html += '<div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 6px 16px rgba(16, 185, 129, 0.2);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">✅ PROFIT</p>';
+            html += '<p style="margin: 0; font-size: 24px; font-weight: 800;">UGX ' + fmt(totalProfit) + '</p>';
+            html += '<p style="margin: 6px 0 0 0; font-size: 11px; opacity: 0.85;">Net profit</p>';
+            html += '</div>';
+            
+            html += '</div>';
+            
+            // AVERAGE DAILY
+            html += '<div style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 24px; box-shadow: 0 6px 16px rgba(139, 92, 246, 0.2);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">📊 Average Daily Profit</p>';
+            html += '<p style="margin: 0; font-size: 32px; font-weight: 800;">UGX ' + fmt(avgDaily) + '</p>';
+            html += '<p style="margin: 8px 0 0 0; font-size: 12px; opacity: 0.9;">Based on ' + last7.length + ' days</p>';
+            html += '</div>';
+            
+            // DAILY BREAKDOWN - Last 7 days
+            html += '<h3 style="margin: 24px 0 16px 0; font-size: 18px; font-weight: 700;">📅 Daily Breakdown (Last 7 Days)</h3>';
+            
+            last7.forEach((date, idx) => {
                 const d = days[date];
                 const rev = d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
                 const cogs = d.usage.reduce((s, u) => s + u.cost, 0);
                 const exp = d.expenses.reduce((s, e) => s + e.amount, 0);
                 const profit = rev - cogs - exp;
-                html += '<div class="item-card"><p><strong>' + date + '</strong></p>';
-                html += '<p style="font-size: 12px;">Revenue: UGX ' + fmt(rev) + ' | COGS: UGX ' + fmt(cogs) + ' | Expenses: UGX ' + fmt(exp) + '</p>';
-                html += '<p style="font-weight: 700; color: #27a745;">Profit: UGX ' + fmt(profit) + '</p></div>';
+                
+                const dateObj = new Date(date + 'T00:00:00');
+                const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                const profitColor = profit > 0 ? '#10b981' : '#ef4444';
+                
+                html += '<div style="background: white; padding: 16px; border-radius: 10px; margin-bottom: 12px; border-left: 5px solid ' + profitColor + '; box-shadow: 0 2px 6px rgba(0,0,0,0.08);">';
+                html += '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">';
+                html += '<div><p style="margin: 0; font-weight: 700; font-size: 15px;">' + dayName + ' - ' + date + '</p>';
+                html += '<p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">Revenue: UGX ' + fmt(rev) + '</p></div>';
+                html += '<p style="margin: 0; font-size: 18px; font-weight: 800; color: ' + profitColor + ';">UGX ' + fmt(profit) + '</p>';
+                html += '</div>';
+                html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px; color: #666;">';
+                html += '<p style="margin: 0;">COGS: UGX ' + fmt(cogs) + '</p>';
+                html += '<p style="margin: 0;">Expenses: UGX ' + fmt(exp) + '</p>';
+                html += '</div>';
+                html += '</div>';
             });
             
+            if (last7.length === 0) {
+                html += '<p style="color: #999; text-align: center; padding: 20px;">No data available</p>';
+            }
+            
             document.getElementById('analytics-content').innerHTML = html;
+        }
+        
+        function showAnalyticsPeriod(period) {
+            const data = load();
+            const days = data.days || {};
+            const daysList = Object.keys(days).sort().reverse();
+            
+            let filteredDays = [];
+            const today = new Date();
+            
+            if (period === 'today') {
+                const todayStr = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+                filteredDays = daysList.filter(d => d === todayStr);
+            } else if (period === 'week') {
+                filteredDays = daysList.slice(0, 7);
+            } else if (period === 'month') {
+                const monthAgo = new Date();
+                monthAgo.setDate(monthAgo.getDate() - 30);
+                filteredDays = daysList.filter(d => {
+                    const dDate = new Date(d + 'T00:00:00');
+                    return dDate >= monthAgo;
+                });
+            } else if (period === 'all') {
+                filteredDays = daysList;
+            }
+            
+            let totalRev = 0, totalCogs = 0, totalExp = 0;
+            filteredDays.forEach(date => {
+                const d = days[date];
+                totalRev += d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                totalCogs += d.usage.reduce((s, u) => s + u.cost, 0);
+                totalExp += d.expenses.reduce((s, e) => s + e.amount, 0);
+            });
+            
+            const totalProfit = totalRev - totalCogs - totalExp;
+            alert('📊 ' + period.toUpperCase() + ' Summary\n\nRevenue: UGX ' + fmt(totalRev) + '\nCOGS: UGX ' + fmt(totalCogs) + '\nExpenses: UGX ' + fmt(totalExp) + '\nProfit: UGX ' + fmt(totalProfit));
         }
 
         function renderHistory() {
