@@ -709,12 +709,14 @@
             html += '<div style="background: #ffe8eb; padding: 16px; border-radius: 8px; border: 2px dashed #dc3545; margin-bottom: 16px;">';
             html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #dc3545; text-transform: uppercase;">➕ Record Usage</p>';
             html += '<div style="display: grid; gap: 10px;">';
-            html += '<select id="usage-item" style="padding: 12px; border: 1px solid #dc3545; border-radius: 6px; font-size: 13px;"><option value="">Select item...</option>';
+            html += '<select id="usage-item" onchange="autoFillUsageCost()" style="padding: 12px; border: 1px solid #dc3545; border-radius: 6px; font-size: 13px;"><option value="">Select item...</option>';
             Object.keys(allItems).forEach(name => {
-                html += '<option value="' + name + '">' + name + ' (Qty: ' + allItems[name].current + ')</option>';
+                const unitCost = allItems[name].unitCost;
+                html += '<option value="' + name + '|' + unitCost + '">' + name + ' (Qty: ' + allItems[name].current + ' @ UGX ' + fmt(unitCost) + ')</option>';
             });
             html += '</select>';
-            html += '<input type="number" id="usage-qty" placeholder="Quantity used" style="padding: 12px; border: 1px solid #dc3545; border-radius: 6px; font-size: 13px;">';
+            html += '<input type="number" id="usage-qty" placeholder="Quantity used" style="padding: 12px; border: 1px solid #dc3545; border-radius: 6px; font-size: 13px;" onchange="autoFillUsageCost()">';
+            html += '<input type="number" id="usage-cost" placeholder="Cost (auto-filled)" readonly style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #f5f5f5;">';
             html += '<button class="btn btn-primary" onclick="addUsage()" style="background: #dc3545; margin-bottom: 0;">✓ Record Usage</button>';
             html += '</div></div>';
             
@@ -892,15 +894,26 @@
             const day = getDay(today);
             const val = document.getElementById('usage-item').value.split('|');
             const item = val[0];
+            const unitCost = parseInt(val[1]) || 0;
             const qty = parseInt(document.getElementById('usage-qty').value) || 0;
-            const cost = parseInt(document.getElementById('usage-cost').value) || 0;
-            if (!item || qty <= 0 || cost <= 0) { alert('Fill all fields'); return; }
-            day.usage.push({item, qty, unitCost: cost, cost: qty * cost});
+            const cost = qty * unitCost;
+            if (!item || qty <= 0 || unitCost <= 0) { alert('Select item and fill quantity'); return; }
+            day.usage.push({item, qty, unitCost: unitCost, cost: cost});
             const data = load();
             data.days[today] = day;
             save(data);
+            document.getElementById('usage-item').value = '';
             document.getElementById('usage-qty').value = '';
+            document.getElementById('usage-cost').value = '';
             renderInventory();
+        }
+        
+        function autoFillUsageCost() {
+            const val = document.getElementById('usage-item').value.split('|');
+            const unitCost = parseInt(val[1]) || 0;
+            const qty = parseInt(document.getElementById('usage-qty').value) || 0;
+            const cost = qty * unitCost;
+            document.getElementById('usage-cost').value = cost > 0 ? fmt(cost) : '';
         }
 
         function renderSales() {
