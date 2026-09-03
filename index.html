@@ -976,25 +976,98 @@
             
             const allPurchases = (day.ownerStock || []).reduce((s, os) => s + (os.qty * os.unitCost), 0) + (day.purchases || []).reduce((s, p) => s + (p.qty * p.unitCost), 0);
             const cash = revenue - allPurchases - expenses;
+            const totalCapital = cash + stockValue;
+            const yourShare = profit / 2;
+            const workerShare = profit / 2;
             
-            let html = '<h3>Cash Position</h3>';
-            html += '<div class="summary"><div class="summary-row"><span>Revenue (Sales)</span><span>UGX ' + fmt(revenue) + '</span></div>';
-            html += '<div class="summary-row"><span>- All Purchases</span><span>UGX ' + fmt(allPurchases) + '</span></div>';
-            html += '<div class="summary-row"><span>- Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
-            html += '<div class="summary-row total"><span>Cash at Hand</span><span>UGX ' + fmt(cash) + '</span></div></div>';
+            // Calculate debtors and creditors totals
+            const debtorsTotal = day.debtors.reduce((s, d) => s + (d.amount - d.paid), 0);
+            const creditorsTotal = day.creditors.reduce((s, c) => s + (c.amount - c.paid), 0);
             
-            html += '<h3>Profit (50/50 Split)</h3>';
-            html += '<div class="summary"><div class="summary-row"><span>Revenue</span><span>UGX ' + fmt(revenue) + '</span></div>';
-            html += '<div class="summary-row"><span>- COGS</span><span>UGX ' + fmt(cogs) + '</span></div>';
-            html += '<div class="summary-row"><span>- Expenses</span><span>UGX ' + fmt(expenses) + '</span></div>';
-            html += '<div class="summary-row total"><span>Total Profit</span><span>UGX ' + fmt(profit) + '</span></div>';
-            html += '<div class="summary-row"><span>Your Share (50%)</span><span style="color: #27a745; font-weight: 700;">UGX ' + fmt(profit / 2) + '</span></div>';
-            html += '<div class="summary-row"><span>Worker Share (50%)</span><span style="color: #2196f3; font-weight: 700;">UGX ' + fmt(profit / 2) + '</span></div></div>';
+            let html = '';
             
-            html += '<h3>Total Capital</h3>';
-            html += '<div class="summary"><div class="summary-row"><span>Cash</span><span>UGX ' + fmt(cash) + '</span></div>';
-            html += '<div class="summary-row total"><span>+ Stock Value</span><span>UGX ' + fmt(stockValue) + '</span></div>';
-            html += '<div class="summary-row total" style="color: #27a745;"><span>TOTAL CAPITAL</span><span>UGX ' + fmt(cash + stockValue) + '</span></div></div>';
+            // HEADER with DATE
+            const dateObj = new Date(today + 'T00:00:00');
+            const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            html += '<div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #f0f0f0;">';
+            html += '<h2 style="margin: 0; font-size: 18px; color: #666; font-weight: 400;">' + dateStr + '</h2>';
+            html += '</div>';
+            
+            // BUSINESS SUMMARY - 6 CARDS
+            html += '<h3 style="margin: 0 0 20px 0; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #333;">📊 BUSINESS SUMMARY</h3>';
+            
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px;">';
+            
+            // CASH AT HAND (Green)
+            html += '<div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 6px 16px rgba(16, 185, 129, 0.2);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">💰 Cash at Hand</p>';
+            html += '<p style="margin: 0; font-size: 24px; font-weight: 800;">UGX ' + fmt(cash) + '</p>';
+            html += '<p style="margin: 6px 0 0 0; font-size: 11px; opacity: 0.85;">Ready to use</p>';
+            html += '</div>';
+            
+            // STOCK VALUE (Blue)
+            html += '<div style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 6px 16px rgba(59, 130, 246, 0.2);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">📦 Stock Value</p>';
+            html += '<p style="margin: 0; font-size: 24px; font-weight: 800;">UGX ' + fmt(stockValue) + '</p>';
+            html += '<p style="margin: 6px 0 0 0; font-size: 11px; opacity: 0.85;">Inventory worth</p>';
+            html += '</div>';
+            
+            // TOTAL CAPITAL (Purple)
+            html += '<div style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 6px 16px rgba(139, 92, 246, 0.2);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">💎 Total Capital</p>';
+            html += '<p style="margin: 0; font-size: 24px; font-weight: 800;">UGX ' + fmt(totalCapital) + '</p>';
+            html += '<p style="margin: 6px 0 0 0; font-size: 11px; opacity: 0.85;">Cash + Stock</p>';
+            html += '</div>';
+            
+            // YOUR PROFIT SHARE (Green Gradient)
+            html += '<div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 6px 16px rgba(16, 185, 129, 0.2);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">✅ Your Share</p>';
+            html += '<p style="margin: 0; font-size: 24px; font-weight: 800;">UGX ' + fmt(yourShare) + '</p>';
+            html += '<p style="margin: 6px 0 0 0; font-size: 11px; opacity: 0.85;">50% of profit</p>';
+            html += '</div>';
+            
+            // TOTAL DEBTORS (Yellow)
+            html += '<div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 6px 16px rgba(245, 158, 11, 0.2);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">👥 Debtors</p>';
+            html += '<p style="margin: 0; font-size: 24px; font-weight: 800;">UGX ' + fmt(debtorsTotal) + '</p>';
+            html += '<p style="margin: 6px 0 0 0; font-size: 11px; opacity: 0.85;">Amount owed to you</p>';
+            html += '</div>';
+            
+            // TOTAL CREDITORS (Pink)
+            html += '<div style="background: linear-gradient(135deg, #ec4899 0%, #be185d 100%); color: white; padding: 20px; border-radius: 12px; box-shadow: 0 6px 16px rgba(236, 72, 153, 0.2);">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; font-weight: 700; text-transform: uppercase; opacity: 0.9;">💳 Creditors</p>';
+            html += '<p style="margin: 0; font-size: 24px; font-weight: 800;">UGX ' + fmt(creditorsTotal) + '</p>';
+            html += '<p style="margin: 6px 0 0 0; font-size: 11px; opacity: 0.85;">Amount you owe</p>';
+            html += '</div>';
+            
+            html += '</div>';
+            
+            // DETAILED BREAKDOWN
+            html += '<h3 style="margin: 24px 0 16px 0; font-size: 18px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #333;">📋 DETAILED BREAKDOWN</h3>';
+            
+            // CASH CALCULATION
+            html += '<div style="background: white; padding: 18px; border-radius: 10px; margin-bottom: 14px; border-left: 5px solid #10b981; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">';
+            html += '<p style="margin: 0 0 12px 0; font-size: 13px; font-weight: 700; color: #10b981;">💰 CASH AT HAND CALCULATION</p>';
+            html += '<div style="background: #f0fdf4; padding: 12px; border-radius: 6px; font-size: 12px;">';
+            html += '<p style="margin: 6px 0; display: flex; justify-content: space-between;"><span>Revenue (Sales)</span><span style="font-weight: 700;">UGX ' + fmt(revenue) + '</span></p>';
+            html += '<p style="margin: 6px 0; display: flex; justify-content: space-between;"><span>- All Purchases</span><span style="font-weight: 700;">UGX ' + fmt(allPurchases) + '</span></p>';
+            html += '<p style="margin: 6px 0 12px 0; display: flex; justify-content: space-between;"><span>- Expenses</span><span style="font-weight: 700;">UGX ' + fmt(expenses) + '</span></p>';
+            html += '<p style="margin: 0; padding-top: 8px; border-top: 2px solid #d1fae5; display: flex; justify-content: space-between; color: #10b981; font-weight: 800;"><span>Cash at Hand</span><span>UGX ' + fmt(cash) + '</span></p>';
+            html += '</div>';
+            html += '</div>';
+            
+            // PROFIT CALCULATION
+            html += '<div style="background: white; padding: 18px; border-radius: 10px; margin-bottom: 14px; border-left: 5px solid #3b82f6; box-shadow: 0 2px 8px rgba(0,0,0,0.08);">';
+            html += '<p style="margin: 0 0 12px 0; font-size: 13px; font-weight: 700; color: #3b82f6;">📊 PROFIT CALCULATION (50/50 SPLIT)</p>';
+            html += '<div style="background: #f0f9ff; padding: 12px; border-radius: 6px; font-size: 12px;">';
+            html += '<p style="margin: 6px 0; display: flex; justify-content: space-between;"><span>Revenue (Sales)</span><span style="font-weight: 700;">UGX ' + fmt(revenue) + '</span></p>';
+            html += '<p style="margin: 6px 0; display: flex; justify-content: space-between;"><span>- COGS (Cost of Goods)</span><span style="font-weight: 700;">UGX ' + fmt(cogs) + '</span></p>';
+            html += '<p style="margin: 6px 0 12px 0; display: flex; justify-content: space-between;"><span>- Expenses</span><span style="font-weight: 700;">UGX ' + fmt(expenses) + '</span></p>';
+            html += '<p style="margin: 6px 0; padding: 8px 0; border-top: 2px solid #bfdbfe; border-bottom: 2px solid #bfdbfe; display: flex; justify-content: space-between; font-weight: 800; color: #3b82f6;"><span>Total Profit</span><span>UGX ' + fmt(profit) + '</span></p>';
+            html += '<p style="margin: 6px 0; display: flex; justify-content: space-between;"><span>Your Share (50%)</span><span style="color: #10b981; font-weight: 800;">UGX ' + fmt(yourShare) + '</span></p>';
+            html += '<p style="margin: 0; display: flex; justify-content: space-between;"><span>Worker Share (50%)</span><span style="color: #2196f3; font-weight: 800;">UGX ' + fmt(workerShare) + '</span></p>';
+            html += '</div>';
+            html += '</div>';
             
             document.getElementById('capital-content').innerHTML = html;
         }
