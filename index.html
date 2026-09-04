@@ -631,8 +631,8 @@
                 html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.cost + '">' + prod.name + '</option>';
             });
             html += '</select>';
-            html += '<input type="number" id="opening-qty" placeholder="Quantity" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;">';
-            html += '<input type="number" id="opening-cost" placeholder="Cost per unit" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;">';
+            html += '<input type="number" id="opening-qty" placeholder="Quantity (0.5, 1.5...)" step="0.01"" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;">';
+            html += '<input type="number" id="opening-cost" placeholder="Cost per unit" step="0.01" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;">';
             html += '<button class="btn btn-primary" onclick="addOpeningItem()" style="background: #28a745; margin-bottom: 0;">✓ Add Item</button>';
             html += '</div></div>';
             
@@ -674,8 +674,8 @@
                 html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.cost + '">' + prod.name + '</option>';
             });
             html += '</select>';
-            html += '<input type="number" id="owner-qty" placeholder="Quantity" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;">';
-            html += '<input type="number" id="owner-cost" placeholder="Cost per unit (can override)" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;">';
+            html += '<input type="number" id="owner-qty" placeholder="Quantity (0.5, 1.5...)" step="0.01" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;">';
+            html += '<input type="number" id="owner-cost" placeholder="Cost per unit" step="0.01" (can override)" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;">';
             html += '<button class="btn btn-primary" onclick="addOwnerStock()" style="background: #ff9800; margin-bottom: 0;">✓ Add Item</button>';
             html += '</div></div>';
             
@@ -722,8 +722,8 @@
                 html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.price + '">' + prod.name + ' (UGX ' + fmt(prod.price) + ')</option>';
             });
             html += '</select>';
-            html += '<input type="number" id="purchase-qty" placeholder="Quantity" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px;">';
-            html += '<input type="number" id="purchase-cost" placeholder="Cost per unit (can override)" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px;">';
+            html += '<input type="number" id="purchase-qty" placeholder="Quantity (0.5, 1.5...)" step="0.01" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px;">';
+            html += '<input type="number" id="purchase-cost" placeholder="Cost per unit" step="0.01" (can override)" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px;">';
             html += '<button class="btn btn-primary" onclick="addPurchase()" style="background: #2196f3; margin-bottom: 0;">✓ Add Item</button>';
             html += '</div></div>';
             
@@ -769,7 +769,7 @@
                 html += '<option value="' + name + '|' + unitCost + '">' + name + ' (Qty: ' + allItems[name].current + ' @ UGX ' + fmt(unitCost) + ')</option>';
             });
             html += '</select>';
-            html += '<input type="number" id="usage-qty" placeholder="Quantity used" style="padding: 12px; border: 1px solid #dc3545; border-radius: 6px; font-size: 13px;" onchange="autoFillUsageCost()">';
+            html += '<input type="number" id="usage-qty" placeholder="Quantity (0.5, 1.5...)" step="0.01" used" style="padding: 12px; border: 1px solid #dc3545; border-radius: 6px; font-size: 13px;" onchange="autoFillUsageCost()">';
             html += '<input type="number" id="usage-cost" placeholder="Cost (auto-filled)" readonly style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #f5f5f5;">';
             html += '<button class="btn btn-primary" onclick="addUsage()" style="background: #dc3545; margin-bottom: 0;">✓ Record Usage</button>';
             html += '</div></div>';
@@ -887,11 +887,28 @@
         function addOpeningItem() {
             const val = document.getElementById('opening-item').value.split('|');
             const item = val[1];
-            const qty = parseInt(document.getElementById('opening-qty').value) || 0;
-            const unitCost = parseInt(document.getElementById('opening-cost').value) || 0;
+            const qty = parseFloat(document.getElementById('opening-qty').value) || 0;
+            const unitCost = parseFloat(document.getElementById('opening-cost').value) || 0;
             if (!item || qty <= 0 || unitCost <= 0) { alert('Select item, enter qty and cost'); return; }
+            
             const day = getDay(today);
-            day.carriedItems.push({item, qty, unitCost});
+            
+            // Check if item already exists
+            const existingIdx = day.carriedItems.findIndex(ci => ci.item === item);
+            if (existingIdx >= 0) {
+                // Item exists - consolidate
+                const existing = day.carriedItems[existingIdx];
+                const totalValue = (existing.qty * existing.unitCost) + (qty * unitCost);
+                const newQty = existing.qty + qty;
+                const avgCost = Math.round(totalValue / newQty);
+                existing.qty = newQty;
+                existing.unitCost = avgCost;
+                console.log('Consolidated ' + item + ': qty=' + newQty + ', avgCost=' + avgCost);
+            } else {
+                // New item
+                day.carriedItems.push({item, qty, unitCost});
+            }
+            
             const data = load();
             data.days[today] = day;
             save(data);
@@ -904,11 +921,28 @@
         function addOwnerStock() {
             const val = document.getElementById('owner-item').value.split('|');
             const item = val[1];
-            const qty = parseInt(document.getElementById('owner-qty').value) || 0;
-            const unitCost = parseInt(document.getElementById('owner-cost').value) || 0;
+            const qty = parseFloat(document.getElementById('owner-qty').value) || 0;
+            const unitCost = parseFloat(document.getElementById('owner-cost').value) || 0;
             if (!item || qty <= 0 || unitCost <= 0) { alert('Select item, enter qty and cost'); return; }
+            
             const day = getDay(today);
-            day.ownerStock.push({item, qty, unitCost});
+            
+            // Check if item already exists
+            const existingIdx = day.ownerStock.findIndex(os => os.item === item);
+            if (existingIdx >= 0) {
+                // Item exists - consolidate
+                const existing = day.ownerStock[existingIdx];
+                const totalValue = (existing.qty * existing.unitCost) + (qty * unitCost);
+                const newQty = existing.qty + qty;
+                const avgCost = Math.round(totalValue / newQty);
+                existing.qty = newQty;
+                existing.unitCost = avgCost;
+                console.log('Consolidated ' + item + ': qty=' + newQty + ', avgCost=' + avgCost);
+            } else {
+                // New item
+                day.ownerStock.push({item, qty, unitCost});
+            }
+            
             const data = load();
             data.days[today] = day;
             save(data);
@@ -923,11 +957,28 @@
         function addPurchase() {
             const val = document.getElementById('purchase-item').value.split('|');
             const item = val[1];
-            const qty = parseInt(document.getElementById('purchase-qty').value) || 0;
-            const unitCost = parseInt(document.getElementById('purchase-cost').value) || 0;
+            const qty = parseFloat(document.getElementById('purchase-qty').value) || 0;
+            const unitCost = parseFloat(document.getElementById('purchase-cost').value) || 0;
             if (!item || qty <= 0 || unitCost <= 0) { alert('Select item, enter qty and cost'); return; }
+            
             const day = getDay(today);
-            day.purchases.push({item, qty, unitCost});
+            
+            // Check if item already exists
+            const existingIdx = day.purchases.findIndex(p => p.item === item);
+            if (existingIdx >= 0) {
+                // Item exists - consolidate
+                const existing = day.purchases[existingIdx];
+                const totalValue = (existing.qty * existing.unitCost) + (qty * unitCost);
+                const newQty = existing.qty + qty;
+                const avgCost = Math.round(totalValue / newQty);
+                existing.qty = newQty;
+                existing.unitCost = avgCost;
+                console.log('Consolidated ' + item + ': qty=' + newQty + ', avgCost=' + avgCost);
+            } else {
+                // New item
+                day.purchases.push({item, qty, unitCost});
+            }
+            
             const data = load();
             data.days[today] = day;
             save(data);
@@ -951,11 +1002,24 @@
             const day = getDay(today);
             const val = document.getElementById('usage-item').value.split('|');
             const item = val[0];
-            const unitCost = parseInt(val[1]) || 0;
-            const qty = parseInt(document.getElementById('usage-qty').value) || 0;
+            const unitCost = parseFloat(val[1]) || 0;
+            const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
             const cost = qty * unitCost;
             if (!item || qty <= 0 || unitCost <= 0) { alert('Select item and fill quantity'); return; }
-            day.usage.push({item, qty, unitCost: unitCost, cost: cost});
+            
+            // Check if item already exists
+            const existingIdx = day.usage.findIndex(u => u.item === item);
+            if (existingIdx >= 0) {
+                // Item exists - consolidate
+                const existing = day.usage[existingIdx];
+                existing.qty += qty;
+                existing.cost += cost;
+                console.log('Consolidated usage ' + item + ': qty=' + existing.qty + ', cost=' + existing.cost);
+            } else {
+                // New item
+                day.usage.push({item, qty, unitCost: unitCost, cost: cost});
+            }
+            
             const data = load();
             data.days[today] = day;
             save(data);
