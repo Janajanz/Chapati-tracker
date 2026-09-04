@@ -234,9 +234,11 @@
         function load() { 
             const data = JSON.parse(localStorage.getItem(KEY) || '{"days":{}}');
             if (!data.products) data.products = [
-                {id: 1, name: 'Chapati', price: 1000},
-                {id: 2, name: 'Eggs', price: 500},
-                {id: 3, name: 'Rolex', price: 5000}
+                {id: 1, name: 'Flour', price: 5000},
+                {id: 2, name: 'Cooking Oil', price: 8000},
+                {id: 3, name: 'Ingredients', price: 3000},
+                {id: 4, name: 'Eggs', price: 500},
+                {id: 5, name: 'Beans', price: 4000}
             ];
             return data;
         }
@@ -602,7 +604,7 @@
         
         function renderOpeningInventoryExpanded(day) {
             const data = load();
-            const products = data.products || [];
+            const items = data.inventoryItems || [];
             let html = '';
             const totalValue = day.carriedItems.reduce((s, ci) => s + (ci.qty * ci.unitCost), 0);
             
@@ -625,8 +627,8 @@
             html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #28a745; text-transform: uppercase;">➕ Add Item</p>';
             html += '<div style="display: grid; gap: 10px;">';
             html += '<select id="opening-item" onchange="autoFillOpeningCost()" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;"><option value="">-- Select Item --</option>';
-            products.forEach(prod => {
-                html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.price + '">' + prod.name + ' (UGX ' + fmt(prod.price) + ')</option>';
+            items.forEach(prod => {
+                html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.cost + '">' + prod.name + '</option>';
             });
             html += '</select>';
             html += '<input type="number" id="opening-qty" placeholder="Quantity" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;">';
@@ -643,16 +645,10 @@
             return html;
         }
         
-        function autoFillOpeningCost() {
-            const val = document.getElementById('opening-item').value.split('|');
-            const cost = val[2];
-            if (cost) document.getElementById('opening-cost').value = cost;
-        }
-        
         
         function renderOwnerStockExpanded(day) {
             const data = load();
-            const products = data.products || [];
+            const items = data.inventoryItems || [];
             let html = '';
             const totalValue = day.ownerStock.reduce((s, os) => s + (os.qty * os.unitCost), 0);
             
@@ -674,8 +670,8 @@
             html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #ff9800; text-transform: uppercase;">➕ Add Owner Purchase</p>';
             html += '<div style="display: grid; gap: 10px;">';
             html += '<select id="owner-item" onchange="autoFillOwnerCost()" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;"><option value="">-- Select Item --</option>';
-            products.forEach(prod => {
-                html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.price + '">' + prod.name + ' (UGX ' + fmt(prod.price) + ')</option>';
+            items.forEach(prod => {
+                html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.cost + '">' + prod.name + '</option>';
             });
             html += '</select>';
             html += '<input type="number" id="owner-qty" placeholder="Quantity" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;">';
