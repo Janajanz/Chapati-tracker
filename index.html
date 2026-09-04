@@ -234,8 +234,8 @@
         function load() { 
             const data = JSON.parse(localStorage.getItem(KEY) || '{"days":{}}');
             if (!data.products) data.products = [
-                {id: 1, name: 'Chapati', price: 2000},
-                {id: 2, name: 'Eggs', price: 3000},
+                {id: 1, name: 'Chapati', price: 1000},
+                {id: 2, name: 'Eggs', price: 500},
                 {id: 3, name: 'Rolex', price: 5000}
             ];
             return data;
@@ -601,6 +601,8 @@
         }
         
         function renderOpeningInventoryExpanded(day) {
+            const data = load();
+            const products = data.products || [];
             let html = '';
             const totalValue = day.carriedItems.reduce((s, ci) => s + (ci.qty * ci.unitCost), 0);
             
@@ -618,11 +620,15 @@
                 html += '<p style="color: #999; text-align: center; padding: 20px;">No items from yesterday</p>';
             }
             
-            // Add form
+            // Add form with dropdown
             html += '<div style="background: #f0f8f4; padding: 16px; border-radius: 8px; border: 2px dashed #28a745; margin-bottom: 16px;">';
-            html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #28a745; text-transform: uppercase;">➕ Add New Item</p>';
+            html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #28a745; text-transform: uppercase;">➕ Add Item</p>';
             html += '<div style="display: grid; gap: 10px;">';
-            html += '<input type="text" id="opening-item" placeholder="Item name" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;">';
+            html += '<select id="opening-item" onchange="autoFillOpeningCost()" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;"><option value="">-- Select Item --</option>';
+            products.forEach(prod => {
+                html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.price + '">' + prod.name + ' (UGX ' + fmt(prod.price) + ')</option>';
+            });
+            html += '</select>';
             html += '<input type="number" id="opening-qty" placeholder="Quantity" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;">';
             html += '<input type="number" id="opening-cost" placeholder="Cost per unit" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;">';
             html += '<button class="btn btn-primary" onclick="addOpeningItem()" style="background: #28a745; margin-bottom: 0;">✓ Add Item</button>';
@@ -637,7 +643,16 @@
             return html;
         }
         
+        function autoFillOpeningCost() {
+            const val = document.getElementById('opening-item').value.split('|');
+            const cost = val[2];
+            if (cost) document.getElementById('opening-cost').value = cost;
+        }
+        
+        
         function renderOwnerStockExpanded(day) {
+            const data = load();
+            const products = data.products || [];
             let html = '';
             const totalValue = day.ownerStock.reduce((s, os) => s + (os.qty * os.unitCost), 0);
             
@@ -654,13 +669,17 @@
                 html += '<p style="color: #999; text-align: center; padding: 20px;">No owner stock today</p>';
             }
             
-            // Add form
+            // Add form with dropdown
             html += '<div style="background: #fffaf0; padding: 16px; border-radius: 8px; border: 2px dashed #ff9800; margin-bottom: 16px;">';
             html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #ff9800; text-transform: uppercase;">➕ Add Owner Purchase</p>';
             html += '<div style="display: grid; gap: 10px;">';
-            html += '<input type="text" id="owner-item" placeholder="Item name" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;">';
+            html += '<select id="owner-item" onchange="autoFillOwnerCost()" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;"><option value="">-- Select Item --</option>';
+            products.forEach(prod => {
+                html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.price + '">' + prod.name + ' (UGX ' + fmt(prod.price) + ')</option>';
+            });
+            html += '</select>';
             html += '<input type="number" id="owner-qty" placeholder="Quantity" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;">';
-            html += '<input type="number" id="owner-cost" placeholder="Cost per unit" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;">';
+            html += '<input type="number" id="owner-cost" placeholder="Cost per unit (can override)" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;">';
             html += '<button class="btn btn-primary" onclick="addOwnerStock()" style="background: #ff9800; margin-bottom: 0;">✓ Add Item</button>';
             html += '</div></div>';
             
@@ -673,7 +692,15 @@
             return html;
         }
         
+        function autoFillOwnerCost() {
+            const val = document.getElementById('owner-item').value.split('|');
+            const cost = val[2];
+            if (cost) document.getElementById('owner-cost').value = cost;
+        }
+        
         function renderWorkerPurchasesExpanded(day) {
+            const data = load();
+            const products = data.products || [];
             let html = '';
             const totalValue = day.purchases.reduce((s, p) => s + (p.qty * p.unitCost), 0);
             
@@ -690,13 +717,17 @@
                 html += '<p style="color: #999; text-align: center; padding: 20px;">No worker purchases today</p>';
             }
             
-            // Add form
+            // Add form with dropdown
             html += '<div style="background: #f0f9ff; padding: 16px; border-radius: 8px; border: 2px dashed #2196f3; margin-bottom: 16px;">';
             html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #2196f3; text-transform: uppercase;">➕ Add Worker Purchase</p>';
             html += '<div style="display: grid; gap: 10px;">';
-            html += '<input type="text" id="purchase-item" placeholder="Item name" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px;">';
+            html += '<select id="purchase-item" onchange="autoFillPurchaseCost()" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px;"><option value="">-- Select Item --</option>';
+            products.forEach(prod => {
+                html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.price + '">' + prod.name + ' (UGX ' + fmt(prod.price) + ')</option>';
+            });
+            html += '</select>';
             html += '<input type="number" id="purchase-qty" placeholder="Quantity" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px;">';
-            html += '<input type="number" id="purchase-cost" placeholder="Cost per unit" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px;">';
+            html += '<input type="number" id="purchase-cost" placeholder="Cost per unit (can override)" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px;">';
             html += '<button class="btn btn-primary" onclick="addPurchase()" style="background: #2196f3; margin-bottom: 0;">✓ Add Item</button>';
             html += '</div></div>';
             
@@ -707,6 +738,12 @@
             
             html += '<button class="btn btn-primary" onclick="toggleCard(\'worker\')" style="margin-top: 14px; background: #999;">✕ Close</button>';
             return html;
+        }
+        
+        function autoFillPurchaseCost() {
+            const val = document.getElementById('purchase-item').value.split('|');
+            const cost = val[2];
+            if (cost) document.getElementById('purchase-cost').value = cost;
         }
         
         function renderUsageExpanded(day, allItems) {
@@ -852,12 +889,13 @@
         }
 
         function addOpeningItem() {
-            const day = getDay(today);
-            const item = document.getElementById('opening-item').value.trim();
+            const val = document.getElementById('opening-item').value.split('|');
+            const item = val[1];
             const qty = parseInt(document.getElementById('opening-qty').value) || 0;
-            const cost = parseInt(document.getElementById('opening-cost').value) || 0;
-            if (!item || qty <= 0 || cost <= 0) { alert('Fill all fields'); return; }
-            day.carriedItems.push({item, qty, unitCost: cost});
+            const unitCost = parseInt(document.getElementById('opening-cost').value) || 0;
+            if (!item || qty <= 0 || unitCost <= 0) { alert('Select item, enter qty and cost'); return; }
+            const day = getDay(today);
+            day.carriedItems.push({item, qty, unitCost});
             const data = load();
             data.days[today] = day;
             save(data);
@@ -868,12 +906,13 @@
         }
         
         function addOwnerStock() {
-            const day = getDay(today);
-            const item = document.getElementById('owner-item').value.trim();
+            const val = document.getElementById('owner-item').value.split('|');
+            const item = val[1];
             const qty = parseInt(document.getElementById('owner-qty').value) || 0;
-            const cost = parseInt(document.getElementById('owner-cost').value) || 0;
-            if (!item || qty <= 0 || cost <= 0) { alert('Fill all fields'); return; }
-            day.ownerStock.push({item, qty, unitCost: cost});
+            const unitCost = parseInt(document.getElementById('owner-cost').value) || 0;
+            if (!item || qty <= 0 || unitCost <= 0) { alert('Select item, enter qty and cost'); return; }
+            const day = getDay(today);
+            day.ownerStock.push({item, qty, unitCost});
             const data = load();
             data.days[today] = day;
             save(data);
@@ -886,12 +925,13 @@
         function delOwnerStock(i) { const day = getDay(today); day.ownerStock.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
         
         function addPurchase() {
-            const day = getDay(today);
-            const item = document.getElementById('purchase-item').value.trim();
+            const val = document.getElementById('purchase-item').value.split('|');
+            const item = val[1];
             const qty = parseInt(document.getElementById('purchase-qty').value) || 0;
-            const cost = parseInt(document.getElementById('purchase-cost').value) || 0;
-            if (!item || qty <= 0 || cost <= 0) { alert('Fill all fields'); return; }
-            day.purchases.push({item, qty, unitCost: cost});
+            const unitCost = parseInt(document.getElementById('purchase-cost').value) || 0;
+            if (!item || qty <= 0 || unitCost <= 0) { alert('Select item, enter qty and cost'); return; }
+            const day = getDay(today);
+            day.purchases.push({item, qty, unitCost});
             const data = load();
             data.days[today] = day;
             save(data);
