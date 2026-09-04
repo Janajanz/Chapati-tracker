@@ -209,6 +209,7 @@
         <div class="sidebar-item" onclick="showTab('history')">📅 History</div>
         <div class="sidebar-item" onclick="showTab('close')">🔒 Close Day</div>
         <div class="sidebar-item" onclick="showTab('backup')">💾 Backup</div>
+        <div class="sidebar-item" onclick="showTab('products')">🏷️ Products</div>
     </div>
     <div class="container">
         <div id="dashboard" class="view active"><div class="card"><h2>📊 Dashboard</h2><div id="dashboard-content"></div></div></div>
@@ -223,13 +224,22 @@
         <div id="history" class="view"><div class="card"><h2>📅 History</h2><div id="history-content"></div></div></div>
         <div id="close" class="view"><div class="card"><h2>🔒 Close Day</h2><div id="close-content"></div></div></div>
         <div id="backup" class="view"><div class="card"><h2>💾 Backup & Cache</h2><p style="font-size: 12px; color: #999; margin-bottom: 16px;">App Version: <strong>v14.26</strong></p><button class="btn btn-primary" onclick="downloadBackup()">📥 Download Backup</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore Backup</button><button class="btn btn-danger" onclick="clearAppCache()">🔄 Clear App Cache & Reload</button><button class="btn btn-danger" onclick="if(confirm('DELETE ALL DATA?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All Data</button></div></div>
+        <div id="products" class="view"><div class="card"><h2>🏷️ Products Menu</h2><div id="products-content"></div></div></div>
     </div>
 
     <script>
         const KEY = 'chapatiBiz';
         let today = new Date().toISOString().split('T')[0];
 
-        function load() { return JSON.parse(localStorage.getItem(KEY) || '{"days":{}}'); }
+        function load() { 
+            const data = JSON.parse(localStorage.getItem(KEY) || '{"days":{}}');
+            if (!data.products) data.products = [
+                {id: 1, name: 'Chapati', price: 2000},
+                {id: 2, name: 'Eggs', price: 3000},
+                {id: 3, name: 'Rolex', price: 5000}
+            ];
+            return data;
+        }
         function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
         function fmt(n) { return parseInt(n || 0).toLocaleString(); }
         function toggleMenu() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); }
@@ -331,6 +341,7 @@
             else if (name === 'analytics') renderAnalytics();
             else if (name === 'history') renderHistory();
             else if (name === 'close') renderClose();
+            else if (name === 'products') renderProducts();
         }
 
         function renderDashboard() {
@@ -928,24 +939,69 @@
 
         function renderSales() {
             const day = getDay(today);
+            const data = load();
+            const products = data.products || [];
             const total = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
             
-            let html = '<h3>Add Sale</h3>';
-            html += '<div class="form-group"><select id="sale-product"><option value="Chapati">Chapati</option><option value="Eggs">Eggs</option><option value="Rolex">Rolex</option><option value="Other">Other</option></select></div>';
-            html += '<div class="form-group"><input type="number" id="sale-qty" placeholder="Quantity"></div>';
-            html += '<div class="form-group"><input type="number" id="sale-price" placeholder="Price"></div>';
-            html += '<button class="btn btn-primary" onclick="addSale()">✓ Add Sale</button>';
-            html += '<h3>Sales (' + day.sales.length + ')</h3>';
+            let html = '<h3 style="margin: 0 0 16px 0; font-size: 18px; font-weight: 700;">📝 Record Sale</h3>';
+            html += '<div style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">';
+            html += '<div style="display: grid; gap: 12px;">';
+            html += '<select id="sale-product" onchange="autoFillSalePrice()" style="padding: 12px; border: none; border-radius: 6px; font-size: 14px;"><option value="">-- Select Product --</option>';
             
-            day.sales.forEach((s, i) => {
-                html += '<div class="item-card"><p><strong>' + s.product + '</strong>: ' + s.qty + ' x UGX ' + fmt(s.price) + ' = UGX ' + fmt(s.qty * s.price) + ' <button class="btn btn-danger" onclick="delSale(' + i + ')">Del</button></p></div>';
+            products.forEach(prod => {
+                html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.price + '">' + prod.name + ' (UGX ' + fmt(prod.price) + ')</option>';
             });
             
-            html += '<div class="summary"><div class="summary-row total"><span>Total Revenue</span><span>UGX ' + fmt(total) + '</span></div></div>';
+            html += '</select>';
+            html += '<input type="number" id="sale-qty" placeholder="Quantity" onchange="autoFillSalePrice()" style="padding: 12px; border: none; border-radius: 6px; font-size: 14px;">';
+            html += '<input type="number" id="sale-price" placeholder="Price per unit" style="padding: 12px; border: none; border-radius: 6px; font-size: 14px;">';
+            html += '<button class="btn btn-primary" onclick="addSale()" style="background: white; color: #1e40af; font-weight: 700; margin-bottom: 0;">✓ Record Sale</button>';
+            html += '</div>';
+            html += '</div>';
+            
+            html += '<h3 style="margin: 24px 0 16px 0; font-size: 18px; font-weight: 700;">📋 Today\'s Sales (' + day.sales.length + ')</h3>';
+            
+            if (day.sales.length === 0) {
+                html += '<p style="color: #999; text-align: center; padding: 20px;">No sales recorded yet</p>';
+            } else {
+                day.sales.forEach((s, i) => {
+                    html += '<div style="background: white; padding: 14px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #3b82f6; display: flex; justify-content: space-between; align-items: center;">';
+                    html += '<div><p style="margin: 0; font-weight: 700; font-size: 14px;">' + s.product + '</p><p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">' + s.qty + ' × UGX ' + fmt(s.price) + ' = UGX ' + fmt(s.qty * s.price) + '</p></div>';
+                    html += '<button class="btn btn-danger" onclick="delSale(' + i + ')" style="width: auto; padding: 8px 12px; font-size: 11px;">✕ Delete</button>';
+                    html += '</div>';
+                });
+            }
+            
+            html += '<div style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); color: white; padding: 16px; border-radius: 10px; text-align: right; margin-top: 16px;">';
+            html += '<p style="margin: 0 0 8px 0; font-size: 12px; opacity: 0.9;">TOTAL REVENUE</p>';
+            html += '<p style="margin: 0; font-size: 24px; font-weight: 800;">UGX ' + fmt(total) + '</p>';
+            html += '</div>';
+            
             document.getElementById('sales-content').innerHTML = html;
         }
+        
+        function autoFillSalePrice() {
+            const val = document.getElementById('sale-product').value.split('|');
+            const price = val[2];
+            if (price) document.getElementById('sale-price').value = price;
+        }
 
-        function addSale() { const day = getDay(today); const product = document.getElementById('sale-product').value; const qty = parseInt(document.getElementById('sale-qty').value) || 0; const price = parseInt(document.getElementById('sale-price').value) || 0; if (qty <= 0 || price <= 0) { alert('Invalid'); return; } day.sales.push({product, qty, price}); const data = load(); data.days[today] = day; save(data); document.getElementById('sale-qty').value = ''; document.getElementById('sale-price').value = ''; renderSales(); }
+        function addSale() { 
+            const val = document.getElementById('sale-product').value.split('|');
+            const product = val[1];
+            const qty = parseInt(document.getElementById('sale-qty').value) || 0; 
+            const price = parseInt(document.getElementById('sale-price').value) || 0; 
+            if (!product || qty <= 0 || price <= 0) { alert('Select product, enter qty and price'); return; } 
+            const day = getDay(today); 
+            day.sales.push({product, qty, price}); 
+            const data = load(); 
+            data.days[today] = day; 
+            save(data); 
+            document.getElementById('sale-qty').value = ''; 
+            document.getElementById('sale-price').value = '';
+            document.getElementById('sale-product').value = ''; 
+            renderSales(); 
+        }
         function delSale(i) { const day = getDay(today); day.sales.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderSales(); }
 
         function renderExpenses() {
@@ -1575,6 +1631,86 @@
                 alert('✓ Cache cleared! Reloading...');
                 location.reload();
             });
+        }
+        
+        function renderProducts() {
+            const data = load();
+            const products = data.products || [];
+            
+            let html = '';
+            
+            // Add new product form
+            html += '<div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 24px;">';
+            html += '<h3 style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700;">➕ Add New Product</h3>';
+            html += '<div style="display: grid; gap: 12px;">';
+            html += '<input type="text" id="new-product-name" placeholder="Product name (Chapati, Eggs, etc.)" style="padding: 12px; border: none; border-radius: 6px; font-size: 14px;">';
+            html += '<input type="number" id="new-product-price" placeholder="Standard price" style="padding: 12px; border: none; border-radius: 6px; font-size: 14px;">';
+            html += '<button class="btn btn-primary" onclick="addProduct()" style="background: white; color: #d97706; font-weight: 700; margin-bottom: 0;">✓ Add Product</button>';
+            html += '</div>';
+            html += '</div>';
+            
+            // Products list
+            html += '<h3 style="margin: 24px 0 16px 0; font-size: 18px; font-weight: 700;">📋 Your Products</h3>';
+            
+            if (products.length === 0) {
+                html += '<p style="color: #999; text-align: center; padding: 20px;">No products yet</p>';
+            } else {
+                html += '<div style="display: grid; gap: 12px;">';
+                products.forEach((prod, idx) => {
+                    html += '<div style="background: white; padding: 16px; border-radius: 10px; border-left: 4px solid #f59e0b; box-shadow: 0 2px 6px rgba(0,0,0,0.08); display: flex; justify-content: space-between; align-items: center;">';
+                    html += '<div><p style="margin: 0; font-weight: 700; font-size: 15px;">' + prod.name + '</p>';
+                    html += '<p style="margin: 6px 0 0 0; color: #666; font-size: 12px;">UGX ' + fmt(prod.price) + '</p></div>';
+                    html += '<div style="display: flex; gap: 8px;">';
+                    html += '<button class="btn btn-primary" onclick="editProduct(' + idx + ')" style="width: auto; padding: 8px 12px; font-size: 11px; background: #2196f3;">✏️ Edit</button>';
+                    html += '<button class="btn btn-danger" onclick="deleteProduct(' + idx + ')" style="width: auto; padding: 8px 12px; font-size: 11px;">✕ Delete</button>';
+                    html += '</div></div>';
+                });
+                html += '</div>';
+            }
+            
+            document.getElementById('products-content').innerHTML = html;
+        }
+        
+        function addProduct() {
+            const name = document.getElementById('new-product-name').value.trim();
+            const price = parseInt(document.getElementById('new-product-price').value) || 0;
+            if (!name || price <= 0) { alert('Fill product name and price'); return; }
+            
+            const data = load();
+            if (!data.products) data.products = [];
+            
+            const maxId = data.products.length > 0 ? Math.max(...data.products.map(p => p.id)) : 0;
+            data.products.push({id: maxId + 1, name: name, price: price});
+            save(data);
+            
+            document.getElementById('new-product-name').value = '';
+            document.getElementById('new-product-price').value = '';
+            renderProducts();
+            renderSales();
+        }
+        
+        function deleteProduct(idx) {
+            if (!confirm('Delete this product?')) return;
+            const data = load();
+            data.products.splice(idx, 1);
+            save(data);
+            renderProducts();
+            renderSales();
+        }
+        
+        function editProduct(idx) {
+            const data = load();
+            const prod = data.products[idx];
+            const newName = prompt('Product name:', prod.name);
+            if (!newName) return;
+            const newPrice = prompt('Price:', prod.price);
+            if (!newPrice) return;
+            
+            data.products[idx].name = newName.trim();
+            data.products[idx].price = parseInt(newPrice);
+            save(data);
+            renderProducts();
+            renderSales();
         }
 
         window.addEventListener('load', () => renderDashboard());
