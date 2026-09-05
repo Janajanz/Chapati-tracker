@@ -600,8 +600,6 @@
         }
         
         function renderOpeningInventoryExpanded(day) {
-            const data = load();
-            const products = data.products || [];
             let html = '';
             const totalValue = day.carriedItems.reduce((s, ci) => s + (ci.qty * ci.unitCost), 0);
             
@@ -612,7 +610,7 @@
                     const n = (ci.item || ci.name);
                     html += '<div style="background: #f9f9f9; padding: 14px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #28a745;">';
                     html += '<div style="display: flex; justify-content: space-between; align-items: start;">';
-                    html += '<div><p style="margin: 0; font-weight: 700; font-size: 15px;">' + n + '</p><p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + '/each = UGX ' + fmt(ci.qty * ci.unitCost) + '</p></div>';
+                    html += '<div><p style="margin: 0; font-weight: 700; font-size: 15px;">' + n + '</p><p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + ' = UGX ' + fmt(ci.qty * ci.unitCost) + '</p></div>';
                     html += '<div style="display: flex; gap: 6px;">';
                     html += '<button class="btn btn-primary" onclick="editCarriedItemPrice(' + idx + ')" style="width: auto; padding: 8px 10px; font-size: 11px; background: #ff9800;">✏️ Price</button>';
                     html += '<button class="btn btn-danger" onclick="delCarriedItem(' + idx + ')" style="width: auto; padding: 8px 12px; font-size: 11px;">✕</button>';
@@ -623,19 +621,24 @@
                 html += '<p style="color: #999; text-align: center; padding: 20px;">No items from yesterday</p>';
             }
             
-            // Add form
+            // Radio buttons form
             html += '<div style="background: #f0f8f4; padding: 16px; border-radius: 8px; border: 2px dashed #28a745; margin-bottom: 16px;">';
-            html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #28a745; text-transform: uppercase;">➕ Add Item - You Control The Price!</p>';
-            html += '<div style="display: grid; gap: 10px;">';
-            html += '<select id="opening-item" onchange="autoFillOpeningCost()" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;"><option value="">-- Select Item --</option>';
-            products.forEach(prod => {
-                html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.price + '">' + prod.name + ' (Suggested: ' + fmt(prod.price) + ')</option>';
+            html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #28a745; text-transform: uppercase;">➕ Add Item - Tap Item Name</p>';
+            
+            const items = ['Flour', 'Cooking Oil', 'Ingredients', 'Eggs', 'Beans'];
+            html += '<div style="display: grid; gap: 10px; margin-bottom: 12px;">';
+            items.forEach((item, i) => {
+                html += '<label style="display: flex; align-items: center; padding: 10px; background: white; border: 2px solid #28a745; border-radius: 6px; cursor: pointer;">';
+                html += '<input type="radio" name="opening-item-radio" value="' + item + '" style="width: 20px; height: 20px; cursor: pointer; margin-right: 10px;">';
+                html += '<span style="font-size: 14px; font-weight: 600; color: #28a745;">' + item + '</span>';
+                html += '</label>';
             });
-            html += '</select>';
-            html += '<input type="number" id="opening-qty" placeholder="Qty (0.5, 1.5...)" step="0.01" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px;">';
-            html += '<input type="number" id="opening-cost" placeholder="⚠️ ENTER YOUR PRICE - App will use this!" step="0.01" style="padding: 12px; border: 3px solid #ff9800; border-radius: 6px; font-size: 13px; font-weight: 700; background: #fffef0; color: #ff6600;">';
-            html += '<button class="btn btn-primary" onclick="addOpeningItem()" style="background: #28a745; margin-bottom: 0; font-weight: 700;">✓ Save (Uses YOUR Price)</button>';
-            html += '</div></div>';
+            html += '</div>';
+            
+            html += '<input type="number" id="opening-qty" placeholder="Quantity (0.5, 1.5...)" step="0.01" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px; margin-bottom: 10px; width: 100%;">';
+            html += '<input type="number" id="opening-cost" placeholder="Cost per unit" step="0.01" style="padding: 12px; border: 1px solid #28a745; border-radius: 6px; font-size: 13px; margin-bottom: 10px; width: 100%;">';
+            html += '<button class="btn btn-primary" onclick="addOpeningItem()" style="background: #28a745; margin-bottom: 0; width: 100%; font-weight: 700;">✓ Save</button>';
+            html += '</div>';
             
             html += '<div style="background: #d4edda; padding: 14px; border-radius: 8px; border: 2px solid #28a745;">';
             html += '<p style="margin: 0; font-size: 12px; color: #28a745; font-weight: 600;">TOTAL VALUE</p>';
@@ -644,30 +647,37 @@
             return html;
         }
         
-        function editCarriedItemPrice(idx) {
+        function addOpeningItem() {
+            const item = document.querySelector('input[name="opening-item-radio"]:checked');
+            if (!item) { alert('Select an item'); return; }
+            const itemName = item.value;
+            const qty = parseFloat(document.getElementById('opening-qty').value) || 0;
+            const unitCost = parseFloat(document.getElementById('opening-cost').value) || 0;
+            if (qty <= 0 || unitCost <= 0) { alert('Enter qty and cost'); return; }
+            
             const day = getDay(today);
-            const item = day.carriedItems[idx];
-            const newPrice = prompt('Change price per unit for ' + item.item + ':\n(Current: ' + item.unitCost + ')\n\nEnter new price:', item.unitCost);
-            if (!newPrice) return;
-            const newCost = parseFloat(newPrice);
-            if (newCost <= 0) { alert('Enter valid price'); return; }
-            item.unitCost = newCost;
+            const existingIdx = day.carriedItems.findIndex(ci => (ci.item || ci.name) === itemName);
+            if (existingIdx >= 0) {
+                const existing = day.carriedItems[existingIdx];
+                const totalValue = (existing.qty * existing.unitCost) + (qty * unitCost);
+                const newQty = existing.qty + qty;
+                const avgCost = Math.round(totalValue / newQty);
+                existing.qty = newQty;
+                existing.unitCost = avgCost;
+            } else {
+                day.carriedItems.push({item: itemName, qty, unitCost});
+            }
+            
             const data = load();
             data.days[today] = day;
             save(data);
-            console.log('Price changed to ' + newCost);
+            document.querySelector('input[name="opening-item-radio"]:checked').checked = false;
+            document.getElementById('opening-qty').value = '';
+            document.getElementById('opening-cost').value = '';
             renderInventory();
         }
         
-        function autoFillOpeningCost() {
-            const val = document.getElementById('opening-item').value.split('|');
-            const price = val[2];
-            if (price) document.getElementById('opening-cost').value = price;
-        }
-        
         function renderOwnerStockExpanded(day) {
-            const data = load();
-            const products = data.products || [];
             let html = '';
             const totalValue = day.ownerStock.reduce((s, os) => s + (os.qty * os.unitCost), 0);
             
@@ -677,7 +687,7 @@
                 day.ownerStock.forEach((os, idx) => {
                     html += '<div style="background: #fff8e1; padding: 14px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #ff9800;">';
                     html += '<div style="display: flex; justify-content: space-between; align-items: start;">';
-                    html += '<div><p style="margin: 0; font-weight: 700; font-size: 15px;">' + os.item + '</p><p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">' + os.qty + ' @ UGX ' + fmt(os.unitCost) + '/each = UGX ' + fmt(os.qty * os.unitCost) + '</p></div>';
+                    html += '<div><p style="margin: 0; font-weight: 700; font-size: 15px;">' + os.item + '</p><p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">' + os.qty + ' @ UGX ' + fmt(os.unitCost) + ' = UGX ' + fmt(os.qty * os.unitCost) + '</p></div>';
                     html += '<div style="display: flex; gap: 6px;">';
                     html += '<button class="btn btn-primary" onclick="editOwnerStockPrice(' + idx + ')" style="width: auto; padding: 8px 10px; font-size: 11px; background: #ff9800;">✏️ Price</button>';
                     html += '<button class="btn btn-danger" onclick="delOwnerStock(' + idx + ')" style="width: auto; padding: 8px 12px; font-size: 11px;">✕</button>';
@@ -688,19 +698,24 @@
                 html += '<p style="color: #999; text-align: center; padding: 20px;">No owner stock today</p>';
             }
             
-            // Add form
+            // Radio buttons form
             html += '<div style="background: #fffaf0; padding: 16px; border-radius: 8px; border: 2px dashed #ff9800; margin-bottom: 16px;">';
-            html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #ff9800; text-transform: uppercase;">➕ Add Owner Purchase - You Control Price!</p>';
-            html += '<div style="display: grid; gap: 10px;">';
-            html += '<select id="owner-item" onchange="autoFillOwnerCost()" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;"><option value="">-- Select Item --</option>';
-            products.forEach(prod => {
-                html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.price + '">' + prod.name + ' (Suggested: ' + fmt(prod.price) + ')</option>';
+            html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #ff9800; text-transform: uppercase;">➕ Add Owner Purchase - Tap Item</p>';
+            
+            const items = ['Flour', 'Cooking Oil', 'Ingredients', 'Eggs', 'Beans'];
+            html += '<div style="display: grid; gap: 10px; margin-bottom: 12px;">';
+            items.forEach((item, i) => {
+                html += '<label style="display: flex; align-items: center; padding: 10px; background: white; border: 2px solid #ff9800; border-radius: 6px; cursor: pointer;">';
+                html += '<input type="radio" name="owner-item-radio" value="' + item + '" style="width: 20px; height: 20px; cursor: pointer; margin-right: 10px;">';
+                html += '<span style="font-size: 14px; font-weight: 600; color: #ff9800;">' + item + '</span>';
+                html += '</label>';
             });
-            html += '</select>';
-            html += '<input type="number" id="owner-qty" placeholder="Qty (0.5, 1.5...)" step="0.01" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px;">';
-            html += '<input type="number" id="owner-cost" placeholder="⚠️ ENTER YOUR PRICE - App will use this!" step="0.01" style="padding: 12px; border: 3px solid #ff9800; border-radius: 6px; font-size: 13px; font-weight: 700; background: #fffef0; color: #ff6600;">';
-            html += '<button class="btn btn-primary" onclick="addOwnerStock()" style="background: #ff9800; margin-bottom: 0; font-weight: 700;">✓ Save (Uses YOUR Price)</button>';
-            html += '</div></div>';
+            html += '</div>';
+            
+            html += '<input type="number" id="owner-qty" placeholder="Qty (0.5, 1.5...)" step="0.01" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px; margin-bottom: 10px; width: 100%;">';
+            html += '<input type="number" id="owner-cost" placeholder="Cost per unit" step="0.01" style="padding: 12px; border: 1px solid #ff9800; border-radius: 6px; font-size: 13px; margin-bottom: 10px; width: 100%;">';
+            html += '<button class="btn btn-primary" onclick="addOwnerStock()" style="background: #ff9800; margin-bottom: 0; width: 100%; font-weight: 700;">✓ Save</button>';
+            html += '</div>';
             
             html += '<div style="background: #fff3e0; padding: 14px; border-radius: 8px; border: 2px solid #ff9800;">';
             html += '<p style="margin: 0; font-size: 12px; color: #ff9800; font-weight: 600;">TOTAL VALUE</p>';
@@ -709,10 +724,40 @@
             return html;
         }
         
+        function addOwnerStock() {
+            const item = document.querySelector('input[name="owner-item-radio"]:checked');
+            if (!item) { alert('Select an item'); return; }
+            const itemName = item.value;
+            const qty = parseFloat(document.getElementById('owner-qty').value) || 0;
+            const unitCost = parseFloat(document.getElementById('owner-cost').value) || 0;
+            if (qty <= 0 || unitCost <= 0) { alert('Enter qty and cost'); return; }
+            
+            const day = getDay(today);
+            const existingIdx = day.ownerStock.findIndex(os => os.item === itemName);
+            if (existingIdx >= 0) {
+                const existing = day.ownerStock[existingIdx];
+                const totalValue = (existing.qty * existing.unitCost) + (qty * unitCost);
+                const newQty = existing.qty + qty;
+                const avgCost = Math.round(totalValue / newQty);
+                existing.qty = newQty;
+                existing.unitCost = avgCost;
+            } else {
+                day.ownerStock.push({item: itemName, qty, unitCost});
+            }
+            
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            document.querySelector('input[name="owner-item-radio"]:checked').checked = false;
+            document.getElementById('owner-qty').value = '';
+            document.getElementById('owner-cost').value = '';
+            renderInventory();
+        }
+        
         function editOwnerStockPrice(idx) {
             const day = getDay(today);
             const item = day.ownerStock[idx];
-            const newPrice = prompt('Change price per unit for ' + item.item + ':\n(Current: ' + item.unitCost + ')\n\nEnter new price:', item.unitCost);
+            const newPrice = prompt('Change price for ' + item.item + ':\n(Current: ' + item.unitCost + ')', item.unitCost);
             if (!newPrice) return;
             const newCost = parseFloat(newPrice);
             if (newCost <= 0) { alert('Enter valid price'); return; }
@@ -720,14 +765,7 @@
             const data = load();
             data.days[today] = day;
             save(data);
-            console.log('Price changed to ' + newCost);
             renderInventory();
-        }
-        
-        function autoFillOwnerCost() {
-            const val = document.getElementById('owner-item').value.split('|');
-            const price = val[2];
-            if (price) document.getElementById('owner-cost').value = price;
         }
         }
         
@@ -738,8 +776,6 @@
         }
         
         function renderWorkerPurchasesExpanded(day) {
-            const data = load();
-            const products = data.products || [];
             let html = '';
             const totalValue = day.purchases.reduce((s, p) => s + (p.qty * p.unitCost), 0);
             
@@ -749,7 +785,7 @@
                 day.purchases.forEach((p, idx) => {
                     html += '<div style="background: #e8f5ff; padding: 14px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #2196f3;">';
                     html += '<div style="display: flex; justify-content: space-between; align-items: start;">';
-                    html += '<div><p style="margin: 0; font-weight: 700; font-size: 15px;">' + p.item + '</p><p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">' + p.qty + ' @ UGX ' + fmt(p.unitCost) + '/each = UGX ' + fmt(p.qty * p.unitCost) + '</p></div>';
+                    html += '<div><p style="margin: 0; font-weight: 700; font-size: 15px;">' + p.item + '</p><p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">' + p.qty + ' @ UGX ' + fmt(p.unitCost) + ' = UGX ' + fmt(p.qty * p.unitCost) + '</p></div>';
                     html += '<div style="display: flex; gap: 6px;">';
                     html += '<button class="btn btn-primary" onclick="editPurchasePrice(' + idx + ')" style="width: auto; padding: 8px 10px; font-size: 11px; background: #2196f3;">✏️ Price</button>';
                     html += '<button class="btn btn-danger" onclick="delPurchase(' + idx + ')" style="width: auto; padding: 8px 12px; font-size: 11px;">✕</button>';
@@ -760,19 +796,24 @@
                 html += '<p style="color: #999; text-align: center; padding: 20px;">No worker purchases today</p>';
             }
             
-            // Add form
+            // Radio buttons form
             html += '<div style="background: #f0f9ff; padding: 16px; border-radius: 8px; border: 2px dashed #2196f3; margin-bottom: 16px;">';
-            html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #2196f3; text-transform: uppercase;">➕ Add Worker Purchase - You Control Price!</p>';
-            html += '<div style="display: grid; gap: 10px;">';
-            html += '<select id="purchase-item" onchange="autoFillPurchaseCost()" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px;"><option value="">-- Select Item --</option>';
-            products.forEach(prod => {
-                html += '<option value="' + prod.id + '|' + prod.name + '|' + prod.price + '">' + prod.name + ' (Suggested: ' + fmt(prod.price) + ')</option>';
+            html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #2196f3; text-transform: uppercase;">➕ Add Worker Purchase - Tap Item</p>';
+            
+            const items = ['Flour', 'Cooking Oil', 'Ingredients', 'Eggs', 'Beans'];
+            html += '<div style="display: grid; gap: 10px; margin-bottom: 12px;">';
+            items.forEach((item, i) => {
+                html += '<label style="display: flex; align-items: center; padding: 10px; background: white; border: 2px solid #2196f3; border-radius: 6px; cursor: pointer;">';
+                html += '<input type="radio" name="purchase-item-radio" value="' + item + '" style="width: 20px; height: 20px; cursor: pointer; margin-right: 10px;">';
+                html += '<span style="font-size: 14px; font-weight: 600; color: #2196f3;">' + item + '</span>';
+                html += '</label>';
             });
-            html += '</select>';
-            html += '<input type="number" id="purchase-qty" placeholder="Qty (0.5, 1.5...)" step="0.01" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px;">';
-            html += '<input type="number" id="purchase-cost" placeholder="⚠️ ENTER YOUR PRICE - App will use this!" step="0.01" style="padding: 12px; border: 3px solid #2196f3; border-radius: 6px; font-size: 13px; font-weight: 700; background: #f0f9ff; color: #0066cc;">';
-            html += '<button class="btn btn-primary" onclick="addPurchase()" style="background: #2196f3; margin-bottom: 0; font-weight: 700;">✓ Save (Uses YOUR Price)</button>';
-            html += '</div></div>';
+            html += '</div>';
+            
+            html += '<input type="number" id="purchase-qty" placeholder="Qty (0.5, 1.5...)" step="0.01" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px; margin-bottom: 10px; width: 100%;">';
+            html += '<input type="number" id="purchase-cost" placeholder="Cost per unit" step="0.01" style="padding: 12px; border: 1px solid #2196f3; border-radius: 6px; font-size: 13px; margin-bottom: 10px; width: 100%;">';
+            html += '<button class="btn btn-primary" onclick="addPurchase()" style="background: #2196f3; margin-bottom: 0; width: 100%; font-weight: 700;">✓ Save</button>';
+            html += '</div>';
             
             html += '<div style="background: #e3f2fd; padding: 14px; border-radius: 8px; border: 2px solid #2196f3;">';
             html += '<p style="margin: 0; font-size: 12px; color: #2196f3; font-weight: 600;">TOTAL VALUE</p>';
@@ -781,10 +822,40 @@
             return html;
         }
         
+        function addPurchase() {
+            const item = document.querySelector('input[name="purchase-item-radio"]:checked');
+            if (!item) { alert('Select an item'); return; }
+            const itemName = item.value;
+            const qty = parseFloat(document.getElementById('purchase-qty').value) || 0;
+            const unitCost = parseFloat(document.getElementById('purchase-cost').value) || 0;
+            if (qty <= 0 || unitCost <= 0) { alert('Enter qty and cost'); return; }
+            
+            const day = getDay(today);
+            const existingIdx = day.purchases.findIndex(p => p.item === itemName);
+            if (existingIdx >= 0) {
+                const existing = day.purchases[existingIdx];
+                const totalValue = (existing.qty * existing.unitCost) + (qty * unitCost);
+                const newQty = existing.qty + qty;
+                const avgCost = Math.round(totalValue / newQty);
+                existing.qty = newQty;
+                existing.unitCost = avgCost;
+            } else {
+                day.purchases.push({item: itemName, qty, unitCost});
+            }
+            
+            const data = load();
+            data.days[today] = day;
+            save(data);
+            document.querySelector('input[name="purchase-item-radio"]:checked').checked = false;
+            document.getElementById('purchase-qty').value = '';
+            document.getElementById('purchase-cost').value = '';
+            renderInventory();
+        }
+        
         function editPurchasePrice(idx) {
             const day = getDay(today);
             const item = day.purchases[idx];
-            const newPrice = prompt('Change price per unit for ' + item.item + ':\n(Current: ' + item.unitCost + ')\n\nEnter new price:', item.unitCost);
+            const newPrice = prompt('Change price for ' + item.item + ':\n(Current: ' + item.unitCost + ')', item.unitCost);
             if (!newPrice) return;
             const newCost = parseFloat(newPrice);
             if (newCost <= 0) { alert('Enter valid price'); return; }
@@ -792,14 +863,7 @@
             const data = load();
             data.days[today] = day;
             save(data);
-            console.log('Price changed to ' + newCost);
             renderInventory();
-        }
-        
-        function autoFillPurchaseCost() {
-            const val = document.getElementById('purchase-item').value.split('|');
-            const cost = val[2];
-            if (cost) document.getElementById('purchase-cost').value = cost;
         }
         
         function renderUsageExpanded(day, allItems) {
@@ -811,7 +875,7 @@
                 html += '<div style="margin-bottom: 16px;">';
                 day.usage.forEach((u, idx) => {
                     html += '<div style="background: #ffebee; padding: 14px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #dc3545; display: flex; justify-content: space-between; align-items: center;">';
-                    html += '<div><p style="margin: 0; font-weight: 700; font-size: 15px;">' + u.item + '</p><p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">Used: ' + u.qty + ' • Cost: UGX ' + fmt(u.cost) + '</p></div>';
+                    html += '<div><p style="margin: 0; font-weight: 700; font-size: 15px;">' + u.item + '</p><p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">Used: ' + u.qty + ' @ UGX ' + fmt(u.unitCost) + ' = UGX ' + fmt(u.cost) + '</p></div>';
                     html += '<button class="btn btn-danger" onclick="delUsage(' + idx + ')" style="width: auto; padding: 8px 12px; font-size: 11px;">✕ Delete</button></div>';
                 });
                 html += '</div>';
@@ -819,28 +883,54 @@
                 html += '<p style="color: #999; text-align: center; padding: 20px;">No usage recorded</p>';
             }
             
-            // Add form
+            // Radio buttons form
             html += '<div style="background: #ffe8eb; padding: 16px; border-radius: 8px; border: 2px dashed #dc3545; margin-bottom: 16px;">';
-            html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #dc3545; text-transform: uppercase;">➕ Record Usage</p>';
-            html += '<div style="display: grid; gap: 10px;">';
-            html += '<select id="usage-item" onchange="autoFillUsageCost()" style="padding: 12px; border: 1px solid #dc3545; border-radius: 6px; font-size: 13px;"><option value="">Select item...</option>';
-            Object.keys(allItems).forEach(name => {
-                const unitCost = allItems[name].unitCost;
-                html += '<option value="' + name + '|' + unitCost + '">' + name + ' (Qty: ' + allItems[name].current + ' @ UGX ' + fmt(unitCost) + ')</option>';
-            });
-            html += '</select>';
-            html += '<input type="number" id="usage-qty" placeholder="Quantity (0.5, 1.5...)" step="0.01" used" style="padding: 12px; border: 1px solid #dc3545; border-radius: 6px; font-size: 13px;" onchange="autoFillUsageCost()">';
-            html += '<input type="number" id="usage-cost" placeholder="Cost (auto-filled)" readonly style="padding: 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 13px; background: #f5f5f5;">';
-            html += '<button class="btn btn-primary" onclick="addUsage()" style="background: #dc3545; margin-bottom: 0;">✓ Record Usage</button>';
-            html += '</div></div>';
+            html += '<p style="margin: 0 0 12px 0; font-size: 12px; font-weight: 700; color: #dc3545; text-transform: uppercase;">➕ Record Usage - Auto-fills cost!</p>';
             
-            // Total
+            const items = ['Flour', 'Cooking Oil', 'Ingredients', 'Eggs', 'Beans'];
+            html += '<div style="display: grid; gap: 10px; margin-bottom: 12px;">';
+            items.forEach((item, i) => {
+                const itemData = allItems[item];
+                const available = itemData ? Math.max(itemData.current, 0) : 0;
+                const unitPrice = itemData ? itemData.unitCost : '?';
+                html += '<label style="display: flex; align-items: center; padding: 10px; background: white; border: 2px solid #dc3545; border-radius: 6px; cursor: pointer;">';
+                html += '<input type="radio" name="usage-item-radio" value="' + item + '" onchange="autoFillUsageCostRadio()" style="width: 20px; height: 20px; cursor: pointer; margin-right: 10px;">';
+                html += '<span style="font-size: 13px; font-weight: 600; color: #dc3545;">' + item + ' (Have: ' + available + ' @ UGX ' + fmt(unitPrice) + ')</span>';
+                html += '</label>';
+            });
+            html += '</div>';
+            
+            html += '<input type="number" id="usage-qty" placeholder="Qty used (0.5, 1.5...)" step="0.01" style="padding: 12px; border: 1px solid #dc3545; border-radius: 6px; font-size: 13px; margin-bottom: 10px; width: 100%;" onchange="autoFillUsageCostRadio()">';
+            html += '<input type="number" id="usage-cost" placeholder="Cost (auto-filled)" readonly style="padding: 12px; border: 2px solid #28a745; border-radius: 6px; font-size: 13px; background: #f0fff0; font-weight: 700; margin-bottom: 10px; width: 100%;">';
+            html += '<button class="btn btn-primary" onclick="addUsage()" style="background: #dc3545; margin-bottom: 0; width: 100%; font-weight: 700;">✓ Record Usage</button>';
+            html += '</div>';
+            
             html += '<div style="background: #ffebee; padding: 14px; border-radius: 8px; border: 2px solid #dc3545;">';
             html += '<p style="margin: 0; font-size: 12px; color: #dc3545; font-weight: 600;">TOTAL USAGE COST</p>';
             html += '<p style="margin: 6px 0 0 0; font-size: 20px; font-weight: 800; color: #dc3545;">UGX ' + fmt(totalUsageCost) + '</p></div>';
-            
             html += '<button class="btn btn-primary" onclick="toggleCard(\'usage\')" style="margin-top: 14px; background: #999;">✕ Close</button>';
             return html;
+        }
+        
+        function autoFillUsageCostRadio() {
+            const item = document.querySelector('input[name="usage-item-radio"]:checked');
+            if (!item) { 
+                document.getElementById('usage-cost').value = '';
+                return; 
+            }
+            const itemName = item.value;
+            const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
+            
+            const day = getDay(today);
+            const allItems = getConsolidatedStock(day);
+            const itemData = allItems[itemName];
+            
+            if (itemData && qty > 0) {
+                const cost = qty * itemData.unitCost;
+                document.getElementById('usage-cost').value = Math.round(cost);
+            } else {
+                document.getElementById('usage-cost').value = '';
+            }
         }
         
         function renderCurrentInventoryExpanded(day, allItems) {
@@ -1053,49 +1143,42 @@
         function delOwnerStock(i) { const day = getDay(today); day.ownerStock.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
         function delUsage(i) { const day = getDay(today); day.usage.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
 
-        function autoFillUsageCost() {
-            const val = document.getElementById('usage-item').value.split('|');
-            document.getElementById('usage-cost').value = val[1] || '';
-        }
 
         function addUsage() {
-            const day = getDay(today);
-            const val = document.getElementById('usage-item').value.split('|');
-            const item = val[0];
-            const unitCost = parseFloat(val[1]) || 0;
+            const itemRadio = document.querySelector('input[name="usage-item-radio"]:checked');
+            if (!itemRadio) { alert('Select an item'); return; }
+            
+            const item = itemRadio.value;
             const qty = parseFloat(document.getElementById('usage-qty').value) || 0;
-            const cost = qty * unitCost;
-            if (!item || qty <= 0 || unitCost <= 0) { alert('Select item and fill quantity'); return; }
+            const cost = parseFloat(document.getElementById('usage-cost').value) || 0;
+            
+            if (!item || qty <= 0 || cost <= 0) { alert('Select item, enter qty, and cost will auto-fill'); return; }
+            
+            const day = getDay(today);
+            const unitCost = cost / qty;
             
             // Check if item already exists
             const existingIdx = day.usage.findIndex(u => u.item === item);
             if (existingIdx >= 0) {
-                // Item exists - consolidate
+                // Item exists - add to it
                 const existing = day.usage[existingIdx];
                 existing.qty += qty;
                 existing.cost += cost;
-                console.log('Consolidated usage ' + item + ': qty=' + existing.qty + ', cost=' + existing.cost);
+                console.log('Added usage ' + item + ': qty=' + existing.qty + ', cost=' + existing.cost);
             } else {
                 // New item
-                day.usage.push({item, qty, unitCost: unitCost, cost: cost});
+                day.usage.push({item, qty, unitCost, cost});
             }
             
             const data = load();
             data.days[today] = day;
             save(data);
-            document.getElementById('usage-item').value = '';
+            document.querySelector('input[name="usage-item-radio"]:checked').checked = false;
             document.getElementById('usage-qty').value = '';
             document.getElementById('usage-cost').value = '';
             renderInventory();
         }
         
-        function autoFillUsageCost() {
-            const val = document.getElementById('usage-item').value.split('|');
-            const unitCost = parseInt(val[1]) || 0;
-            const qty = parseInt(document.getElementById('usage-qty').value) || 0;
-            const cost = qty * unitCost;
-            document.getElementById('usage-cost').value = cost > 0 ? fmt(cost) : '';
-        }
 
         function renderSales() {
             const day = getDay(today);
