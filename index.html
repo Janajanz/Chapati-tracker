@@ -868,21 +868,48 @@
         function renderCurrentStock(day) {
             const consolidated = getConsolidatedStock(day);
             
-            let html = '<h3>📊 CURRENT STOCK (TOTAL)</h3>';
+            let html = '<h3>📊 INVENTORY RECONCILIATION</h3>';
+            html += '<p style="font-size: 12px; color: #666; margin: 0 0 16px 0;">Opening + Owner + Worker - Used = Remaining</p>';
+            
             let totalValue = 0;
-            let stockHtml = '';
+            let reconcilHtml = '';
             
             Object.keys(consolidated).forEach(name => {
                 const item = consolidated[name];
+                
+                // Get breakdown by source
+                let opening = 0, owner = 0, worker = 0, used = 0;
+                
+                day.carriedItems.forEach(ci => {
+                    if ((ci.item || ci.name) === name) opening += ci.qty;
+                });
+                day.ownerStock.forEach(os => {
+                    if (os.item === name) owner += os.qty;
+                });
+                day.purchases.forEach(p => {
+                    if (p.item === name) worker += p.qty;
+                });
+                day.usage.forEach(u => {
+                    if (u.item === name) used += u.qty;
+                });
+                
                 totalValue += item.value;
-                stockHtml += '<div class="item-card"><p><strong>' + item.displayName + '</strong></p>';
-                stockHtml += '<p style="font-size: 12px;"><strong>Remaining: ' + item.qty + '</strong></p>';
-                stockHtml += '<p style="font-size: 12px; font-weight: 700; color: #27a745;">Value: UGX ' + fmt(item.value) + '</p></div>';
+                
+                reconcilHtml += '<div style="background: white; padding: 14px; margin-bottom: 12px; border-radius: 8px; border-left: 4px solid #27a745;">';
+                reconcilHtml += '<p style="margin: 0 0 8px 0; font-weight: 700; font-size: 15px;">' + item.displayName + '</p>';
+                reconcilHtml += '<div style="font-size: 12px; color: #666; line-height: 1.6;">';
+                if (opening > 0) reconcilHtml += '<p style="margin: 2px 0;">📦 Opening: ' + opening + '</p>';
+                if (owner > 0) reconcilHtml += '<p style="margin: 2px 0;">👨 Owner: ' + owner + '</p>';
+                if (worker > 0) reconcilHtml += '<p style="margin: 2px 0;">🛒 Worker: ' + worker + '</p>';
+                reconcilHtml += '<p style="margin: 6px 0 0 0; border-top: 1px solid #ddd; padding-top: 4px; font-weight: 600;">Total: ' + (opening + owner + worker) + '</p>';
+                if (used > 0) reconcilHtml += '<p style="margin: 2px 0; color: #dc3545;">📉 Used: -' + used + '</p>';
+                reconcilHtml += '<p style="margin: 6px 0 0 0; font-weight: 700; font-size: 13px; color: #27a745; background: #f0fff0; padding: 6px; border-radius: 4px;">✓ Remaining: ' + item.qty + ' @ UGX ' + fmt(item.unitCost) + ' = UGX ' + fmt(item.value) + '</p>';
+                reconcilHtml += '</div></div>';
             });
             
-            if (stockHtml) {
-                html += '<div class="summary" style="background: #e8f5e9; border: 2px solid #27a745;"><div class="summary-row total"><span>Total Stock Value</span><span style="color: #27a745; font-weight: 700;">UGX ' + fmt(totalValue) + '</span></div></div>';
-                html += stockHtml;
+            if (reconcilHtml) {
+                html += '<div style="background: #e8f5e9; border: 2px solid #27a745; padding: 12px; border-radius: 8px; margin-bottom: 16px;"><div style="display: flex; justify-content: space-between; align-items: center;"><span style="font-weight: 600;">Total Stock Value</span><span style="color: #27a745; font-weight: 700; font-size: 16px;">UGX ' + fmt(totalValue) + '</span></div></div>';
+                html += reconcilHtml;
             } else {
                 html += '<p style="color: #999;">No stock or all used</p>';
             }
