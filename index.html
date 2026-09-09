@@ -1050,9 +1050,30 @@
         function addExpense() { const day = getDay(today); const desc = document.getElementById('exp-desc').value; const cat = document.getElementById('exp-cat').value; const amt = parseInt(document.getElementById('exp-amt').value) || 0; if (!desc || amt <= 0) { alert('Invalid'); return; } day.expenses.push({desc, category: cat, amount: amt}); const data = load(); data.days[today] = day; save(data); document.getElementById('exp-desc').value = ''; document.getElementById('exp-amt').value = ''; renderExpenses(); }
         function delExpense(i) { const day = getDay(today); day.expenses.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderExpenses(); }
 
+        function getAutoCalculatedRevenue(day) {
+            // CHAPATI: Carried + Made - Remaining = Sold
+            const chapatiCarried = day.chapatiCarried || 0;
+            const chapatiMade = day.chapatiMade || 0;
+            const chapatiRemaining = day.chapatiRemaining || 0;
+            const chapatiSold = chapatiCarried + chapatiMade - chapatiRemaining;
+            const chapatiRevenue = chapatiSold * 1000;
+            
+            // EGGS: Used in production
+            let eggsSold = 0;
+            day.usage.forEach(u => {
+                if (u.item === 'Eggs' || u.item === 'eggs') {
+                    eggsSold += u.qty;
+                }
+            });
+            const eggsRevenue = eggsSold * 500;
+            
+            // TOTAL
+            return chapatiRevenue + eggsRevenue;
+        }
+
         function renderCapital() {
             const day = getDay(today);
-            const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+            const revenue = getAutoCalculatedRevenue(day);  // USE AUTO-CALCULATED REVENUE
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
             const profit = revenue - cogs - expenses;
@@ -1539,7 +1560,7 @@
 
         function renderClose() {
             const day = getDay(today);
-            const revenue = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+            const revenue = getAutoCalculatedRevenue(day);  // USE AUTO-CALCULATED REVENUE
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
             const profit = revenue - cogs - expenses;
