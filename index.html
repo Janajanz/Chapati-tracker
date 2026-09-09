@@ -958,10 +958,11 @@
         function renderSales() {
             const day = getDay(today);
             
-            // AUTO-CALCULATE CHAPATI SOLD
-            const chapatiMade = day.chapatiMade || 0;
-            const chapatiRemaining = day.chapatiRemaining || 0;
-            const chapatiSold = chapatiMade - chapatiRemaining;
+            // AUTO-CALCULATE CHAPATI SOLD - INCLUDE CARRIED!
+            const chapatiCarried = day.chapatiCarried || 0;  // From yesterday
+            const chapatiMade = day.chapatiMade || 0;        // Made today
+            const chapatiRemaining = day.chapatiRemaining || 0; // Left at end of day
+            const chapatiSold = chapatiCarried + chapatiMade - chapatiRemaining;
             const chapatiPrice = 1000;
             const chapatiRevenue = chapatiSold * chapatiPrice;
             
@@ -985,8 +986,11 @@
             html += '<div style="background: white; border-left: 5px solid #ff9800; padding: 16px; margin-bottom: 12px; border-radius: 6px;">';
             html += '<h3 style="margin-top: 0; color: #ff9800;">🍪 CHAPATI SALES</h3>';
             html += '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">';
-            html += '<strong>Quantity Sold:</strong> ' + chapatiSold + ' pieces<br>';
-            html += '<strong>From Dashboard:</strong> Made ' + chapatiMade + ' - Remaining ' + chapatiRemaining + ' = Sold ' + chapatiSold + '<br>';
+            html += '<strong>Calculation:</strong><br>';
+            html += 'Carried from yesterday: ' + chapatiCarried + ' pieces<br>';
+            html += '+ Made today: ' + chapatiMade + ' pieces<br>';
+            html += '- Remaining at end: ' + chapatiRemaining + ' pieces<br>';
+            html += '= <strong style="color: #ff9800;">Chapati Sold: ' + chapatiSold + ' pieces</strong><br><br>';
             html += '<strong>Price per Unit:</strong> UGX ' + fmt(chapatiPrice) + '<br>';
             html += '</div>';
             html += '<div style="background: #fff3e0; padding: 12px; border-radius: 6px; text-align: right;">';
