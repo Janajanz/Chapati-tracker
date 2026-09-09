@@ -516,38 +516,33 @@
         function renderInventory() {
             const day = getDay(today);
             
-            // Calculate consolidated stock for summary
-            const allItems = {};
+            // Calculate summary values
             let totalCarriedValue = 0;
             let totalOwnerValue = 0;
             let totalPurchaseValue = 0;
             let totalUsageQty = 0;
+            
+            day.carriedItems.forEach(ci => totalCarriedValue += (ci.qty * ci.unitCost));
+            day.ownerStock.forEach(os => totalOwnerValue += (os.qty * os.unitCost));
+            day.purchases.forEach(p => totalPurchaseValue += (p.qty * p.unitCost));
+            day.usage.forEach(u => totalUsageQty += u.qty);
+            
+            // USE SAME CONSOLIDATION AS CLOSE DAY
+            const consolidated = getConsolidatedStock(day);
+            
+            // Build allItems in same format for renderCurrentInventoryExpanded
+            const allItems = {};
             let totalInventoryValue = 0;
-            
-            day.carriedItems.forEach(ci => { 
-                const n = (ci.item || ci.name); 
-                totalCarriedValue += (ci.qty * ci.unitCost);
-                if (!allItems[n]) allItems[n] = {name: n, current: 0, used: 0, unitCost: ci.unitCost}; 
-                allItems[n].current += ci.qty; 
-            });
-            day.ownerStock.forEach(os => { 
-                totalOwnerValue += (os.qty * os.unitCost);
-                if (!allItems[os.item]) allItems[os.item] = {name: os.item, current: 0, used: 0, unitCost: os.unitCost}; 
-                allItems[os.item].current += os.qty; 
-            });
-            day.purchases.forEach(p => { 
-                totalPurchaseValue += (p.qty * p.unitCost);
-                if (!allItems[p.item]) allItems[p.item] = {name: p.item, current: 0, used: 0, unitCost: p.unitCost}; 
-                allItems[p.item].current += p.qty; 
-            });
-            day.usage.forEach(u => { 
-                totalUsageQty += u.qty;
-                if (allItems[u.item]) allItems[u.item].used += u.qty; 
-            });
-            
-            Object.keys(allItems).forEach(name => {
-                allItems[name].remaining = allItems[name].current - allItems[name].used;
-                totalInventoryValue += (allItems[name].remaining * allItems[name].unitCost);
+            Object.keys(consolidated).forEach(name => {
+                const item = consolidated[name];
+                allItems[name] = {
+                    name: name,
+                    current: item.qty,
+                    used: 0,  // Already subtracted in getConsolidatedStock
+                    remaining: item.qty,
+                    unitCost: item.unitCost
+                };
+                totalInventoryValue += item.value;
             });
             
             let html = '<div style="display: flex; flex-direction: column; gap: 14px;">';
