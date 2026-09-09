@@ -957,20 +957,67 @@
 
         function renderSales() {
             const day = getDay(today);
-            const total = day.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
             
-            let html = '<h3>Add Sale</h3>';
-            html += '<div class="form-group"><select id="sale-product"><option value="Chapati">Chapati</option><option value="Eggs">Eggs</option><option value="Rolex">Rolex</option><option value="Other">Other</option></select></div>';
-            html += '<div class="form-group"><input type="number" id="sale-qty" placeholder="Quantity"></div>';
-            html += '<div class="form-group"><input type="number" id="sale-price" placeholder="Price"></div>';
-            html += '<button class="btn btn-primary" onclick="addSale()">✓ Add Sale</button>';
-            html += '<h3>Sales (' + day.sales.length + ')</h3>';
+            // AUTO-CALCULATE CHAPATI SOLD
+            const chapatiMade = day.chapatiMade || 0;
+            const chapatiRemaining = day.chapatiRemaining || 0;
+            const chapatiSold = chapatiMade - chapatiRemaining;
+            const chapatiPrice = 1000;
+            const chapatiRevenue = chapatiSold * chapatiPrice;
             
-            day.sales.forEach((s, i) => {
-                html += '<div class="item-card"><p><strong>' + s.product + '</strong>: ' + s.qty + ' x UGX ' + fmt(s.price) + ' = UGX ' + fmt(s.qty * s.price) + ' <button class="btn btn-danger" onclick="delSale(' + i + ')">Del</button></p></div>';
+            // AUTO-CALCULATE EGGS SOLD (from usage)
+            let eggsSold = 0;
+            day.usage.forEach(u => {
+                if (u.item === 'Eggs' || u.item === 'eggs') {
+                    eggsSold += u.qty;
+                }
             });
+            const eggsPrice = 500;
+            const eggsRevenue = eggsSold * eggsPrice;
             
-            html += '<div class="summary"><div class="summary-row total"><span>Total Revenue</span><span>UGX ' + fmt(total) + '</span></div></div>';
+            // TOTAL REVENUE
+            const totalRevenue = chapatiRevenue + eggsRevenue;
+            
+            let html = '<div style="background: #f0f0f0; padding: 16px; border-radius: 8px; margin-bottom: 20px;">';
+            html += '<h2 style="margin-top: 0; color: #333;">📊 Auto-Calculated Sales</h2>';
+            
+            // CHAPATI CARD
+            html += '<div style="background: white; border-left: 5px solid #ff9800; padding: 16px; margin-bottom: 12px; border-radius: 6px;">';
+            html += '<h3 style="margin-top: 0; color: #ff9800;">🍪 CHAPATI SALES</h3>';
+            html += '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">';
+            html += '<strong>Quantity Sold:</strong> ' + chapatiSold + ' pieces<br>';
+            html += '<strong>From Dashboard:</strong> Made ' + chapatiMade + ' - Remaining ' + chapatiRemaining + ' = Sold ' + chapatiSold + '<br>';
+            html += '<strong>Price per Unit:</strong> UGX ' + fmt(chapatiPrice) + '<br>';
+            html += '</div>';
+            html += '<div style="background: #fff3e0; padding: 12px; border-radius: 6px; text-align: right;">';
+            html += '<strong style="font-size: 16px; color: #ff9800;">Revenue: UGX ' + fmt(chapatiRevenue) + '</strong>';
+            html += '</div>';
+            html += '</div>';
+            
+            // EGGS CARD
+            html += '<div style="background: white; border-left: 5px solid #2196f3; padding: 16px; margin-bottom: 12px; border-radius: 6px;">';
+            html += '<h3 style="margin-top: 0; color: #2196f3;">🥚 EGG SALES</h3>';
+            html += '<div style="font-size: 14px; color: #666; margin-bottom: 8px;">';
+            html += '<strong>Quantity Sold:</strong> ' + eggsSold + ' pieces<br>';
+            html += '<strong>From Inventory:</strong> Eggs Used in Production<br>';
+            html += '<strong>Price per Unit:</strong> UGX ' + fmt(eggsPrice) + '<br>';
+            html += '</div>';
+            html += '<div style="background: #e3f2fd; padding: 12px; border-radius: 6px; text-align: right;">';
+            html += '<strong style="font-size: 16px; color: #2196f3;">Revenue: UGX ' + fmt(eggsRevenue) + '</strong>';
+            html += '</div>';
+            html += '</div>';
+            
+            // TOTAL REVENUE
+            html += '<div style="background: #4caf50; color: white; padding: 16px; border-radius: 8px; text-align: center;">';
+            html += '<h2 style="margin: 0; font-size: 18px;">TOTAL REVENUE</h2>';
+            html += '<div style="font-size: 32px; font-weight: bold; margin-top: 8px;">UGX ' + fmt(totalRevenue) + '</div>';
+            html += '<div style="margin-top: 8px; font-size: 14px; opacity: 0.9;">';
+            html += 'Chapati: UGX ' + fmt(chapatiRevenue) + ' + Eggs: UGX ' + fmt(eggsRevenue);
+            html += '</div>';
+            html += '</div>';
+            
+            html += '</div>';
+            
             document.getElementById('sales-content').innerHTML = html;
         }
 
