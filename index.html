@@ -251,17 +251,22 @@
         <div id="analytics" class="view"><div class="card"><h2>📈 Analytics</h2><div id="analytics-content"></div></div></div>
         <div id="history" class="view"><div class="card"><h2>📅 History</h2><div id="history-content"></div></div></div>
         <div id="close" class="view"><div class="card"><h2>🔒 Close Day</h2><div id="close-content"></div></div></div>
-        <div id="backup" class="view"><div class="card"><h2>💾 Backup & Cache</h2><p style="font-size: 12px; color: #999; margin-bottom: 16px;">App Version: <strong>v14.68</strong></p><button class="btn btn-primary" onclick="downloadBackup()">📥 Download Backup</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore Backup</button><button class="btn btn-danger" onclick="clearAppCache()">🔄 Clear App Cache & Reload</button><button class="btn btn-danger" onclick="if(confirm('DELETE ALL DATA?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All Data</button></div></div>
+        <div id="backup" class="view"><div class="card"><h2>💾 Backup & Cache</h2><p style="font-size: 12px; color: #999; margin-bottom: 16px;">App Version: <strong>v14.69</strong></p><button class="btn btn-primary" onclick="downloadBackup()">📥 Download Backup</button><input type="file" id="restore-file" accept=".json" style="margin: 10px 0;"><button class="btn btn-primary" onclick="restoreBackup()">📤 Restore Backup</button><button class="btn btn-danger" onclick="clearAppCache()">🔄 Clear App Cache & Reload</button><button class="btn btn-danger" onclick="if(confirm('DELETE ALL DATA?')) { localStorage.removeItem('chapatiBiz'); location.reload(); }">🗑️ Clear All Data</button></div></div>
     </div>
 
     <script>
         const KEY = 'chapatiBiz';
-        let today = new Date().toISOString().split('T')[0];
+        let workingDate = new Date().toISOString().split('T')[0];
 
         function load() { return JSON.parse(localStorage.getItem(KEY) || '{"days":{}}'); }
         function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
         function fmt(n) { return parseInt(n || 0).toLocaleString(); }
         function toggleMenu() { document.getElementById('sidebar').classList.toggle('open'); document.getElementById('overlay').classList.toggle('open'); }
+        
+        function setWorkingDate(date) {
+            workingDate = date;
+            renderDashboard();
+        }
         
         function getDay(date) {
             const data = load();
@@ -364,7 +369,7 @@
         }
 
         function renderDashboard() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             const chapatiCarried = day.chapatiCarried || 0;
             const chapatiMade = day.chapatiMade || 0;
             const totalAvailable = chapatiCarried + chapatiMade;
@@ -372,7 +377,7 @@
             const chapatySold = totalAvailable - chapatiRemaining;
 
             console.log('=== RENDERING DASHBOARD ===');
-            console.log('Today:', today);
+            console.log('Working Date:', workingDate);
             console.log('day.chapatiCarried:', day.chapatiCarried);
             console.log('chapatiCarried variable:', chapatiCarried);
             console.log('FULL DAY OBJECT:', JSON.stringify(day));
@@ -381,7 +386,7 @@
             console.log('Chapati Remaining:', chapatiRemaining);
             console.log('Chapati Sold:', chapatySold);
 
-            const dateObj = new Date(today + 'T00:00:00');
+            const dateObj = new Date(workingDate + 'T00:00:00');
             const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
             const dateFormatted = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -389,11 +394,11 @@
             
             // HEADER - Date and Navigation
             html += '<div style="background: linear-gradient(135deg, #8B4513 0%, #d4a574 100%); color: white; padding: 24px 20px; border-radius: 14px; margin-bottom: 24px; box-shadow: 0 6px 16px rgba(139, 69, 19, 0.25);">';
-            html += '<p style="font-size: 11px; margin: 0 0 8px 0; opacity: 0.85; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700;">📅 TODAY</p>';
+            html += '<p style="font-size: 11px; margin: 0 0 8px 0; opacity: 0.85; text-transform: uppercase; letter-spacing: 1.2px; font-weight: 700;">📅 WORKING DATE</p>';
             html += '<p style="font-size: 32px; font-weight: 800; margin: 0 0 4px 0; line-height: 1;">' + dayName + '</p>';
             html += '<p style="font-size: 15px; margin: 0 0 16px 0; opacity: 0.9;">' + dateFormatted + '</p>';
-            html += '<label style="color: white; font-size: 10px; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 8px;">🗓️ Pick Date:</label>';
-            html += '<input type="date" value="' + today + '" id="date-picker" onchange="changeDate()" style="width: 100%; padding: 10px; border-radius: 8px; border: none; font-size: 12px; font-weight: 600;">';
+            html += '<label style="color: white; font-size: 10px; font-weight: 600; text-transform: uppercase; display: block; margin-bottom: 8px;">🗓️ Pick Date (for missed days):</label>';
+            html += '<input type="date" value="' + workingDate + '" id="date-picker" onchange="changeDate()" style="width: 100%; padding: 10px; border-radius: 8px; border: none; font-size: 12px; font-weight: 600;">';
             html += '</div>';
             
             // OPENING INVENTORY - HERO SECTION (EDITABLE)
@@ -506,12 +511,12 @@
         }
 
         function updateChapati() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             day.chapatiCarried = parseInt(document.getElementById('chapati-carried').value) || 0;
             day.chapatiMade = parseInt(document.getElementById('chapati-made').value) || 0;
             day.chapatiRemaining = parseInt(document.getElementById('chapati-remaining').value) || 0;
             const data = load();
-            data.days[today] = day;
+            data.days[workingDate] = day;
             save(data);
             renderDashboard();
         }
@@ -519,14 +524,14 @@
         function changeDate() {
             const selectedDate = document.getElementById('date-picker').value;
             if (selectedDate) {
-                today = selectedDate;
-                getDay(today); // Initialize the day (which will copy carried items from yesterday)
+                workingDate = selectedDate;
+                getDay(workingDate); // Initialize the day (which will copy carried items from yesterday)
                 renderDashboard();
             }
         }
 
         function renderInventory() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             
             // Calculate consolidated stock for summary
             const allItems = {};
@@ -570,25 +575,19 @@
                 renderOpeningInventoryExpanded(day)
             );
             
-            // CARD 2: OWNER STOCK
-            html += renderCollapsibleCard('owner', '👨 OWNER STOCK',
-                day.ownerStock.length + ' items • UGX ' + fmt(totalOwnerValue),
-                renderOwnerStockExpanded(day)
-            );
-            
-            // CARD 3: WORKER PURCHASES
+            // CARD 2: WORKER PURCHASES (formerly CARD 3)
             html += renderCollapsibleCard('worker', '🛒 WORKER PURCHASES',
                 day.purchases.length + ' items • UGX ' + fmt(totalPurchaseValue),
                 renderWorkerPurchasesExpanded(day)
             );
             
-            // CARD 4: RECORD USAGE
+            // CARD 3: RECORD USAGE (formerly CARD 4)
             html += renderCollapsibleCard('usage', '📉 RECORD USAGE',
                 totalUsageQty + ' items used',
                 renderUsageExpanded(day, allItems)
             );
             
-            // CARD 5: CURRENT INVENTORY
+            // CARD 4: CURRENT INVENTORY (formerly CARD 5)
             html += renderCollapsibleCard('inventory', '📊 CURRENT INVENTORY',
                 Object.keys(allItems).length + ' items • UGX ' + fmt(totalInventoryValue),
                 renderCurrentInventoryExpanded(day, allItems)
@@ -602,7 +601,6 @@
         function renderCollapsibleCard(id, title, summary, expandedContent, color) {
             const colorMap = {
                 'opening': { bg: 'linear-gradient(135deg, #d4edda 0%, #c8e6c9 100%)', text: '#27a745', border: '#27a745' },
-                'owner': { bg: 'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)', text: '#ff9800', border: '#ff9800' },
                 'worker': { bg: 'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)', text: '#2196f3', border: '#2196f3' },
                 'usage': { bg: 'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)', text: '#dc3545', border: '#dc3545' },
                 'inventory': { bg: 'linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%)', text: '#673ab7', border: '#673ab7' }
@@ -929,14 +927,14 @@
         }
 
         function addOpeningItem() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             const item = document.getElementById('opening-item').value.trim();
             const qty = parseInt(document.getElementById('opening-qty').value) || 0;
             const cost = parseInt(document.getElementById('opening-cost').value) || 0;
             if (!item || qty <= 0 || cost <= 0) { alert('Fill all fields'); return; }
             day.carriedItems.push({item, qty, unitCost: cost});
             const data = load();
-            data.days[today] = day;
+            data.days[workingDate] = day;
             save(data);
             document.getElementById('opening-item').value = '';
             document.getElementById('opening-qty').value = '';
@@ -945,14 +943,14 @@
         }
         
         function addOwnerStock() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             const item = document.getElementById('owner-item').value.trim();
             const qty = parseInt(document.getElementById('owner-qty').value) || 0;
             const cost = parseInt(document.getElementById('owner-cost').value) || 0;
             if (!item || qty <= 0 || cost <= 0) { alert('Fill all fields'); return; }
             day.ownerStock.push({item, qty, unitCost: cost});
             const data = load();
-            data.days[today] = day;
+            data.days[workingDate] = day;
             save(data);
             document.getElementById('owner-item').value = '';
             document.getElementById('owner-qty').value = '';
@@ -960,17 +958,17 @@
             renderInventory();
         }
 
-        function delOwnerStock(i) { const day = getDay(today); day.ownerStock.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
+        function delOwnerStock(i) { const day = getDay(workingDate); day.ownerStock.splice(i, 1); const data = load(); data.days[workingDate] = day; save(data); renderInventory(); }
         
         function addPurchase() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             const item = document.getElementById('purchase-item').value.trim();
             const qty = parseInt(document.getElementById('purchase-qty').value) || 0;
             const cost = parseInt(document.getElementById('purchase-cost').value) || 0;
             if (!item || qty <= 0 || cost <= 0) { alert('Fill all fields'); return; }
             day.purchases.push({item, qty, unitCost: cost});
             const data = load();
-            data.days[today] = day;
+            data.days[workingDate] = day;
             save(data);
             document.getElementById('purchase-item').value = '';
             document.getElementById('purchase-qty').value = '';
@@ -978,10 +976,10 @@
             renderInventory();
         }
         
-        function delPurchase(i) { const day = getDay(today); day.purchases.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
-        function delCarriedItem(i) { const day = getDay(today); day.carriedItems.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
-        function delOwnerStock(i) { const day = getDay(today); day.ownerStock.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
-        function delUsage(i) { const day = getDay(today); day.usage.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderInventory(); }
+        function delPurchase(i) { const day = getDay(workingDate); day.purchases.splice(i, 1); const data = load(); data.days[workingDate] = day; save(data); renderInventory(); }
+        function delCarriedItem(i) { const day = getDay(workingDate); day.carriedItems.splice(i, 1); const data = load(); data.days[workingDate] = day; save(data); renderInventory(); }
+        function delOwnerStock(i) { const day = getDay(workingDate); day.ownerStock.splice(i, 1); const data = load(); data.days[workingDate] = day; save(data); renderInventory(); }
+        function delUsage(i) { const day = getDay(workingDate); day.usage.splice(i, 1); const data = load(); data.days[workingDate] = day; save(data); renderInventory(); }
 
         function autoFillUsageCost() {
             const val = document.getElementById('usage-item').value.split('|');
@@ -989,7 +987,7 @@
         }
 
         function addUsage() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             const val = document.getElementById('usage-item').value.split('|');
             const item = val[0];
             const unitCost = parseInt(val[1]) || 0;
@@ -999,7 +997,7 @@
             if (!item || qty <= 0 || unitCost <= 0) { alert('Select item and fill quantity'); return; }
             day.usage.push({item, qty, unitCost: unitCost, cost: cost, notes: notes});
             const data = load();
-            data.days[today] = day;
+            data.days[workingDate] = day;
             save(data);
             document.getElementById('usage-item').value = '';
             document.getElementById('usage-qty').value = '';
@@ -1017,7 +1015,7 @@
         }
 
         function renderSales() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             
             // AUTO-CALCULATE CHAPATI SOLD - INCLUDE CARRIED!
             const chapatiCarried = day.chapatiCarried || 0;  // From yesterday
@@ -1086,11 +1084,11 @@
             document.getElementById('sales-content').innerHTML = html;
         }
 
-        function addSale() { const day = getDay(today); const product = document.getElementById('sale-product').value; const qty = parseInt(document.getElementById('sale-qty').value) || 0; const price = parseInt(document.getElementById('sale-price').value) || 0; if (qty <= 0 || price <= 0) { alert('Invalid'); return; } day.sales.push({product, qty, price}); const data = load(); data.days[today] = day; save(data); document.getElementById('sale-qty').value = ''; document.getElementById('sale-price').value = ''; renderSales(); }
-        function delSale(i) { const day = getDay(today); day.sales.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderSales(); }
+        function addSale() { const day = getDay(workingDate); const product = document.getElementById('sale-product').value; const qty = parseInt(document.getElementById('sale-qty').value) || 0; const price = parseInt(document.getElementById('sale-price').value) || 0; if (qty <= 0 || price <= 0) { alert('Invalid'); return; } day.sales.push({product, qty, price}); const data = load(); data.days[workingDate] = day; save(data); document.getElementById('sale-qty').value = ''; document.getElementById('sale-price').value = ''; renderSales(); }
+        function delSale(i) { const day = getDay(workingDate); day.sales.splice(i, 1); const data = load(); data.days[workingDate] = day; save(data); renderSales(); }
 
         function renderExpenses() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             const total = day.expenses.reduce((s, e) => s + e.amount, 0);
             
             let html = '<h3>Add Expense</h3>';
@@ -1108,8 +1106,8 @@
             document.getElementById('expenses-content').innerHTML = html;
         }
 
-        function addExpense() { const day = getDay(today); const desc = document.getElementById('exp-desc').value; const cat = document.getElementById('exp-cat').value; const amt = parseInt(document.getElementById('exp-amt').value) || 0; if (!desc || amt <= 0) { alert('Invalid'); return; } day.expenses.push({desc, category: cat, amount: amt}); const data = load(); data.days[today] = day; save(data); document.getElementById('exp-desc').value = ''; document.getElementById('exp-amt').value = ''; renderExpenses(); }
-        function delExpense(i) { const day = getDay(today); day.expenses.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderExpenses(); }
+        function addExpense() { const day = getDay(workingDate); const desc = document.getElementById('exp-desc').value; const cat = document.getElementById('exp-cat').value; const amt = parseInt(document.getElementById('exp-amt').value) || 0; if (!desc || amt <= 0) { alert('Invalid'); return; } day.expenses.push({desc, category: cat, amount: amt}); const data = load(); data.days[workingDate] = day; save(data); document.getElementById('exp-desc').value = ''; document.getElementById('exp-amt').value = ''; renderExpenses(); }
+        function delExpense(i) { const day = getDay(workingDate); day.expenses.splice(i, 1); const data = load(); data.days[workingDate] = day; save(data); renderExpenses(); }
 
         function getAutoCalculatedRevenue(day) {
             // CHAPATI: Carried + Made - Remaining = Sold
@@ -1133,7 +1131,7 @@
         }
 
         function renderCapital() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             const revenue = getAutoCalculatedRevenue(day);  // USE AUTO-CALCULATED REVENUE
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
@@ -1353,7 +1351,7 @@
         }
 
         function renderDebtors() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             if (!day.debtors) day.debtors = [];
             const total = day.debtors.reduce((s, d) => s + (d.amount - (d.paid || 0)), 0);
             
@@ -1373,11 +1371,11 @@
             document.getElementById('debtors-content').innerHTML = html;
         }
 
-        function addDebtor() { const day = getDay(today); if (!day.debtors) day.debtors = []; const name = document.getElementById('debtor-name').value; const amount = parseInt(document.getElementById('debtor-amount').value) || 0; if (!name || amount <= 0) { alert('Invalid'); return; } day.debtors.push({name, amount, paid: 0}); const data = load(); data.days[today] = day; save(data); document.getElementById('debtor-name').value = ''; document.getElementById('debtor-amount').value = ''; renderDebtors(); }
-        function delDebtor(i) { const day = getDay(today); day.debtors.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderDebtors(); }
+        function addDebtor() { const day = getDay(workingDate); if (!day.debtors) day.debtors = []; const name = document.getElementById('debtor-name').value; const amount = parseInt(document.getElementById('debtor-amount').value) || 0; if (!name || amount <= 0) { alert('Invalid'); return; } day.debtors.push({name, amount, paid: 0}); const data = load(); data.days[workingDate] = day; save(data); document.getElementById('debtor-name').value = ''; document.getElementById('debtor-amount').value = ''; renderDebtors(); }
+        function delDebtor(i) { const day = getDay(workingDate); day.debtors.splice(i, 1); const data = load(); data.days[workingDate] = day; save(data); renderDebtors(); }
 
         function renderCreditors() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             if (!day.creditors) day.creditors = [];
             const total = day.creditors.reduce((s, c) => s + (c.amount - (c.paid || 0)), 0);
             
@@ -1397,8 +1395,8 @@
             document.getElementById('creditors-content').innerHTML = html;
         }
 
-        function addCreditor() { const day = getDay(today); if (!day.creditors) day.creditors = []; const name = document.getElementById('creditor-name').value; const amount = parseInt(document.getElementById('creditor-amount').value) || 0; if (!name || amount <= 0) { alert('Invalid'); return; } day.creditors.push({name, amount, paid: 0}); const data = load(); data.days[today] = day; save(data); document.getElementById('creditor-name').value = ''; document.getElementById('creditor-amount').value = ''; renderCreditors(); }
-        function delCreditor(i) { const day = getDay(today); day.creditors.splice(i, 1); const data = load(); data.days[today] = day; save(data); renderCreditors(); }
+        function addCreditor() { const day = getDay(workingDate); if (!day.creditors) day.creditors = []; const name = document.getElementById('creditor-name').value; const amount = parseInt(document.getElementById('creditor-amount').value) || 0; if (!name || amount <= 0) { alert('Invalid'); return; } day.creditors.push({name, amount, paid: 0}); const data = load(); data.days[workingDate] = day; save(data); document.getElementById('creditor-name').value = ''; document.getElementById('creditor-amount').value = ''; renderCreditors(); }
+        function delCreditor(i) { const day = getDay(workingDate); day.creditors.splice(i, 1); const data = load(); data.days[workingDate] = day; save(data); renderCreditors(); }
 
         function renderAnalytics() {
             const data = load();
@@ -1620,7 +1618,7 @@
         }
 
         function renderClose() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             const revenue = getAutoCalculatedRevenue(day);  // USE AUTO-CALCULATED REVENUE
             const cogs = day.usage.reduce((s, u) => s + u.cost, 0);
             const expenses = day.expenses.reduce((s, e) => s + e.amount, 0);
@@ -1685,11 +1683,11 @@
         }
 
         function closeDay() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             const consolidated = getConsolidatedStock(day);
             
             console.log('===== CLOSING DAY - STEP 1 =====');
-            console.log('TODAY DATE:', today);
+            console.log('WORKING DATE:', workingDate);
             console.log('day object:', JSON.stringify(day, null, 2));
             console.log('day.chapatiRemaining:', day.chapatiRemaining);
             console.log('day.chapatiMade:', day.chapatiMade);
@@ -1713,7 +1711,7 @@
             
             day.status = 'closed';
             const data = load();
-            data.days[today] = day;
+            data.days[workingDate] = day;
             save(data);
             
             // IMPORTANT: Do NOT automatically move evening purchases to tomorrow's opening inventory
@@ -1722,10 +1720,10 @@
             
             console.log('===== CLOSING DAY - STEP 3 VERIFY =====');
             const verifyData = load();
-            console.log('After save - what is in storage for', today, ':', JSON.stringify(verifyData.days[today].closingInventory, null, 2));
+            console.log('After save - what is in storage for', workingDate, ':', JSON.stringify(verifyData.days[workingDate].closingInventory, null, 2));
             
-            // Calculate tomorrow - pure string-based
-            const parts = today.split('-');
+            // Calculate next day - pure string-based
+            const parts = workingDate.split('-');
             let year = parseInt(parts[0]);
             let month = parseInt(parts[1]);
             let day_num = parseInt(parts[2]);
@@ -1745,21 +1743,26 @@
                 }
             }
             
-            const tomorrowDate = year + '-' + String(month).padStart(2, '0') + '-' + String(day_num).padStart(2, '0');
+            const nextDate = year + '-' + String(month).padStart(2, '0') + '-' + String(day_num).padStart(2, '0');
             
             console.log('===== CLOSING DAY - STEP 4 DATE CALC =====');
-            console.log('TODAY:', today);
-            console.log('TOMORROW:', tomorrowDate);
-            today = tomorrowDate;
+            console.log('WORKING DATE:', workingDate);
+            console.log('NEXT DATE:', nextDate);
             
-            alert('✓ Day closed! Moved to ' + today);
+            // Initialize the next day (getDay will auto-create with carryover)
+            getDay(nextDate);
+            
+            // Move to next day
+            workingDate = nextDate;
+            
+            alert('✓ Day closed! Moved to ' + nextDate);
             
             console.log('===== CLOSING DAY - COMPLETE =====');
             renderDashboard();
         }
 
         function addEveningPurchase() {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             const item = document.getElementById('evening-item').value.trim();
             const qty = parseInt(document.getElementById('evening-qty').value) || 0;
             const unitCost = parseInt(document.getElementById('evening-cost').value) || 0;
@@ -1771,7 +1774,7 @@
             
             day.eveningPurchases.push({item, qty, unitCost, notes, paid, paidDate: paidDate || ''});
             const data = load();
-            data.days[today] = day;
+            data.days[workingDate] = day;
             save(data);
             
             document.getElementById('evening-item').value = '';
@@ -1785,20 +1788,20 @@
         }
 
         function delEveningPurchase(i) {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             day.eveningPurchases.splice(i, 1);
             const data = load();
-            data.days[today] = day;
+            data.days[workingDate] = day;
             save(data);
             renderClose();
         }
 
         function toggleEveningPurchasePaid(i) {
-            const day = getDay(today);
+            const day = getDay(workingDate);
             if (day.eveningPurchases[i]) {
                 day.eveningPurchases[i].paid = !day.eveningPurchases[i].paid;
                 const data = load();
-                data.days[today] = day;
+                data.days[workingDate] = day;
                 save(data);
                 renderClose();
             }
