@@ -1749,13 +1749,23 @@
             console.log('WORKING DATE:', workingDate);
             console.log('NEXT DATE:', nextDate);
             
-            // Initialize the next day (getDay will auto-create with carryover)
-            getDay(nextDate);
+            // Initialize the next day (getDay will auto-create with carryover items)
+            const nextDay = getDay(nextDate);
+            
+            // IMPORTANT: Carry over the remaining chapatis to next day
+            nextDay.chapatiCarried = day.chapatiRemaining;
+            
+            // Save next day with carryover
+            const dataForNextDay = load();
+            dataForNextDay.days[nextDate] = nextDay;
+            save(dataForNextDay);
+            
+            console.log('CHAPATI CARRYOVER:', day.chapatiRemaining, '→', nextDate);
             
             // Move to next day
             workingDate = nextDate;
             
-            alert('✓ Day closed! Moved to ' + nextDate);
+            alert('✓ Day closed! Moved to ' + nextDate + '\n✓ Chapatis carried: ' + day.chapatiRemaining);
             
             console.log('===== CLOSING DAY - COMPLETE =====');
             renderDashboard();
