@@ -1682,46 +1682,70 @@
 
         function closeDay() {
             const day = getDay(workingDate);
-            const consolidated = getConsolidatedStock(day);
             
-            console.log('===== CLOSING DAY - STEP 1 =====');
-            console.log('WORKING DATE:', workingDate);
-            console.log('day.carriedItems:', JSON.stringify(day.carriedItems));
-            console.log('day.eveningPurchasesCarried:', JSON.stringify(day.eveningPurchasesCarried));
-            console.log('day.purchases (worker):', JSON.stringify(day.purchases));
-            console.log('day.usage:', JSON.stringify(day.usage));
-            console.log('CONSOLIDATED STOCK BEFORE CLOSING:', JSON.stringify(consolidated, null, 2));
+            // Build a complete picture of what's available to use TODAY
+            const allItems = {};
             
-            // Convert consolidated to closing inventory format
-            const closing = [];
-            Object.keys(consolidated).forEach(name => {
-                const item = consolidated[name];
-                closing.push({
-                    item: item.displayName,
-                    qty: item.qty,
-                    unitCost: item.unitCost
-                });
+            // 1. Add carried items (leftovers from yesterday)
+            day.carriedItems.forEach(ci => {
+                const n = ci.item || ci.name;
+                if (!allItems[n]) allItems[n] = {name: n, available: 0, used: 0, unitCost: ci.unitCost};
+                allItems[n].available += ci.qty;
+                allItems[n].unitCost = ci.unitCost;
             });
             
+            // 2. Add evening purchases carried from yesterday
+            (day.eveningPurchasesCarried || []).forEach(ep => {
+                const n = ep.item;
+                if (!allItems[n]) allItems[n] = {name: n, available: 0, used: 0, unitCost: ep.unitCost};
+                allItems[n].available += ep.qty;
+                allItems[n].unitCost = ep.unitCost;
+            });
+            
+            // 3. Add worker purchases (today)
+            day.purchases.forEach(p => {
+                const n = p.item;
+                if (!allItems[n]) allItems[n] = {name: n, available: 0, used: 0, unitCost: p.unitCost};
+                allItems[n].available += p.qty;
+                allItems[n].unitCost = p.unitCost;
+            });
+            
+            // 4. Subtract usage (today)
+            day.usage.forEach(u => {
+                if (allItems[u.item]) {
+                    allItems[u.item].used += u.qty;
+                }
+            });
+            
+            // 5. Build closing inventory with ONLY items that have remaining > 0
+            const closing = [];
+            Object.keys(allItems).forEach(name => {
+                const item = allItems[name];
+                const remaining = item.available - item.used;
+                if (remaining > 0) {
+                    closing.push({
+                        item: name,
+                        qty: remaining,
+                        unitCost: item.unitCost
+                    });
+                }
+            });
+            
+            console.log('===== CLOSING DAY =====');
+            console.log('All items with stock:', JSON.stringify(allItems));
+            console.log('Items with remaining > 0:', JSON.stringify(closing));
+            
+            // Save closing inventory
             day.closingInventory = {chapati: day.chapatiRemaining, items: closing};
-            
-            console.log('===== CLOSING DAY - STEP 2 =====');
-            console.log('About to save closingInventory:', JSON.stringify(day.closingInventory, null, 2));
-            
             day.status = 'closed';
+            
             const data = load();
             data.days[workingDate] = day;
             save(data);
             
-            // IMPORTANT: Do NOT automatically move evening purchases to tomorrow's opening inventory
-            // They are tracked separately and shown in Opening Inventory display
-            // This keeps the data model clean and allows tracking payment status
+            console.log('Saved to', workingDate, ':', JSON.stringify(day.closingInventory));
             
-            console.log('===== CLOSING DAY - STEP 3 VERIFY =====');
-            const verifyData = load();
-            console.log('After save - what is in storage for', workingDate, ':', JSON.stringify(verifyData.days[workingDate].closingInventory, null, 2));
-            
-            // Calculate next day - pure string-based
+            // Calculate next date
             const parts = workingDate.split('-');
             let year = parseInt(parts[0]);
             let month = parseInt(parts[1]);
@@ -1744,17 +1768,13 @@
             
             const nextDate = year + '-' + String(month).padStart(2, '0') + '-' + String(day_num).padStart(2, '0');
             
-            console.log('===== CLOSING DAY - STEP 4 DATE CALC =====');
-            console.log('WORKING DATE:', workingDate);
-            console.log('NEXT DATE:', nextDate);
-            
-            // Initialize the next day (getDay will auto-create with carryover items)
+            // Initialize next day - this will load today's closing inventory as tomorrow's carriedItems
             const nextDay = getDay(nextDate);
             
-            // IMPORTANT: Carry over the remaining chapatis to next day
+            // Set chapati carryover
             nextDay.chapatiCarried = day.chapatiRemaining;
             
-            // IMPORTANT: Carry over evening purchases to next day (keep separate from leftovers)
+            // Set evening purchases carryover
             if (day.eveningPurchases && day.eveningPurchases.length > 0) {
                 nextDay.eveningPurchasesCarried = day.eveningPurchases.map(ep => ({
                     item: ep.item,
@@ -1762,22 +1782,20 @@
                     unitCost: ep.unitCost,
                     notes: ep.notes
                 }));
-                console.log('EVENING PURCHASES CARRIED:', day.eveningPurchases.length, 'items');
             }
             
-            // Save next day with carryover
+            // Save next day
             const dataForNextDay = load();
             dataForNextDay.days[nextDate] = nextDay;
             save(dataForNextDay);
             
-            console.log('CHAPATI CARRYOVER:', day.chapatiRemaining, '→', nextDate);
+            console.log('Next day', nextDate, 'carriedItems:', JSON.stringify(nextDay.carriedItems));
+            console.log('Next day', nextDate, 'eveningPurchasesCarried:', JSON.stringify(nextDay.eveningPurchasesCarried));
             
             // Move to next day
             workingDate = nextDate;
+            alert('✓ Day closed! Moved to ' + nextDate + '\n✓ Chapatis carried: ' + day.chapatiRemaining + '\n✓ Inventory items carried: ' + closing.length);
             
-            alert('✓ Day closed! Moved to ' + nextDate + '\n✓ Chapatis carried: ' + day.chapatiRemaining);
-            
-            console.log('===== CLOSING DAY - COMPLETE =====');
             renderDashboard();
         }
 
