@@ -1764,6 +1764,20 @@
             // IMPORTANT: Carry over the remaining chapatis to next day
             nextDay.chapatiCarried = day.chapatiRemaining;
             
+            // IMPORTANT: Carry over evening purchases to next day's opening inventory
+            if (day.eveningPurchases && day.eveningPurchases.length > 0) {
+                day.eveningPurchases.forEach(ep => {
+                    // Add to next day's carriedItems so they're available as opening inventory
+                    nextDay.carriedItems.push({
+                        item: ep.item,
+                        qty: ep.qty,
+                        unitCost: ep.unitCost,
+                        notes: ep.notes
+                    });
+                });
+                console.log('EVENING PURCHASES CARRIED:', day.eveningPurchases.length, 'items');
+            }
+            
             // Save next day with carryover
             const dataForNextDay = load();
             dataForNextDay.days[nextDate] = nextDay;
