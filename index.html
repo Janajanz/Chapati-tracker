@@ -856,6 +856,15 @@
                 items[n].totalQty += ci.qty;
                 items[n].totalCost += ci.qty * ci.unitCost;
             });
+            
+            // Include eveningPurchasesCarried (yesterday's evening purchases)
+            (day.eveningPurchasesCarried || []).forEach(ep => {
+                const n = ep.item;
+                if (!items[n]) items[n] = { displayName: n, totalQty: 0, totalCost: 0 };
+                items[n].totalQty += ep.qty;
+                items[n].totalCost += ep.qty * ep.unitCost;
+            });
+            
             day.ownerStock.forEach(os => {
                 if (!items[os.item]) items[os.item] = { displayName: os.item, totalQty: 0, totalCost: 0 };
                 items[os.item].totalQty += os.qty;
