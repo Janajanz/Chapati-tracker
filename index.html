@@ -1686,10 +1686,11 @@
             
             console.log('===== CLOSING DAY - STEP 1 =====');
             console.log('WORKING DATE:', workingDate);
-            console.log('day object:', JSON.stringify(day, null, 2));
-            console.log('day.chapatiRemaining:', day.chapatiRemaining);
-            console.log('day.chapatiMade:', day.chapatiMade);
-            console.log('day.chapatiCarried:', day.chapatiCarried);
+            console.log('day.carriedItems:', JSON.stringify(day.carriedItems));
+            console.log('day.eveningPurchasesCarried:', JSON.stringify(day.eveningPurchasesCarried));
+            console.log('day.purchases (worker):', JSON.stringify(day.purchases));
+            console.log('day.usage:', JSON.stringify(day.usage));
+            console.log('CONSOLIDATED STOCK BEFORE CLOSING:', JSON.stringify(consolidated, null, 2));
             
             // Convert consolidated to closing inventory format
             const closing = [];
