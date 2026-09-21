@@ -317,10 +317,12 @@
                 
                 const carriedFromYesterday = (yesterdayData && yesterdayData.closingInventory && yesterdayData.closingInventory.items) ? yesterdayData.closingInventory.items : [];
                 const carriedChapati = yesterdayData ? (yesterdayData.closingInventory?.chapati || 0) : 0;
+                const carriedEveningPurchases = (yesterdayData && yesterdayData.eveningPurchasesCarried) ? yesterdayData.eveningPurchasesCarried : [];
                 
                 console.log('===== GET DAY - CARRYOVER VALUES =====');
                 console.log('Carried chapati:', carriedChapati);
                 console.log('Carried items:', JSON.stringify(carriedFromYesterday, null, 2));
+                console.log('Carried evening purchases:', JSON.stringify(carriedEveningPurchases, null, 2));
                 
                 data.days[date] = {
                     date: date,
@@ -329,6 +331,7 @@
                     chapatiMade: 0,
                     chapatiRemaining: 0,
                     carriedItems: carriedFromYesterday,
+                    eveningPurchasesCarried: carriedEveningPurchases,
                     ownerStock: [],
                     purchases: [],
                     usage: [],
@@ -549,9 +552,12 @@
                 allItems[n].current += ci.qty; 
             });
             
-            // Calculate evening purchases value
-            (day.eveningPurchases || []).forEach(ep => {
+            // Add eveningPurchasesCarried (items bought yesterday evening that carry to today)
+            (day.eveningPurchasesCarried || []).forEach(ep => {
+                const n = ep.item;
                 totalEveningPurchasesValue += (ep.qty * ep.unitCost);
+                if (!allItems[n]) allItems[n] = {name: n, current: 0, used: 0, unitCost: ep.unitCost};
+                allItems[n].current += ep.qty;
             });
             
             day.ownerStock.forEach(os => { 
@@ -576,8 +582,8 @@
             
             let html = '<div style="display: flex; flex-direction: column; gap: 14px;">';
             
-            // CARD 1: OPENING INVENTORY - Include both leftovers and evening purchases
-            const openingInventoryCount = day.carriedItems.length + (day.eveningPurchases || []).length;
+            // CARD 1: OPENING INVENTORY - Include leftovers + carried evening purchases
+            const openingInventoryCount = day.carriedItems.length + (day.eveningPurchasesCarried || []).length;
             const openingInventoryValue = totalCarriedValue + totalEveningPurchasesValue;
             html += renderCollapsibleCard('opening', '📦 OPENING INVENTORY', 
                 openingInventoryCount + ' items • UGX ' + fmt(openingInventoryValue),
@@ -657,43 +663,15 @@
                 html += '<p style="color: #999; text-align: center; padding: 20px; background: #f5f5f5; border-radius: 6px;">No items from yesterday</p>';
             }
             
-            // SECTION 2: Yesterday's Evening Purchases
+            // SECTION 2: Yesterday's Evening Purchases (now carried to today)
             html += '<h4 style="margin: 16px 0 12px 0; color: #2196f3; font-size: 14px;">🛒 From Yesterday\'s Evening Purchases</h4>';
-            const yesterdayEveningPurchases = [];
-            if (day.carriedItems && day.carriedItems.length === 0) {
-                // Try to get yesterday's data
-                const parts = day.date.split('-');
-                let year = parseInt(parts[0]);
-                let month = parseInt(parts[1]);
-                let day_num = parseInt(parts[2]);
-                day_num -= 1;
-                if (day_num < 1) {
-                    month -= 1;
-                    if (month < 1) {
-                        month = 12;
-                        year -= 1;
-                    }
-                    const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-                    if (year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0)) {
-                        daysInMonth[1] = 29;
-                    }
-                    day_num = daysInMonth[month - 1];
-                }
-                const yesterdayDate = year + '-' + String(month).padStart(2, '0') + '-' + String(day_num).padStart(2, '0');
-                const data = load();
-                const yesterdayData = data.days[yesterdayDate];
-                if (yesterdayData && yesterdayData.eveningPurchases) {
-                    yesterdayEveningPurchases.push(...yesterdayData.eveningPurchases);
-                }
-            }
             
-            if (yesterdayEveningPurchases.length > 0) {
+            if (day.eveningPurchasesCarried && day.eveningPurchasesCarried.length > 0) {
                 html += '<div style="margin-bottom: 16px;">';
-                const eveningValue = yesterdayEveningPurchases.reduce((s, ep) => s + (ep.qty * ep.unitCost), 0);
-                yesterdayEveningPurchases.forEach((ep) => {
-                    const paidStatus = ep.paid ? '✓' : '⚠️';
+                const eveningValue = day.eveningPurchasesCarried.reduce((s, ep) => s + (ep.qty * ep.unitCost), 0);
+                day.eveningPurchasesCarried.forEach((ep) => {
                     html += '<div style="background: #e3f2fd; padding: 14px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #2196f3;">';
-                    html += '<p style="margin: 0; font-weight: 700; font-size: 15px;">' + ep.item + ' ' + paidStatus + '</p><p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">' + ep.qty + ' @ UGX ' + fmt(ep.unitCost) + '/each = UGX ' + fmt(ep.qty * ep.unitCost) + (ep.notes ? ' • ' + ep.notes : '') + '</p></div>';
+                    html += '<p style="margin: 0; font-weight: 700; font-size: 15px;">' + ep.item + '</p><p style="margin: 4px 0 0 0; color: #666; font-size: 12px;">' + ep.qty + ' @ UGX ' + fmt(ep.unitCost) + '/each = UGX ' + fmt(ep.qty * ep.unitCost) + (ep.notes ? ' • ' + ep.notes : '') + '</p></div>';
                 });
                 html += '<div style="background: #bbdefb; padding: 12px; border-radius: 6px; border: 2px solid #2196f3;"><p style="margin: 0; font-size: 12px; color: #2196f3;">Evening purchases total: UGX ' + fmt(eveningValue) + '</p></div>';
                 html += '</div>';
@@ -712,9 +690,11 @@
             html += '</div></div>';
             
             // Total
+            const totalValueOpening = (day.carriedItems.reduce((s, ci) => s + (ci.qty * ci.unitCost), 0)) + 
+                                     ((day.eveningPurchasesCarried || []).reduce((s, ep) => s + (ep.qty * ep.unitCost), 0));
             html += '<div style="background: #d4edda; padding: 14px; border-radius: 8px; border: 2px solid #28a745;">';
-            html += '<p style="margin: 0; font-size: 12px; color: #28a745; font-weight: 600;">TOTAL VALUE</p>';
-            html += '<p style="margin: 6px 0 0 0; font-size: 20px; font-weight: 800; color: #28a745;">UGX ' + fmt(totalValue) + '</p></div>';
+            html += '<p style="margin: 0; font-size: 12px; color: #28a745; font-weight: 600;">TOTAL OPENING VALUE</p>';
+            html += '<p style="margin: 6px 0 0 0; font-size: 20px; font-weight: 800; color: #28a745;">UGX ' + fmt(totalValueOpening) + '</p></div>';
             
             html += '<button class="btn btn-primary" onclick="toggleCard(\'opening\')" style="margin-top: 14px; background: #999;">✕ Close</button>';
             return html;
@@ -1764,17 +1744,14 @@
             // IMPORTANT: Carry over the remaining chapatis to next day
             nextDay.chapatiCarried = day.chapatiRemaining;
             
-            // IMPORTANT: Carry over evening purchases to next day's opening inventory
+            // IMPORTANT: Carry over evening purchases to next day (keep separate from leftovers)
             if (day.eveningPurchases && day.eveningPurchases.length > 0) {
-                day.eveningPurchases.forEach(ep => {
-                    // Add to next day's carriedItems so they're available as opening inventory
-                    nextDay.carriedItems.push({
-                        item: ep.item,
-                        qty: ep.qty,
-                        unitCost: ep.unitCost,
-                        notes: ep.notes
-                    });
-                });
+                nextDay.eveningPurchasesCarried = day.eveningPurchases.map(ep => ({
+                    item: ep.item,
+                    qty: ep.qty,
+                    unitCost: ep.unitCost,
+                    notes: ep.notes
+                }));
                 console.log('EVENING PURCHASES CARRIED:', day.eveningPurchases.length, 'items');
             }
             
