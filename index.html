@@ -1771,6 +1771,15 @@
             // Initialize next day - this will load today's closing inventory as tomorrow's carriedItems
             const nextDay = getDay(nextDate);
             
+            // EXPLICITLY set carriedItems to today's remaining inventory (don't rely on closingInventory read)
+            nextDay.carriedItems = closing.map(item => ({
+                item: item.item,
+                qty: item.qty,
+                unitCost: item.unitCost
+            }));
+            
+            console.log('SETTING nextDay.carriedItems explicitly:', JSON.stringify(nextDay.carriedItems));
+            
             // Set chapati carryover
             nextDay.chapatiCarried = day.chapatiRemaining;
             
@@ -1789,8 +1798,7 @@
             dataForNextDay.days[nextDate] = nextDay;
             save(dataForNextDay);
             
-            console.log('Next day', nextDate, 'carriedItems:', JSON.stringify(nextDay.carriedItems));
-            console.log('Next day', nextDate, 'eveningPurchasesCarried:', JSON.stringify(nextDay.eveningPurchasesCarried));
+            console.log('Saved nextDay with carriedItems:', JSON.stringify(dataForNextDay.days[nextDate].carriedItems));
             
             // Move to next day
             workingDate = nextDate;
