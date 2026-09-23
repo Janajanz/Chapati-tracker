@@ -1155,7 +1155,7 @@
             let html = '';
             
             // HEADER with DATE
-            const dateObj = new Date(today + 'T00:00:00');
+            const dateObj = new Date(workingDate + 'T00:00:00');
             const dateStr = dateObj.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
             html += '<div style="margin-bottom: 24px; padding-bottom: 16px; border-bottom: 3px solid #f0f0f0;">';
             html += '<h2 style="margin: 0; font-size: 18px; color: #666; font-weight: 400;">' + dateStr + '</h2>';
@@ -1259,7 +1259,7 @@
                 const earning = (rev - cogs - exp) / 2;
                 
                 // Today
-                if (date === today) {
+                if (date === workingDate) {
                     todayEarning = earning;
                 }
                 
@@ -1272,7 +1272,7 @@
                 }
                 
                 // This month
-                const currentMonth = today.substring(0, 7);
+                const currentMonth = workingDate.substring(0, 7);
                 const dateMonth = date.substring(0, 7);
                 if (dateMonth === currentMonth) {
                     monthEarning += earning;
@@ -1417,7 +1417,8 @@
             
             last7.forEach(date => {
                 const d = days[date];
-                totalRev += d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                const revenue = getAutoCalculatedRevenue(d);  // USE AUTO-CALCULATED REVENUE like Close Day
+                totalRev += revenue;
                 totalCogs += d.usage.reduce((s, u) => s + u.cost, 0);
                 totalExp += d.expenses.reduce((s, e) => s + e.amount, 0);
             });
@@ -1470,7 +1471,7 @@
             
             last7.forEach((date, idx) => {
                 const d = days[date];
-                const rev = d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                const rev = getAutoCalculatedRevenue(d);  // USE AUTO-CALCULATED REVENUE
                 const cogs = d.usage.reduce((s, u) => s + u.cost, 0);
                 const exp = d.expenses.reduce((s, e) => s + e.amount, 0);
                 const profit = rev - cogs - exp;
