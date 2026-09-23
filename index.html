@@ -1253,10 +1253,10 @@
             
             daysList.forEach(date => {
                 const d = days[date];
-                const rev = d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                const rev = getAutoCalculatedRevenue(d);  // USE AUTO-CALCULATED REVENUE - SAME AS CLOSE DAY
                 const cogs = d.usage.reduce((s, u) => s + u.cost, 0);
                 const exp = d.expenses.reduce((s, e) => s + e.amount, 0);
-                const earning = (rev - cogs - exp) / 2;
+                const earning = (rev - cogs - exp) / 2;  // Your 50% share
                 
                 // Today
                 if (date === workingDate) {
@@ -1547,7 +1547,7 @@
             } else {
                 daysList.forEach(date => {
                     const d = days[date];
-                    const rev = d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+                    const rev = getAutoCalculatedRevenue(d);  // USE AUTO-CALCULATED REVENUE
                     const profit = rev - d.usage.reduce((s, u) => s + u.cost, 0) - d.expenses.reduce((s, e) => s + e.amount, 0);
                     html += '<div class="item-card" onclick="showHistoryDetail(\'' + date + '\')" style="cursor: pointer;"><p><strong>' + date + '</strong> ' + (d.status === 'closed' ? '✓' : '') + '</p>';
                     html += '<p style="font-size: 12px;">Revenue: UGX ' + fmt(rev) + ' | Profit: UGX ' + fmt(profit) + '</p>';
@@ -1563,7 +1563,7 @@
             const d = data.days[date];
             if (!d) return;
             
-            const rev = d.sales.reduce((s, sl) => s + (sl.qty * sl.price), 0);
+            const rev = getAutoCalculatedRevenue(d);  // USE AUTO-CALCULATED REVENUE
             const cogs = d.usage.reduce((s, u) => s + u.cost, 0);
             const exp = d.expenses.reduce((s, e) => s + e.amount, 0);
             const profit = rev - cogs - exp;
@@ -1609,7 +1609,7 @@
             if (d.closingInventory && d.closingInventory.items && d.closingInventory.items.length > 0) {
                 html += '<h4>What Remained</h4>';
                 d.closingInventory.items.forEach(ci => {
-                    html += '<div class="item-card"><p><strong>' + ci.name + '</strong>: ' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + '</p></div>';
+                    html += '<div class="item-card"><p><strong>' + (ci.item || ci.name) + '</strong>: ' + ci.qty + ' @ UGX ' + fmt(ci.unitCost) + '</p></div>';
                 });
             }
             
